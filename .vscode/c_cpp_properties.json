@@ -1,0 +1,25 @@
+{
+	"configurations": [
+		{
+			"name": "Win32",
+			"includePath": [
+				"${workspaceFolder}/src/**",
+				"${env:VULKAN_SDK}/Include"
+			],
+			"defines": [
+				"_DEBUG",
+				"NOMINMAX",
+				"WIN32_LEAN_AND_MEAN",
+				"APP_VERSION_MAJOR",
+				"APP_VERSION_MINOR",
+				"APP_VERSION_PATCH"
+			],
+			"windowsSdkVersion": "10.0.19041.0",
+			"compilerPath": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Tools/MSVC/14.39.33519/bin/Hostx64/x64/cl.exe",
+			"cStandard": "c17",
+			"cppStandard": "c++23",
+			"intelliSenseMode": "windows-msvc-x64"
+		}
+	],
+	"version": 4
+}
