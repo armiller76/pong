@@ -22,6 +22,7 @@ class Win32Window
   public:
     Win32Window(std::string_view app_name, Win32WindowCreateInfo create_info);
 
+    auto process_events() -> void;
     auto handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
     auto running() const -> bool;

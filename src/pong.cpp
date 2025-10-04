@@ -28,6 +28,11 @@ int main()
         auto win32_window_create_info = pong::Win32WindowCreateInfo{100, 100, 800, 600};
         auto win32_window = pong::Win32Window(app_name, win32_window_create_info);
 
+        while (win32_window.running())
+        {
+            win32_window.process_events();
+        }
+
         std::println("Hello Pong");
         return 0;
     }

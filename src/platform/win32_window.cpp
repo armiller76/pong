@@ -46,6 +46,22 @@ Win32Window::Win32Window(std::string_view app_name, Win32WindowCreateInfo create
     running_ = true;
 }
 
+auto Win32Window::process_events() -> void
+{
+    ::MSG message;
+    while (::PeekMessageA(&message, nullptr, 0, 0, PM_REMOVE))
+    {
+        if (message.message == WM_QUIT)
+        {
+            running_ = false;
+            break;
+        }
+
+        ::TranslateMessage(&message);
+        ::DispatchMessageA(&message);
+    }
+}
+
 auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT
 {
     switch (msg)
@@ -53,6 +69,13 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
         case WM_CLOSE:
         {
             running_ = false;
+            ::PostQuitMessage(0);
+            break;
+        }
+        case WM_DESTROY:
+        {
+            ::PostQuitMessage(0);
+            break;
         }
         default: break;
     }
