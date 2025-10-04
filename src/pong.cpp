@@ -1,25 +1,38 @@
+#include <cstdlib>
 #include <print>
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_raii.hpp>
+
+#include "engine/vulkan_instance.h"
+#include "utils/exception.h"
+#include "utils/log.h"
 
 int main()
 {
-    auto vk_application_info = VkApplicationInfo{};
-    vk_application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    vk_application_info.applicationVersion = VK_MAKE_VERSION(APP_VERSION_MAJOR, APP_VERSION_MINOR, APP_VERSION_PATCH);
-    vk_application_info.pApplicationName = "Pong";
-    vk_application_info.pEngineName = "NotAnEngine";
-
-    auto vk_instance_create_info = VkInstanceCreateInfo{};
-    vk_instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    vk_instance_create_info.pApplicationInfo = &vk_application_info;
-
-    auto vk_instance = VkInstance{};
-    if (vkCreateInstance(&vk_instance_create_info, 0, &vk_instance) == VK_SUCCESS)
+    try
     {
-        std::println("Successfully created Vulkan instance");
+        auto vk_context = ::vk::raii::Context();
+        auto vk_instance = pong::VulkanInstance{
+            vk_context,
+            "Pong",
+            "NotAnEngine",
+            static_cast<uint32_t>(APP_VERSION_MAJOR),
+            static_cast<uint32_t>(APP_VERSION_MINOR),
+            static_cast<uint32_t>(APP_VERSION_PATCH)};
+        std::println("Hello Pong");
+        return 0;
     }
-
-    std::println("Hello Pong");
-    return 0;
+    catch (::vk::SystemError &e)
+    {
+        pong::log::error("Vulkan error: {}", e.what());
+    }
+    catch (pong::Exception &e)
+    {
+        pong::log::error("Pong error: {}", e.to_string());
+    }
+    catch (...)
+    {
+        pong::log::error("Unknown error, exiting...");
+        return EXIT_FAILURE;
+    }
 }
