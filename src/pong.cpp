@@ -25,7 +25,8 @@ int main()
             static_cast<uint32_t>(APP_VERSION_MINOR),
             static_cast<uint32_t>(APP_VERSION_PATCH)};
 
-        auto win32_window = pong::Win32Window(app_name);
+        auto win32_window_create_info = pong::Win32WindowCreateInfo{100, 100, 800, 600};
+        auto win32_window = pong::Win32Window(app_name, win32_window_create_info);
 
         std::println("Hello Pong");
         return 0;

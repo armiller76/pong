@@ -9,7 +9,7 @@
 namespace pong
 {
 
-Win32Window::Win32Window(std::string_view app_name)
+Win32Window::Win32Window(std::string_view app_name, Win32WindowCreateInfo create_info)
     : window_({})
     , running_(false)
     , app_name_(app_name)
@@ -33,10 +33,10 @@ Win32Window::Win32Window(std::string_view app_name)
             class_name_.c_str(),
             app_name_.c_str(),
             WS_OVERLAPPEDWINDOW,
-            100,
-            100,
-            1200,
-            780,
+            create_info.x,
+            create_info.y,
+            create_info.width,
+            create_info.height,
             0,
             0,
             win32_instance,

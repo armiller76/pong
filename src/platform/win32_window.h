@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <string>
 
 #include <windows.h>
@@ -8,10 +9,18 @@
 namespace pong
 {
 
+struct Win32WindowCreateInfo
+{
+    std::uint32_t x;
+    std::uint32_t y;
+    std::uint32_t width;
+    std::uint32_t height;
+};
+
 class Win32Window
 {
   public:
-    Win32Window(std::string_view app_name);
+    Win32Window(std::string_view app_name, Win32WindowCreateInfo create_info);
 
     auto handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
