@@ -1,5 +1,5 @@
 #pragma once
-#include <string_view>
+#include <string>
 
 #include <windows.h>
 
@@ -20,8 +20,10 @@ class Win32Window
   private:
     static auto CALLBACK instance_window_callback(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
-    arm::AutoRelease<HWND, nullptr> window_;
+    arm::AutoRelease<HWND, static_cast<HWND>(0)> window_;
     bool running_;
+    std::string app_name_;
+    std::string class_name_;
 };
 
 }
