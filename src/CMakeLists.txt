@@ -1,5 +1,8 @@
 add_executable(Pong pong.cpp)
 
+add_subdirectory(engine)
+add_subdirectory(utils)
+
 target_compile_definitions(
   Pong
   PRIVATE NOMINMAX
