@@ -2,6 +2,7 @@ add_executable(Pong pong.cpp)
 
 add_subdirectory(engine)
 add_subdirectory(utils)
+add_subdirectory(platform)
 
 target_compile_definitions(
   Pong
