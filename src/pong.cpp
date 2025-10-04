@@ -33,10 +33,12 @@ int main()
     catch (::vk::SystemError &e)
     {
         arm::log::error("Vulkan error: {}", e.what());
+        return EXIT_FAILURE;
     }
     catch (arm::Exception &e)
     {
         arm::log::error("Pong error: {}", e.to_string());
+        return EXIT_FAILURE;
     }
     catch (...)
     {
