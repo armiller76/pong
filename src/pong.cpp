@@ -1,38 +1,46 @@
 #include <cstdlib>
 #include <print>
+#include <string>
 
 #include <vulkan/vulkan_raii.hpp>
 
 #include "engine/vulkan_instance.h"
+#include "platform/win32_window.h"
 #include "utils/exception.h"
 #include "utils/log.h"
 
 int main()
 {
+    std::string app_name{"Pong"};
+    std::string engine_name{"NotAnEngine"};
+
     try
     {
         auto vk_context = ::vk::raii::Context();
         auto vk_instance = pong::VulkanInstance{
             vk_context,
-            "Pong",
-            "NotAnEngine",
+            app_name,
+            engine_name,
             static_cast<uint32_t>(APP_VERSION_MAJOR),
             static_cast<uint32_t>(APP_VERSION_MINOR),
             static_cast<uint32_t>(APP_VERSION_PATCH)};
+
+        auto win32_window = pong::Win32Window(app_name);
+
         std::println("Hello Pong");
         return 0;
     }
     catch (::vk::SystemError &e)
     {
-        pong::log::error("Vulkan error: {}", e.what());
+        arm::log::error("Vulkan error: {}", e.what());
     }
-    catch (pong::Exception &e)
+    catch (arm::Exception &e)
     {
-        pong::log::error("Pong error: {}", e.to_string());
+        arm::log::error("Pong error: {}", e.to_string());
     }
     catch (...)
     {
-        pong::log::error("Unknown error, exiting...");
+        arm::log::error("Unknown error, exiting...");
         return EXIT_FAILURE;
     }
 }
