@@ -5,7 +5,7 @@
 #include <stacktrace>
 #include <string>
 
-namespace pong
+namespace arm
 {
 
 class Exception

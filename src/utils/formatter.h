@@ -7,7 +7,7 @@
 #include <format>
 #include <string>
 
-namespace hta
+namespace arm
 {
 
 template <class T>
@@ -63,7 +63,7 @@ struct Formatter
 // concept to check if a type can be formatted
 template <class T>
 concept CanFormat = requires(T a) {
-    { hta::util::to_string(a) } -> std::convertible_to<std::string>;
+    { arm::util::to_string(a) } -> std::convertible_to<std::string>;
 };
 
 /**
@@ -72,6 +72,6 @@ concept CanFormat = requires(T a) {
  * Look above for implementation details but it uses CPO to find the correct to_string function.
  */
 template <CanFormat T>
-struct std::formatter<T> : hta::Formatter<T>
+struct std::formatter<T> : arm::Formatter<T>
 {
 };

@@ -11,7 +11,7 @@
 
 #include "utils/formatter.h"
 
-namespace pong::log
+namespace arm::log
 {
 
 enum class Level

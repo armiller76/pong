@@ -11,7 +11,7 @@
 #include "utils/formatter.h"
 #include "utils/log.h"
 
-namespace pong
+namespace arm
 {
 
 /**

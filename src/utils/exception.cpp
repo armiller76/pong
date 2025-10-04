@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <format>
 
-namespace pong
+namespace arm
 {
 
 auto Exception::stacktrace() const -> std::string
