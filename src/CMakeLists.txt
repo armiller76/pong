@@ -13,4 +13,4 @@ target_compile_definitions(
 
 target_link_libraries(Pong PRIVATE Vulkan::Vulkan)
 target_include_directories(Pong PRIVATE ${Vulkan_INCLUDE_DIRS}
-                                        "$ENV{VULKAN_SDK}/Include")
+                                        ${CMAKE_CURRENT_SOURCE_DIR})
