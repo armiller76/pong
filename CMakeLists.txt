@@ -9,7 +9,7 @@ if(MSVC)
   add_compile_options(/WX /W4)
 endif()
 
-add_compile_definitions(VK_USE_WIN32_PLATFORM_KHR)
+add_compile_definitions(VK_USE_PLATFORM_WIN32_KHR)
 
 find_package(Vulkan REQUIRED)
 
