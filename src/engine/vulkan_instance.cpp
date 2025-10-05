@@ -6,6 +6,8 @@
 #include <string>
 #include <vector>
 
+#include <vulkan/vulkan_raii.hpp>
+
 #include "utils/error.h"
 
 namespace pong
@@ -23,6 +25,48 @@ VulkanInstance::VulkanInstance(
     , instance_({})
     , debug_messenger_({})
 {
+    auto required_extensions = std::vector{
+        VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME, VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
+    auto available_extensions = ::vk::enumerateInstanceExtensionProperties();
+    arm::ensure(
+        std::ranges::all_of(
+            required_extensions,
+            [&](const auto &required)
+            {
+                return std::ranges::find_if(
+                           available_extensions,
+                           [&](const auto &available) {
+                               return std::string_view(available.extensionName) == required;
+                           }) != available_extensions.end();
+            }),
+        "Required instance extension(s) not available");
+
+    constexpr auto validation = std::array<const char *, 1>{"VK_LAYER_KHRONOS_validation"};
+    auto available_layers = ::vk::enumerateInstanceLayerProperties();
+    arm::ensure(
+        std::ranges::find_if(
+            available_layers,
+            [&validation](const auto &available)
+            { return std::string_view(available.layerName) == validation[0]; }) != available_layers.end(),
+        "Validation layers not available");
+
+    auto vk_application_info = VkApplicationInfo{};
+    vk_application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    vk_application_info.apiVersion = VK_API_VERSION_1_3;
+    vk_application_info.applicationVersion = VK_MAKE_VERSION(major_version, minor_version, patch_version);
+    vk_application_info.pApplicationName = application_name_.c_str();
+    vk_application_info.pEngineName = engine_name_.c_str();
+
+    auto vk_instance_create_info = VkInstanceCreateInfo{};
+    vk_instance_create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    vk_instance_create_info.pApplicationInfo = &vk_application_info;
+    vk_instance_create_info.enabledExtensionCount = static_cast<std::uint32_t>(required_extensions.size());
+    vk_instance_create_info.ppEnabledExtensionNames = required_extensions.data();
+    vk_instance_create_info.enabledLayerCount = 1;
+    vk_instance_create_info.ppEnabledLayerNames = validation.data();
+
+    instance_ = ::vk::raii::Instance(context, vk_instance_create_info);
+
     auto debug_messenger_create_info = ::vk::DebugUtilsMessengerCreateInfoEXT{};
     debug_messenger_create_info.messageSeverity = ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eError |
                                                   ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
@@ -31,7 +75,7 @@ VulkanInstance::VulkanInstance(
                                               ::vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
                                               ::vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation;
     debug_messenger_create_info.pfnUserCallback =
-        reinterpret_cast<::vk::PFN_DebugUtilsMessengerCallbackEXT>(VulkanInstance::vk_debug_callback);
+        reinterpret_cast<::vk::PFN_DebugUtilsMessengerCallbackEXT>(&pong::VulkanInstance::vk_debug_callback);
     debug_messenger_ = ::vk::raii::DebugUtilsMessengerEXT(instance_, debug_messenger_create_info, nullptr);
 }
 
@@ -40,13 +84,65 @@ auto VulkanInstance::get() const -> const ::vk::raii::Instance &
     return instance_;
 }
 
-static auto VKAPI_PTR vk_debug_callback(
+auto VKAPI_PTR VulkanInstance::vk_debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
     VkDebugUtilsMessageTypeFlagsEXT message_types,
     const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
-    void *user_data) -> VkBool32
+    [[maybe_unused]] void *user_data) -> VkBool32
 {
-    // TODO: Implement this!
+    auto severity = message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT     ? "ERROR"
+                    : message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT ? "WARNING"
+                                                                                         : "INFO";
+    auto types = std::string{};
+    if (message_types & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+    {
+        types += "GENERAL|";
+    }
+    if (message_types & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+    {
+        types += "VALIDATION|";
+    }
+    if (message_types & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+    {
+        types += "PERFORMANCE|";
+    }
+    if (!types.empty())
+    {
+        types.pop_back();
+    }
+
+    auto message = std::format(
+        "Vulkan: [{}][{}] (ID: {}, Name: {}) {}",
+        severity,
+        types,
+        callback_data->messageIdNumber,
+        callback_data->pMessageIdName,
+        callback_data->pMessage);
+
+    switch (message_severity)
+    {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        {
+            arm::log::error("{}", message);
+        }
+        break;
+
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        {
+            arm::log::warn("{}", message);
+        }
+        break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        {
+            arm::log::info("{}", message);
+        }
+        break;
+        default:
+        {
+            throw arm::Exception("Unknown Vk debug message severity");
+        }
+    }
+    return VK_FALSE;
 }
 
 } // namespace pong

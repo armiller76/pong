@@ -1,6 +1,5 @@
 #include "vulkan_swapchain.h"
 
-#include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
 #include "platform/win32_window.h"
