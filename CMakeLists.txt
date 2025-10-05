@@ -9,6 +9,8 @@ if(MSVC)
   add_compile_options(/WX /W4)
 endif()
 
+add_compile_definitions(VK_USE_WIN32_PLATFORM_KHR)
+
 find_package(Vulkan REQUIRED)
 
 add_subdirectory(src)
