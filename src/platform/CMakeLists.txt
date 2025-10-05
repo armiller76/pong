@@ -1,1 +1,1 @@
-target_sources(Pong PRIVATE win32_window.cpp)
+target_sources(platform PRIVATE win32_window.cpp)
