@@ -12,6 +12,12 @@ target_compile_definitions(
           APP_VERSION_MINOR=${PROJECT_VERSION_MINOR}
           APP_VERSION_PATCH=${PROJECT_VERSION_PATCH})
 
-target_link_libraries(Pong PRIVATE Vulkan::Vulkan)
-target_include_directories(Pong PRIVATE ${Vulkan_INCLUDE_DIRS}
-                                        ${CMAKE_CURRENT_SOURCE_DIR})
+add_library(ponglib STATIC)
+target_link_libraries(ponglib PUBLIC engine platform utils)
+
+target_link_libraries(Pong PRIVATE Vulkan::Vulkan ponglib)
+target_include_directories(
+  Pong
+  PUBLIC ${Vulkan_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}
+         ${CMAKE_CURRENT_SOURCE_DIR}/platform
+         ${CMAKE_CURRENT_SOURCE_DIR}/engine ${CMAKE_CURRENT_SOURCE_DIR}/utils)

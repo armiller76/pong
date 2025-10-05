@@ -1,9 +1,9 @@
 FetchContent_MakeAvailable(google_test)
 
-add_executable(unit_tests unit_tests.cpp)
+add_executable(unit_tests window_tests.cpp)
 
-target_include_directories(unit_tests PRIVATE ${PROJECT_SOURCE_DIR}/src)
-target_link_libraries(unit_tests gtest gtest_main)
+target_include_directories(unit_tests PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(unit_tests PUBLIC gtest gtest_main engine platform utils)
 
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
