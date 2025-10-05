@@ -17,6 +17,12 @@ struct Win32WindowCreateInfo
     std::uint32_t height;
 };
 
+struct WindowHandles
+{
+    const HWND window;
+    const HINSTANCE instance;
+};
+
 class Win32Window
 {
   public:
@@ -26,11 +32,14 @@ class Win32Window
     auto handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
     auto running() const -> bool;
+    auto instance() const -> HINSTANCE;
+    auto handles() const -> WindowHandles;
 
   private:
     static auto CALLBACK instance_window_callback(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
     arm::AutoRelease<HWND, static_cast<HWND>(0)> window_;
+    HINSTANCE instance_;
     bool running_;
     std::string app_name_;
     std::string class_name_;

@@ -11,14 +11,14 @@ namespace pong
 
 Win32Window::Win32Window(std::string_view app_name, Win32WindowCreateInfo create_info)
     : window_({})
+    , instance_(::GetModuleHandleA(0))
     , running_(false)
     , app_name_(app_name)
     , class_name_(std::string(app_name_ + "WindowClass"))
 {
-    auto win32_instance = ::GetModuleHandleA(0);
     auto win32_window_class = WNDCLASS{};
     win32_window_class.lpfnWndProc = instance_window_callback;
-    win32_window_class.hInstance = win32_instance;
+    win32_window_class.hInstance = instance_;
     win32_window_class.lpszClassName = class_name_.c_str();
 
     if (!::RegisterClassA(&win32_window_class))
@@ -38,7 +38,7 @@ Win32Window::Win32Window(std::string_view app_name, Win32WindowCreateInfo create
             create_info.height,
             0,
             0,
-            win32_instance,
+            instance_,
             this),
         ::DestroyWindow};
 
@@ -85,6 +85,16 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
 auto Win32Window::running() const -> bool
 {
     return running_;
+}
+
+auto Win32Window::instance() const -> HINSTANCE
+{
+    return instance_;
+}
+
+auto Win32Window::handles() const -> WindowHandles
+{
+    return {window_, instance_};
 }
 
 auto CALLBACK Win32Window::instance_window_callback(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT
