@@ -5,6 +5,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "engine/vulkan_instance.h"
+#include "engine/vulkan_swapchain.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"
 #include "utils/log.h"
