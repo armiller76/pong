@@ -1,0 +1,17 @@
+Vulkan Project Structure Suggestions
+===================================
+
+| Class/Module         | Owns/Manages                                      |
+|----------------------|---------------------------------------------------|
+| VulkanInstance       | Instance, debug messenger                         |
+| VulkanDevice         | Physical/logical device, queues                   |
+| VulkanSwapchain      | Surface, swapchain, images, image views           |
+| VulkanRenderPass     | Render pass, framebuffers                         |
+| VulkanCommandPool    | Command pool, command buffers                     |
+| VulkanSync           | Semaphores, fences                                |
+| VulkanPipeline       | Pipeline, pipeline layout, shaders                |
+
+Notes:
+- Group tightly related Vulkan objects together.
+- Keep objects with different lifetimes or responsibilities separate.
+- This modular approach keeps your codebase clean and avoids a monolith.
