@@ -3,11 +3,34 @@
 #include <string>
 #include <windows.h>
 
+#include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
 
 namespace pong
 {
+
+Win32WindowCreateInfo::Win32WindowCreateInfo()
+    : Win32WindowCreateInfo(0, 0, 800, 600)
+{
+    arm::log::warn("Win32WindowCreateInfo: No parameters, using defaults");
+}
+
+Win32WindowCreateInfo::Win32WindowCreateInfo(
+    std::uint32_t x,
+    std::uint32_t y,
+    std::uint32_t width,
+    std::uint32_t height)
+    : x(x)
+    , y(y)
+    , width(width)
+    , height(height)
+{
+    arm::ensure(x >= 0, "Win32WindowCreateInfo: Invalid x parameter ({})", x);
+    arm::ensure(y >= 0, "Win32WindowCreateInfo: Invalid y parameter ({})", y);
+    arm::ensure(width >= 0 && width <= 8192, "Win32WindowCreateInfo: Invalid width parameter ({})", width);
+    arm::ensure(height >= 0 && height <= 4320, "Win32WindowCreateInfo: Invalid height parameter ({})", height);
+}
 
 Win32Window::Win32Window(std::string_view app_name, Win32WindowCreateInfo create_info)
     : window_({})

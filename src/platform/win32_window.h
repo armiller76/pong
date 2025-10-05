@@ -15,6 +15,10 @@ struct Win32WindowCreateInfo
     std::uint32_t y;
     std::uint32_t width;
     std::uint32_t height;
+
+    Win32WindowCreateInfo();
+
+    Win32WindowCreateInfo(std::uint32_t x, std::uint32_t y, std::uint32_t width, std::uint32_t height);
 };
 
 struct WindowHandles
