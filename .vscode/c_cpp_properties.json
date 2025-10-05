@@ -4,7 +4,8 @@
 			"name": "Win32",
 			"includePath": [
 				"${workspaceFolder}/src/**",
-				"${env:VULKAN_SDK}/Include"
+				"${env:VULKAN_SDK}/Include",
+				"${workspaceFolder}/build/_deps/google_test-src/googletest/include"
 			],
 			"defines": [
 				"_DEBUG",
