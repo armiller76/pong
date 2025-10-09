@@ -2,13 +2,14 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/vulkan_instance.h"
 #include "platform/win32_window.h"
 
 namespace pong
 {
 
-VulkanSurface::VulkanSurface(::vk::raii::Instance &vk_instance, WindowHandles handles)
-    : surface_(vk_instance, ::vk::Win32SurfaceCreateInfoKHR{}.setHwnd(handles.window).setHinstance(handles.instance))
+VulkanSurface::VulkanSurface(const VulkanInstance &vk_instance, const WindowHandles &handles)
+    : surface_(vk_instance.get(), ::vk::Win32SurfaceCreateInfoKHR({}, handles.instance, handles.window))
 {
 }
 

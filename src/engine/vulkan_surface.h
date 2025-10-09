@@ -8,13 +8,15 @@
 
 namespace pong
 {
+class VulkanInstance;
 
 class VulkanSurface
 {
   public:
-    VulkanSurface(::vk::raii::Instance &vk_instance, WindowHandles handles);
+    VulkanSurface(const VulkanInstance &vk_instance, const WindowHandles &handles);
 
     auto get() const -> const ::vk::raii::SurfaceKHR &;
+
     auto get_surface_capabilities(const ::vk::raii::PhysicalDevice &physical_device) const
         -> ::vk::SurfaceCapabilitiesKHR;
     auto get_surface_formats(const ::vk::raii::PhysicalDevice &physical_device) const
