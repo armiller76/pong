@@ -4,8 +4,9 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/vulkan_device.h"
 #include "engine/vulkan_instance.h"
-#include "engine/vulkan_swapchain.h"
+#include "engine/vulkan_surface.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"
 #include "utils/log.h"
@@ -18,7 +19,7 @@ int main()
     try
     {
         auto vk_context = ::vk::raii::Context();
-        auto vk_instance = pong::VulkanInstance{
+        const auto vk_instance = pong::VulkanInstance{
             vk_context,
             app_name,
             engine_name,
@@ -27,6 +28,9 @@ int main()
             static_cast<uint32_t>(APP_VERSION_PATCH)};
 
         auto win32_window = pong::Win32Window(app_name, {100, 100, 800, 600});
+
+        const auto vk_surface = pong::VulkanSurface(vk_instance, win32_window.handles());
+        const auto vk_device = pong::VulkanDevice(vk_instance, vk_surface);
 
         while (win32_window.running())
         {
