@@ -7,9 +7,11 @@
 #include "engine/vulkan_device.h"
 #include "engine/vulkan_instance.h"
 #include "engine/vulkan_surface.h"
+#include "engine/vulkan_swapchain.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"
 #include "utils/log.h"
+
 
 int main()
 {
@@ -31,6 +33,8 @@ int main()
 
         const auto vk_surface = pong::VulkanSurface(vk_instance, win32_window.handles());
         const auto vk_device = pong::VulkanDevice(vk_instance, vk_surface);
+
+        auto vk_swapchain = pong::VulkanSwapchain(vk_surface, vk_device);
 
         while (win32_window.running())
         {
