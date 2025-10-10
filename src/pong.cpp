@@ -4,6 +4,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/vulkan_command_context.h"
 #include "engine/vulkan_device.h"
 #include "engine/vulkan_instance.h"
 #include "engine/vulkan_surface.h"
@@ -11,7 +12,6 @@
 #include "platform/win32_window.h"
 #include "utils/exception.h"
 #include "utils/log.h"
-
 
 int main()
 {
@@ -35,6 +35,7 @@ int main()
         const auto vk_device = pong::VulkanDevice(vk_instance, vk_surface);
 
         auto vk_swapchain = pong::VulkanSwapchain(vk_surface, vk_device);
+        auto vk_command_context = pong::VulkanCommandContext(vk_device, 2u);
 
         while (win32_window.running())
         {
