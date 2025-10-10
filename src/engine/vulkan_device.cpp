@@ -89,6 +89,11 @@ auto VulkanDevice::get() const -> const ::vk::raii::Device &
     return device_;
 }
 
+auto VulkanDevice::physical_device() const -> const ::vk::raii::PhysicalDevice &
+{
+    return physical_device_;
+}
+
 auto VulkanDevice::graphics_queue() const -> ::vk::Queue
 {
     return graphics_queue_;
