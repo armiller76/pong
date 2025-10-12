@@ -8,7 +8,7 @@
 namespace pong
 {
 
-VulkanSurface::VulkanSurface(const VulkanInstance &vk_instance, const WindowHandles &handles)
+VulkanSurface::VulkanSurface(const VulkanInstance &vk_instance, const Win32WindowHandles &handles)
     : surface_(vk_instance.get(), ::vk::Win32SurfaceCreateInfoKHR({}, handles.instance, handles.window))
 {
 }

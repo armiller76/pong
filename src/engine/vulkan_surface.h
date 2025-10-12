@@ -4,16 +4,21 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "platform/win32_window.h"
-
 namespace pong
 {
 class VulkanInstance;
+struct Win32WindowHandles;
 
 class VulkanSurface
 {
   public:
-    VulkanSurface(const VulkanInstance &vk_instance, const WindowHandles &handles);
+    VulkanSurface(const VulkanInstance &vk_instance, const Win32WindowHandles &handles);
+
+    VulkanSurface(VulkanSurface &&) noexcept = default;
+    VulkanSurface &operator=(VulkanSurface &&) noexcept = default;
+    VulkanSurface(const VulkanSurface &) = delete;
+    VulkanSurface &operator=(const VulkanSurface &) = delete;
+    ~VulkanSurface() = default;
 
     auto get() const -> const ::vk::raii::SurfaceKHR &;
 
