@@ -12,11 +12,15 @@
 #include "platform/win32_window.h"
 #include "utils/exception.h"
 #include "utils/log.h"
+#include "utils/util.h"
 
 int main()
 {
     std::string app_name{"Pong"};
     std::string engine_name{"NotAnEngine"};
+
+    auto window_offset = pong::Offset{100u, 100u};
+    auto window_size = pong::Size{800u, 600u};
 
     try
     {
@@ -29,17 +33,18 @@ int main()
             static_cast<uint32_t>(APP_VERSION_MINOR),
             static_cast<uint32_t>(APP_VERSION_PATCH)};
 
-        auto win32_window = pong::Win32Window(app_name, {100, 100, 800, 600});
+        // TODO: consider other platforms
+        auto window = pong::Win32Window(app_name, window_offset, window_size);
 
-        const auto vk_surface = pong::VulkanSurface(vk_instance, win32_window.handles());
+        const auto vk_surface = window.create_vulkan_surface(vk_instance);
         const auto vk_device = pong::VulkanDevice(vk_instance, vk_surface);
 
-        auto vk_swapchain = pong::VulkanSwapchain(vk_surface, vk_device);
-        auto vk_command_context = pong::VulkanCommandContext(vk_device, 2u);
+        // auto vk_swapchain = VulkanSwapchain(vk_surface, vk_device);
+        // auto vk_command_context = VulkanCommandContext(vk_device, 2u);
 
-        while (win32_window.running())
+        while (!window.should_close())
         {
-            win32_window.process_events();
+            window.process_events();
         }
 
         std::println("Hello Pong");
@@ -60,4 +65,4 @@ int main()
         arm::log::error("Unknown error, exiting...");
         return EXIT_FAILURE;
     }
-}
+} // main()

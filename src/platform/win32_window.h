@@ -1,52 +1,67 @@
 #pragma once
+
 #include <cstdint>
+#include <functional>
+#include <map>
 #include <string>
 
 #include <windows.h>
 
+#include "engine/window.h"
 #include "utils/auto_release.h"
+#include "utils/util.h"
 
 namespace pong
 {
 
-struct Win32WindowCreateInfo
-{
-    std::uint32_t x;
-    std::uint32_t y;
-    std::uint32_t width;
-    std::uint32_t height;
-
-    Win32WindowCreateInfo();
-
-    Win32WindowCreateInfo(std::uint32_t x, std::uint32_t y, std::uint32_t width, std::uint32_t height);
-};
-
-struct WindowHandles
+struct Win32WindowHandles
 {
     const HWND window;
     const HINSTANCE instance;
 };
 
-class Win32Window
+class VulkanInstance;
+class VulkanSurface;
+
+class Win32Window : public Window
 {
   public:
-    Win32Window(std::string_view application_name, Win32WindowCreateInfo create_info);
+    ~Win32Window() override;
 
-    auto process_events() -> void;
+    Win32Window(std::string_view application_name, Offset window_offset, Size window_size);
+
+    auto process_events() -> void override;
     auto handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
-    auto running() const -> bool;
-    auto instance() const -> HINSTANCE;
-    auto handles() const -> WindowHandles;
+    auto size_pixels() const -> Size override;
+    auto set_title(std::string_view title) -> void override;
+
+    auto should_close() const -> bool override;
+    auto win32_handles() const -> Win32WindowHandles;
+
+    auto create_vulkan_surface(const VulkanInstance &instance) const -> VulkanSurface override;
+
+    auto add_close_callback(std::function<void()> close_callback) -> std::uint64_t override;
+    auto remove_close_callback(std::uint64_t callback_id) -> void override;
+
+    auto add_resize_callback(std::function<void(std::uint32_t, std::uint32_t)> resize_callback)
+        -> std::uint64_t override;
+    auto remove_resize_callback(std::uint64_t callback_id) -> void override;
 
   private:
-    static auto CALLBACK instance_window_callback(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
+    arm::AutoRelease<HWND, static_cast<HWND>(0)> hwnd_;
+    HINSTANCE hinstance_;
+    bool should_close_;
+    std::string app_name_{};
+    std::string class_name_{};
+    std::uint32_t window_width_{};
+    std::uint32_t window_height_{};
 
-    arm::AutoRelease<HWND, static_cast<HWND>(0)> window_;
-    HINSTANCE instance_;
-    bool running_;
-    std::string app_name_;
-    std::string class_name_;
+    std::map<std::uint64_t, std::function<void()>> close_callbacks_{};
+    std::map<std::uint64_t, std::function<void(std::uint32_t, std::uint32_t)>> resize_callbacks_{};
+    std::uint64_t current_callback_token_{};
+
+    static auto CALLBACK instance_window_callback(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 };
 
 }

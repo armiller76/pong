@@ -1,72 +1,72 @@
 #include "win32_window.h"
 
+#include <map>
 #include <string>
 #include <windows.h>
 
+#include "engine/vulkan_instance.h"
+#include "engine/vulkan_surface.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
+#include "utils/util.h"
 
 namespace pong
 {
 
-Win32WindowCreateInfo::Win32WindowCreateInfo()
-    : Win32WindowCreateInfo(0, 0, 800, 600)
+Win32Window::~Win32Window()
 {
-    arm::log::warn("Win32WindowCreateInfo: No parameters, using defaults");
+    ::UnregisterClassA(class_name_.c_str(), hinstance_);
 }
 
-Win32WindowCreateInfo::Win32WindowCreateInfo(
-    std::uint32_t x,
-    std::uint32_t y,
-    std::uint32_t width,
-    std::uint32_t height)
-    : x(x)
-    , y(y)
-    , width(width)
-    , height(height)
-{
-    arm::ensure(x >= 0, "Win32WindowCreateInfo: Invalid x parameter ({})", x);
-    arm::ensure(y >= 0, "Win32WindowCreateInfo: Invalid y parameter ({})", y);
-    arm::ensure(width >= 0 && width <= 8192, "Win32WindowCreateInfo: Invalid width parameter ({})", width);
-    arm::ensure(height >= 0 && height <= 4320, "Win32WindowCreateInfo: Invalid height parameter ({})", height);
-}
-
-Win32Window::Win32Window(std::string_view app_name, Win32WindowCreateInfo create_info)
-    : window_({})
-    , instance_(::GetModuleHandleA(0))
-    , running_(false)
+Win32Window::Win32Window(std::string_view app_name, Offset window_offset, Size window_size)
+    : hinstance_(::GetModuleHandleA(0))
+    , should_close_(false)
     , app_name_(app_name)
     , class_name_(std::string(app_name_ + "WindowClass"))
+    , window_width_(window_size.width)
+    , window_height_(window_size.height)
 {
+    arm::ensure(
+        (window_width_ != 0) && (window_height_ != 0),
+        "Invalid window dimension: w={} h={}",
+        window_width_,
+        window_height_);
+
+    // TODO: Consider some parameterization here?
     auto win32_window_class = WNDCLASS{};
     win32_window_class.lpfnWndProc = instance_window_callback;
-    win32_window_class.hInstance = instance_;
+    win32_window_class.hInstance = hinstance_;
     win32_window_class.lpszClassName = class_name_.c_str();
 
     if (!::RegisterClassA(&win32_window_class))
     {
-        throw arm::Exception("Failed to create window class");
+        throw arm::Exception("Failed to register window class");
     }
 
-    window_ = {
+    hwnd_ = {
         ::CreateWindowExA(
             WS_EX_OVERLAPPEDWINDOW,
             class_name_.c_str(),
             app_name_.c_str(),
             WS_OVERLAPPEDWINDOW,
-            create_info.x,
-            create_info.y,
-            create_info.width,
-            create_info.height,
+            window_offset.x,
+            window_offset.y,
+            window_width_,
+            window_height_,
             0,
             0,
-            instance_,
+            hinstance_,
             this),
         ::DestroyWindow};
 
-    ::ShowWindow(window_, SW_SHOWNORMAL);
-    running_ = true;
+    if (!hwnd_)
+    {
+        throw arm::Exception("CreateWindowEx failed");
+    }
+
+    ::ShowWindow(hwnd_, SW_SHOWNORMAL);
+    ::UpdateWindow(hwnd_);
 }
 
 auto Win32Window::process_events() -> void
@@ -76,7 +76,7 @@ auto Win32Window::process_events() -> void
     {
         if (message.message == WM_QUIT)
         {
-            running_ = false;
+            should_close_ = true;
             break;
         }
 
@@ -89,51 +89,120 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
 {
     switch (msg)
     {
+        case WM_SIZE:
+        {
+            if (wParam != SIZE_MINIMIZED)
+            {
+                window_width_ = LOWORD(lParam);
+                window_height_ = HIWORD(lParam);
+
+                for (const auto &[id, callback] : resize_callbacks_)
+                {
+                    callback(window_width_, window_height_);
+                }
+            }
+            return 0;
+        }
+
         case WM_CLOSE:
         {
-            running_ = false;
+            should_close_ = true;
+
+            for (const auto &[id, callback] : close_callbacks_)
+            {
+                callback();
+            }
+
             ::PostQuitMessage(0);
-            break;
+            return 0;
         }
+
         case WM_DESTROY:
         {
+            should_close_ = true;
             ::PostQuitMessage(0);
-            break;
+            return 0;
         }
-        default: break;
+
+        default:
+        {
+            return ::DefWindowProcA(window, msg, wParam, lParam);
+        }
     }
-    return ::DefWindowProcA(window, msg, wParam, lParam);
 }
 
-auto Win32Window::running() const -> bool
+auto Win32Window::size_pixels() const -> Size
 {
-    return running_;
+    return Size{window_width_, window_height_};
 }
 
-auto Win32Window::instance() const -> HINSTANCE
+auto Win32Window::set_title(std::string_view title) -> void
 {
-    return instance_;
+    ::SetWindowTextA(hwnd_, title.data());
 }
 
-auto Win32Window::handles() const -> WindowHandles
+auto Win32Window::should_close() const -> bool
 {
-    return {window_, instance_};
+    return should_close_;
+}
+
+auto Win32Window::win32_handles() const -> Win32WindowHandles
+{
+    return {hwnd_, hinstance_};
+}
+
+auto Win32Window::create_vulkan_surface(const VulkanInstance &instance) const -> VulkanSurface
+{
+    return VulkanSurface{instance, win32_handles()};
+}
+
+auto Win32Window::add_close_callback(std::function<void()> close_callback) -> std::uint64_t
+{
+    auto token = ++current_callback_token_;
+    close_callbacks_.emplace(token, close_callback);
+    return token;
+}
+
+auto Win32Window::remove_close_callback(std::uint64_t callback_handle) -> void
+{
+    arm::ensure(
+        close_callbacks_.contains(callback_handle),
+        "Can't remove close_callbacks_ handle ({}) which is not in the map",
+        callback_handle);
+    close_callbacks_.erase(callback_handle);
+}
+
+auto Win32Window::add_resize_callback(std::function<void(std::uint32_t, std::uint32_t)> resize_callback)
+    -> std::uint64_t
+{
+    auto token = ++current_callback_token_;
+    resize_callbacks_.emplace(token, resize_callback);
+    return token;
+}
+
+auto Win32Window::remove_resize_callback(std::uint64_t callback_handle) -> void
+{
+    arm::ensure(
+        resize_callbacks_.contains(callback_handle),
+        "Can't remove resize_callbacks_ handle ({}) which is not in the map",
+        callback_handle);
+    resize_callbacks_.erase(callback_handle);
 }
 
 auto CALLBACK Win32Window::instance_window_callback(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT
 {
-    Win32Window *self = reinterpret_cast<Win32Window *>(::GetWindowLongPtrA(window, GWLP_USERDATA));
-    if (self)
-    {
-        return self->handle_message(window, msg, wParam, lParam);
-    }
-
     if (msg == WM_NCCREATE)
     {
         auto create_struct = reinterpret_cast<CREATESTRUCT *>(lParam);
         auto this_pointer = reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams);
         SetWindowLongPtr(window, GWLP_USERDATA, this_pointer);
-        return ::DefWindowProcA(window, msg, wParam, lParam);
+        return TRUE;
+    }
+
+    Win32Window *self = reinterpret_cast<Win32Window *>(::GetWindowLongPtrA(window, GWLP_USERDATA));
+    if (self)
+    {
+        return self->handle_message(window, msg, wParam, lParam);
     }
 
     return DefWindowProcA(window, msg, wParam, lParam);
