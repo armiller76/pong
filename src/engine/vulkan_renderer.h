@@ -1,0 +1,32 @@
+#pragma once
+
+#include <vulkan/vulkan_raii.hpp>
+
+#include "engine/vulkan_command_context.h"
+#include "engine/vulkan_surface.h"
+#include "engine/vulkan_swapchain.h"
+
+namespace pong
+{
+class VulkanDevice;
+
+class VulkanRenderer
+{
+  public:
+    VulkanRenderer(const VulkanDevice &device, const VulkanSurface surface);
+
+    auto begin_frame() -> void;
+    auto begin_render_pass() -> void;
+    auto draw() -> void;
+    auto end_render_pass() -> void;
+    auto end_frame() -> void;
+
+  private:
+    const VulkanDevice &device_;
+    const VulkanSurface surface_;
+
+    VulkanSwapchain swapchain_;
+    VulkanCommandContext command_context_;
+};
+
+}

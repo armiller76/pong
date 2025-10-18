@@ -16,6 +16,9 @@ struct VulkanDeviceInfo
     std::uint32_t score;
     std::uint32_t graphics_index;
     std::uint32_t present_index;
+    bool supports_api13;
+    bool supports_dynamic_rendering;
+    bool supports_sync2;
 };
 
 class VulkanDevice
@@ -31,6 +34,8 @@ class VulkanDevice
     auto present_queue() const -> ::vk::Queue;
     auto present_queue_index() const -> std::uint32_t;
 
+    auto supports_dynamic_rendering() const -> bool;
+
   private:
     ::vk::raii::PhysicalDevice physical_device_;
     ::vk::raii::Device device_;
@@ -38,6 +43,9 @@ class VulkanDevice
     std::uint32_t present_queue_family_index_;
     ::vk::Queue graphics_queue_;
     ::vk::Queue present_queue_;
+    bool supports_api13_;
+    bool supports_dynamic_rendering_;
+    bool supports_sync2_;
 
     auto score_device(VulkanDeviceInfo &info, const VulkanSurface &surface) -> void;
 };

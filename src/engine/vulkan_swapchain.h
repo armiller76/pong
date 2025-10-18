@@ -12,7 +12,7 @@ class VulkanSurface;
 class VulkanSwapchain
 {
   public:
-    VulkanSwapchain(const VulkanSurface &surface, const VulkanDevice &device);
+    VulkanSwapchain(const VulkanDevice &device, const VulkanSurface &surface);
 
     auto recreate() -> void;
 

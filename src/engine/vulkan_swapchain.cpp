@@ -14,7 +14,7 @@
 namespace pong
 {
 
-VulkanSwapchain::VulkanSwapchain(const VulkanSurface &surface, const VulkanDevice &device)
+VulkanSwapchain::VulkanSwapchain(const VulkanDevice &device, const VulkanSurface &surface)
     : device_(device)
     , surface_(surface)
 {
