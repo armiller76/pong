@@ -5,6 +5,7 @@
 #include <ranges>
 #include <set>
 #include <string_view>
+#include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -29,6 +30,8 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
     , supports_dynamic_rendering_(false)
     , supports_sync2_(false)
 {
+    arm::log::debug("Starting device selection and creation...");
+
     static constexpr std::array<const char *, 1> required_device_extensions_if_13 = {::vk::KHRSwapchainExtensionName};
     static constexpr std::array<const char *, 3> required_device_extensions_no_13 = {
         ::vk::KHRSwapchainExtensionName,
@@ -41,9 +44,16 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
     auto device_infos = std::vector<VulkanDeviceInfo>();
     for (const auto &physical_device : available_devices)
     {
-        auto vulkan_device_info = VulkanDeviceInfo{&physical_device, 0, UINT32_MAX, UINT32_MAX, false, false, false};
+        auto vulkan_device_info = VulkanDeviceInfo{*physical_device, 0, UINT32_MAX, UINT32_MAX, false, false, false};
 
         const auto device_properties = physical_device.getProperties();
+        arm::log::debug(
+            "Enumerated device: {} (vendorID: {:#x}, deviceID: {:#x}, type: {})",
+            std::string_view(device_properties.deviceName),
+            device_properties.vendorID,
+            device_properties.deviceID,
+            ::vk::to_string(device_properties.deviceType));
+
         if (device_properties.apiVersion >= VK_API_VERSION_1_3)
         {
             vulkan_device_info.supports_api13 = true;
@@ -52,6 +62,19 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
             const auto &features13 = features.get<::vk::PhysicalDeviceVulkan13Features>();
             vulkan_device_info.supports_dynamic_rendering = features13.dynamicRendering == VK_TRUE;
             vulkan_device_info.supports_sync2 = features13.synchronization2 == VK_TRUE;
+        }
+        else // API < 1.3
+        {
+            vulkan_device_info.supports_api13 = false;
+            auto features = physical_device.getFeatures2<
+                ::vk::PhysicalDeviceFeatures2,
+                ::vk::PhysicalDeviceSynchronization2Features,
+                ::vk::PhysicalDeviceDynamicRenderingFeatures>();
+            const auto feature_dynamic_rendering = features.get<::vk::PhysicalDeviceDynamicRenderingFeatures>();
+            const auto feature_sync2 = features.get<::vk::PhysicalDeviceSynchronization2Features>();
+
+            vulkan_device_info.supports_dynamic_rendering = feature_dynamic_rendering.dynamicRendering == VK_TRUE;
+            vulkan_device_info.supports_sync2 = feature_sync2.synchronization2 == VK_TRUE;
         }
 
         auto has_extensions = true;
@@ -81,8 +104,15 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
 
         if (has_extensions)
         {
-            score_device(vulkan_device_info, surface);
-            device_infos.push_back(vulkan_device_info);
+            if (score_device(vulkan_device_info, surface, physical_device))
+            {
+                // score_device returns true if the device has graphics and present support
+                device_infos.push_back(vulkan_device_info);
+            }
+            arm::log::debug(
+                "Scored physical device: {} (Score: {})",
+                std::string_view(device_properties.deviceName),
+                vulkan_device_info.score);
         }
     }
 
@@ -90,9 +120,14 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
 
     std::ranges::sort(device_infos, std::greater{}, &VulkanDeviceInfo::score);
 
-    physical_device_ = ::vk::raii::PhysicalDevice(*device_infos[0].physical_device);
+    physical_device_ = ::vk::raii::PhysicalDevice(instance.get(), device_infos[0].physical_device);
     graphics_queue_family_index_ = device_infos[0].graphics_index;
     present_queue_family_index_ = device_infos[0].present_index;
+    arm::log::debug(
+        "Selected physical device: {} (graphics queue index {}, present queue index {})",
+        std::string_view(physical_device_.getProperties().deviceName),
+        graphics_queue_family_index_,
+        present_queue_family_index_);
 
     arm::ensure(graphics_queue_family_index_ != UINT32_MAX, "No graphics queue family found");
     arm::ensure(present_queue_family_index_ != UINT32_MAX, "No present queue family found");
@@ -109,12 +144,41 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
             &queue_priority);
     }
 
-    vk::PhysicalDeviceFeatures device_features{};
-    vk::DeviceCreateInfo device_create_info{
-        {}, queue_create_infos, {}, required_device_extensions_no_13, &device_features};
+    auto device_create_info = vk::DeviceCreateInfo{};
+    [[maybe_unused]] auto feature_api13 = ::vk::PhysicalDeviceVulkan13Features{};
+    [[maybe_unused]] auto feature_sync2 = ::vk::PhysicalDeviceSynchronization2Features{};
+    [[maybe_unused]] auto feature_dynamic_rendering = ::vk::PhysicalDeviceDynamicRenderingFeatures{};
+
+    if (device_infos[0].supports_api13)
+    {
+        feature_api13.synchronization2 = device_infos[0].supports_sync2 ? VK_TRUE : VK_FALSE;
+        feature_api13.dynamicRendering = device_infos[0].supports_dynamic_rendering ? VK_TRUE : VK_FALSE;
+
+        device_create_info = {{}, queue_create_infos, {}, required_device_extensions_if_13, nullptr};
+        device_create_info.pNext = &feature_api13;
+    }
+    else
+    {
+        feature_dynamic_rendering.dynamicRendering = device_infos[0].supports_dynamic_rendering ? VK_TRUE : VK_FALSE;
+        feature_sync2.synchronization2 = device_infos[0].supports_sync2 ? VK_TRUE : VK_FALSE;
+        feature_sync2.pNext = &feature_dynamic_rendering;
+
+        device_create_info = {{}, queue_create_infos, {}, required_device_extensions_no_13, nullptr};
+        device_create_info.pNext = &feature_sync2;
+    }
+
     device_ = vk::raii::Device(physical_device_, device_create_info);
     graphics_queue_ = device_.getQueue(graphics_queue_family_index_, 0);
     present_queue_ = device_.getQueue(present_queue_family_index_, 0);
+    supports_api13_ = device_infos[0].supports_api13;
+    supports_dynamic_rendering_ = device_infos[0].supports_dynamic_rendering;
+    supports_sync2_ = device_infos[0].supports_sync2;
+
+    arm::log::debug(
+        "Device creation complete...\n\tAPI Version: {}\n\tDynamic Rendering: {}\n\tSynchronization2: {}",
+        supports_api13_ ? ">= 1.3" : "< 1.3",
+        supports_dynamic_rendering_ ? "Supported" : "Not Supported",
+        supports_sync2_ ? "Supported" : "Not Supported");
 }
 
 auto VulkanDevice::get() const -> const ::vk::raii::Device &
@@ -149,13 +213,17 @@ auto VulkanDevice::present_queue_index() const -> std::uint32_t
 
 auto VulkanDevice::supports_dynamic_rendering() const -> bool
 {
-    // TODO: Implement supports_dynamic_rendering
-    const auto physical_device_features = physical_device_.getFeatures2KHR();
+    return supports_dynamic_rendering_;
 }
 
-auto VulkanDevice::score_device(VulkanDeviceInfo &info, const VulkanSurface &surface) -> void
+auto VulkanDevice::score_device(
+    VulkanDeviceInfo &info,
+    const VulkanSurface &surface,
+    const ::vk::raii::PhysicalDevice &device) -> bool
 {
-    const auto queue_family_properties = info.physical_device->getQueueFamilyProperties();
+    auto result = false;
+
+    const auto queue_family_properties = device.getQueueFamilyProperties();
 
     auto graphics_index = UINT32_MAX;
     auto present_index = UINT32_MAX;
@@ -165,7 +233,7 @@ auto VulkanDevice::score_device(VulkanDeviceInfo &info, const VulkanSurface &sur
     {
         const auto has_graphics = (queue_family_properties[i].queueFlags & ::vk::QueueFlagBits::eGraphics) !=
                                   static_cast<::vk::QueueFlags>(0);
-        const auto has_present = surface.get_present_support(*info.physical_device, i);
+        const auto has_present = surface.get_present_support(device, i);
 
         if (has_graphics && graphics_index == UINT32_MAX)
             graphics_index = i;
@@ -183,15 +251,17 @@ auto VulkanDevice::score_device(VulkanDeviceInfo &info, const VulkanSurface &sur
         info.graphics_index = combined_index;
         info.present_index = combined_index;
         info.score += COMBINED_QUEUE_BONUS;
+        result = true;
     }
     else if (graphics_index != UINT32_MAX && present_index != UINT32_MAX)
     {
         info.graphics_index = graphics_index;
         info.present_index = present_index;
         info.score += SEPARATE_QUEUE_BONUS;
+        result = true;
     }
 
-    const auto device_properties = info.physical_device->getProperties();
+    const auto device_properties = device.getProperties();
     if (device_properties.deviceType == ::vk::PhysicalDeviceType::eDiscreteGpu)
     {
         info.score += DISCRETE_GPU_BONUS;
@@ -201,7 +271,7 @@ auto VulkanDevice::score_device(VulkanDeviceInfo &info, const VulkanSurface &sur
         info.score += INTEGRATED_GPU_BONUS;
     }
 
-    const auto device_memory_properties = info.physical_device->getMemoryProperties();
+    const auto device_memory_properties = device.getMemoryProperties();
     auto largest_heap_size = ::vk::DeviceSize{0};
     for (std::uint32_t i = 0; i < device_memory_properties.memoryHeapCount; ++i)
     {
@@ -212,6 +282,7 @@ auto VulkanDevice::score_device(VulkanDeviceInfo &info, const VulkanSurface &sur
         }
     }
     info.score += static_cast<uint32_t>(largest_heap_size / (256 * 1024 * 1024));
+    return result;
 }
 
 } // namespace pong

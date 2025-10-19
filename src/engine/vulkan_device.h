@@ -12,7 +12,7 @@ class VulkanSurface;
 
 struct VulkanDeviceInfo
 {
-    const vk::raii::PhysicalDevice *physical_device;
+    vk::PhysicalDevice physical_device;
     std::uint32_t score;
     std::uint32_t graphics_index;
     std::uint32_t present_index;
@@ -47,7 +47,8 @@ class VulkanDevice
     bool supports_dynamic_rendering_;
     bool supports_sync2_;
 
-    auto score_device(VulkanDeviceInfo &info, const VulkanSurface &surface) -> void;
+    auto score_device(VulkanDeviceInfo &info, const VulkanSurface &surface, const ::vk::raii::PhysicalDevice &device)
+        -> bool;
 };
 
 }
