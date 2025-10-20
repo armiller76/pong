@@ -17,6 +17,7 @@ VulkanCommandContext::VulkanCommandContext(const VulkanDevice &device, std::uint
     , frames_in_flight_(frames_in_flight)
     , current_frame_(0)
 {
+    arm::log::debug("VulkanCommandContext constructor");
 #ifndef NDEBUG
     auto debug_name_info = ::vk::DebugUtilsObjectNameInfoEXT{};
     auto debug_name_str = std::string{};

@@ -18,6 +18,7 @@ VulkanSwapchain::VulkanSwapchain(const VulkanDevice &device, const VulkanSurface
     : device_(device)
     , surface_(surface)
 {
+    arm::log::debug("VulkanSwapchain constructor");
     create_();
 }
 

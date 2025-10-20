@@ -25,6 +25,8 @@ VulkanInstance::VulkanInstance(
     , instance_({})
     , debug_messenger_({})
 {
+    arm::log::debug("VulkanInstance constructor");
+
     auto required_extensions = std::vector{
         VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME, VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
     auto available_extensions = ::vk::enumerateInstanceExtensionProperties();

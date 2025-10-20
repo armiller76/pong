@@ -30,6 +30,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
     , supports_dynamic_rendering_(false)
     , supports_sync2_(false)
 {
+    arm::log::debug("VulkanDevice constructor");
     arm::log::debug("Starting device selection and creation...");
 
     static constexpr std::array<const char *, 1> required_device_extensions_if_13 = {::vk::KHRSwapchainExtensionName};
