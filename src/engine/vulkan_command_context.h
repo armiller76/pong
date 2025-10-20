@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstddef>
+#include <cstdint>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -19,12 +19,16 @@ class VulkanCommandContext
     auto advance_frame() -> void;
 
     auto current_command_buffer() -> ::vk::raii::CommandBuffer &;
+    auto current_command_buffer() const -> const ::vk::raii::CommandBuffer &;
     auto current_fence() -> ::vk::raii::Fence &;
+    auto current_fence() const -> const ::vk::raii::Fence &;
     auto current_image_available_semaphore() -> ::vk::raii::Semaphore &;
+    auto current_image_available_semaphore() const -> const ::vk::raii::Semaphore &;
     auto current_render_finished_semaphore() -> ::vk::raii::Semaphore &;
+    auto current_render_finished_semaphore() const -> const ::vk::raii::Semaphore &;
 
-    auto frames_in_flight() -> std::uint32_t;
-    auto current_frame_index() -> std::uint32_t;
+    auto frames_in_flight() const -> std::uint32_t;
+    auto current_frame_index() const -> std::uint32_t;
 
   private:
     const VulkanDevice &device_;
