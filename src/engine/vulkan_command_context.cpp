@@ -1,6 +1,7 @@
 #include "vulkan_command_context.h"
 
-#include <cstddef>
+#include <cstdint>
+#include <string>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -16,10 +17,24 @@ VulkanCommandContext::VulkanCommandContext(const VulkanDevice &device, std::uint
     , frames_in_flight_(frames_in_flight)
     , current_frame_(0)
 {
+#ifndef NDEBUG
+    auto debug_name_info = ::vk::DebugUtilsObjectNameInfoEXT{};
+    auto debug_name_str = std::string{};
+#endif
+
+    arm::ensure(frames_in_flight_ > 0, "frames_in_flight_ is <= 0");
+
     auto pool_create_info = ::vk::CommandPoolCreateInfo{};
     pool_create_info.flags = ::vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
     pool_create_info.queueFamilyIndex = device_.graphics_queue_family_index();
     command_pool_ = ::vk::raii::CommandPool{device_.get(), pool_create_info};
+#ifndef NDEBUG
+    debug_name_str = "Graphics Command Pool";
+    debug_name_info.pObjectName = debug_name_str.c_str();
+    debug_name_info.objectType = ::vk::ObjectType::eCommandPool;
+    debug_name_info.objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkCommandPool>(*command_pool_));
+    device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+#endif
 
     command_buffers_.reserve(frames_in_flight_);
     auto cb_allocate_info = ::vk::CommandBufferAllocateInfo{};
@@ -31,6 +46,17 @@ VulkanCommandContext::VulkanCommandContext(const VulkanDevice &device, std::uint
     {
         command_buffers_.emplace_back(std::move(buffer));
     }
+#ifndef NDEBUG
+    for (std::uint32_t i = 0; i < frames_in_flight_; ++i)
+    {
+        debug_name_str = "Graphics Command Buffer " + std::to_string(i);
+        debug_name_info.pObjectName = debug_name_str.c_str();
+        debug_name_info.objectType = ::vk::ObjectType::eCommandBuffer;
+        debug_name_info.objectHandle =
+            reinterpret_cast<std::uint64_t>(static_cast<::VkCommandBuffer>(*command_buffers_[i]));
+        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+    }
+#endif
 
     image_available_semaphores_.reserve(frames_in_flight_);
     render_finished_semaphores_.reserve(frames_in_flight_);
@@ -45,6 +71,30 @@ VulkanCommandContext::VulkanCommandContext(const VulkanDevice &device, std::uint
         render_finished_semaphores_.emplace_back(device_.get(), semaphore_info);
         fences_.emplace_back(device_.get(), fence_info);
     }
+#ifndef NDEBUG
+    for (std::uint32_t i = 0; i < frames_in_flight_; ++i)
+    {
+        debug_name_str = "Image Available Semaphore " + std::to_string(i);
+        debug_name_info.pObjectName = debug_name_str.c_str();
+        debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
+        debug_name_info.objectHandle =
+            reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*image_available_semaphores_[i]));
+        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+
+        debug_name_str = "Render Finished Semaphore " + std::to_string(i);
+        debug_name_info.pObjectName = debug_name_str.c_str();
+        debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
+        debug_name_info.objectHandle =
+            reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*render_finished_semaphores_[i]));
+        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+
+        debug_name_str = "Fence " + std::to_string(i);
+        debug_name_info.pObjectName = debug_name_str.c_str();
+        debug_name_info.objectType = ::vk::ObjectType::eFence;
+        debug_name_info.objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkFence>(*fences_[i]));
+        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+    }
+#endif
 }
 
 auto VulkanCommandContext::wait_current_frame() -> void
