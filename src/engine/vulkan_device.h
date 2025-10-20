@@ -30,9 +30,9 @@ class VulkanDevice
     auto physical_device() const -> const ::vk::raii::PhysicalDevice &;
 
     auto graphics_queue() const -> ::vk::Queue;
-    auto graphics_queue_index() const -> std::uint32_t;
+    auto graphics_queue_family_index() const -> std::uint32_t;
     auto present_queue() const -> ::vk::Queue;
-    auto present_queue_index() const -> std::uint32_t;
+    auto present_queue_family_index() const -> std::uint32_t;
 
     auto supports_dynamic_rendering() const -> bool;
 

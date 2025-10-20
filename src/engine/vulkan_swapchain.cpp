@@ -78,7 +78,7 @@ auto VulkanSwapchain::create_() -> void
     }
 
     const auto queue_indices =
-        std::vector<std::uint32_t>{device_.graphics_queue_index(), device_.present_queue_index()};
+        std::vector<std::uint32_t>{device_.graphics_queue_family_index(), device_.present_queue_family_index()};
 
     auto swapchain_create_info = ::vk::SwapchainCreateInfoKHR{};
     swapchain_create_info.surface = *surface_.get();
@@ -91,7 +91,7 @@ auto VulkanSwapchain::create_() -> void
     swapchain_create_info.imageUsage =
         ::vk::ImageUsageFlagBits::eColorAttachment | ::vk::ImageUsageFlagBits::eTransferDst;
 
-    if (device_.graphics_queue_index() == device_.present_queue_index())
+    if (device_.graphics_queue_family_index() == device_.present_queue_family_index())
     {
         swapchain_create_info.imageSharingMode = ::vk::SharingMode::eExclusive;
     }

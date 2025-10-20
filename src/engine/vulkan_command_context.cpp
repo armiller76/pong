@@ -18,7 +18,7 @@ VulkanCommandContext::VulkanCommandContext(const VulkanDevice &device, std::uint
 {
     auto pool_create_info = ::vk::CommandPoolCreateInfo{};
     pool_create_info.flags = ::vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
-    pool_create_info.queueFamilyIndex = device_.graphics_queue_index();
+    pool_create_info.queueFamilyIndex = device_.graphics_queue_family_index();
     command_pool_ = ::vk::raii::CommandPool{device_.get(), pool_create_info};
 
     command_buffers_.reserve(frames_in_flight_);

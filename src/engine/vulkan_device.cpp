@@ -196,7 +196,7 @@ auto VulkanDevice::graphics_queue() const -> ::vk::Queue
     return graphics_queue_;
 }
 
-auto VulkanDevice::graphics_queue_index() const -> std::uint32_t
+auto VulkanDevice::graphics_queue_family_index() const -> std::uint32_t
 {
     return graphics_queue_family_index_;
 }
@@ -206,7 +206,7 @@ auto VulkanDevice::present_queue() const -> ::vk::Queue
     return present_queue_;
 }
 
-auto VulkanDevice::present_queue_index() const -> std::uint32_t
+auto VulkanDevice::present_queue_family_index() const -> std::uint32_t
 {
     return present_queue_family_index_;
 }
