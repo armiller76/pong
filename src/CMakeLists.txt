@@ -5,6 +5,7 @@ add_dependencies(Pong shaders)
 add_subdirectory(engine)
 add_subdirectory(utils)
 add_subdirectory(platform)
+add_subdirectory(graphics)
 
 target_compile_definitions(
   Pong

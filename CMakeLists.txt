@@ -19,6 +19,18 @@ find_package(Vulkan REQUIRED)
 add_subdirectory(assets/shaders)
 add_subdirectory(src)
 
+FetchContent_Declare(
+  glm
+  GIT_REPOSITORY https://github.com/g-truc/glm.git
+  GIT_TAG 1.0.2)
+set(GLM_BUILD_TESTS
+    OFF
+    CACHE BOOL "" FORCE)
+set(BUILD_STATIC_LIBS
+    OFF
+    CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(glm)
+
 if(BUILD_TESTING)
   FetchContent_Declare(
     google_test
