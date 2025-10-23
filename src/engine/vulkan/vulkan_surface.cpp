@@ -2,9 +2,10 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/vulkan_instance.h"
 #include "platform/win32_window.h"
 #include "utils/log.h"
+#include "vulkan_instance.h"
+
 
 namespace pong
 {

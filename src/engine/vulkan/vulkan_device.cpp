@@ -9,9 +9,10 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/vulkan_instance.h"
-#include "engine/vulkan_surface.h"
 #include "utils/error.h"
+#include "vulkan_instance.h"
+#include "vulkan_surface.h"
+
 
 namespace pong
 {

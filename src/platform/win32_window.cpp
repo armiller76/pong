@@ -4,8 +4,8 @@
 #include <string>
 #include <windows.h>
 
-#include "engine/vulkan_instance.h"
-#include "engine/vulkan_surface.h"
+#include "engine/vulkan/vulkan_instance.h"
+#include "engine/vulkan/vulkan_surface.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"

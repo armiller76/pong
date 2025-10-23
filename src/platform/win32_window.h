@@ -7,7 +7,7 @@
 
 #include <windows.h>
 
-#include "engine/window.h"
+#include "engine/vulkan/vulkan_window.h"
 #include "utils/auto_release.h"
 #include "utils/util.h"
 

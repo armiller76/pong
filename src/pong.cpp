@@ -4,11 +4,11 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/vulkan_command_context.h"
-#include "engine/vulkan_device.h"
-#include "engine/vulkan_instance.h"
-#include "engine/vulkan_surface.h"
-#include "engine/vulkan_swapchain.h"
+#include "engine/vulkan/vulkan_command_context.h"
+#include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_instance.h"
+#include "engine/vulkan/vulkan_surface.h"
+#include "engine/vulkan/vulkan_swapchain.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"
 #include "utils/log.h"
