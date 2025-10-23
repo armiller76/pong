@@ -217,6 +217,25 @@ auto VulkanDevice::supports_dynamic_rendering() const -> bool
     return supports_dynamic_rendering_;
 }
 
+auto VulkanDevice::find_memory_type_index(
+    const ::vk::MemoryRequirements requirements,
+    const ::vk::MemoryPropertyFlags flags) const -> std::uint32_t
+{
+    const auto device_memory_info = physical_device_.getMemoryProperties();
+    for (std::uint32_t i = 0; i < device_memory_info.memoryTypeCount; ++i)
+    {
+        const auto type_supported = bool(requirements.memoryTypeBits & (1u << i));
+        const auto properties_match = (device_memory_info.memoryTypes[i].propertyFlags & flags) == flags;
+
+        if (type_supported && properties_match)
+        {
+            return i;
+        }
+    }
+
+    throw arm::Exception("unable to find usable gpu memory");
+}
+
 auto VulkanDevice::score_device(
     VulkanDeviceInfo &info,
     const VulkanSurface &surface,

@@ -35,6 +35,8 @@ class VulkanDevice
     auto present_queue_family_index() const -> std::uint32_t;
 
     auto supports_dynamic_rendering() const -> bool;
+    auto find_memory_type_index(const ::vk::MemoryRequirements requirements, const ::vk::MemoryPropertyFlags flags)
+        const -> std::uint32_t;
 
   private:
     ::vk::raii::PhysicalDevice physical_device_;
