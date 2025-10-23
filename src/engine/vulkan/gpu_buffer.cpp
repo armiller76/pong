@@ -62,7 +62,7 @@ auto GpuBuffer::upload(const void *data, std::size_t bytes, std::size_t offset) 
     std::memcpy(dest, data, bytes);
     memory_.unmapMemory();
 
-    if (!(memory_flags_ & ::vk::MemoryPropertyFlagBits::eHostCoherent))
+    if (!((memory_flags_ & ::vk::MemoryPropertyFlagBits::eHostCoherent) == ::vk::MemoryPropertyFlagBits::eHostCoherent))
     {
         auto flush_range = ::vk::MappedMemoryRange{};
         flush_range.memory = *memory_;
