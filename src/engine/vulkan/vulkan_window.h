@@ -11,10 +11,10 @@ namespace pong
 class VulkanInstance;
 class VulkanSurface;
 
-class Window
+class VulkanWindow
 {
   public:
-    virtual ~Window() = default;
+    virtual ~VulkanWindow() = default;
 
     virtual auto process_events() -> void = 0;
     virtual auto should_close() const -> bool = 0;

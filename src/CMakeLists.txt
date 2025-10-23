@@ -18,6 +18,9 @@ target_link_libraries(ponglib PUBLIC engine platform utils)
 target_link_libraries(Pong PRIVATE Vulkan::Vulkan ponglib)
 target_include_directories(
   Pong
-  PUBLIC ${Vulkan_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}
+  PUBLIC ${Vulkan_INCLUDE_DIRS}
+         ${CMAKE_CURRENT_SOURCE_DIR}
          ${CMAKE_CURRENT_SOURCE_DIR}/platform
-         ${CMAKE_CURRENT_SOURCE_DIR}/engine ${CMAKE_CURRENT_SOURCE_DIR}/utils)
+         ${CMAKE_CURRENT_SOURCE_DIR}/utils
+         ${CMAKE_CURRENT_SOURCE_DIR}/engine
+         ${CMAKE_CURRENT_SOURCE_DIR}/engine/vulkan)

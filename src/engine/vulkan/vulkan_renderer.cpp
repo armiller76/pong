@@ -82,4 +82,5 @@ auto VulkanRenderer::end_frame() -> void
 
     command_context_.advance_frame();
 }
+
 }

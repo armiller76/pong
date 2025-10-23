@@ -1,0 +1,5 @@
+namespace pong
+
+{
+class File;
+}
