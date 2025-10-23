@@ -23,7 +23,7 @@ struct Win32WindowHandles
 class VulkanInstance;
 class VulkanSurface;
 
-class Win32Window : public Window
+class Win32Window : public VulkanWindow
 {
   public:
     ~Win32Window() override;
