@@ -36,7 +36,7 @@ struct Vertex
         col_entry.format = ::vk::Format::eR32G32B32Sfloat;
         col_entry.offset = offsetof(Vertex, color);
 
-        return std::array<::vk::VertexInputAttributeDescription, 2>(pos_entry, col_entry);
+        return std::array<::vk::VertexInputAttributeDescription, 2>{{pos_entry, col_entry}};
     }
 };
 

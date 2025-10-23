@@ -13,7 +13,7 @@ namespace pong
 {
 
 Mesh::Mesh(const VulkanDevice &device, std::span<const Vertex> vertices)
-    : vertex_count_(vertices.size())
+    : vertex_count_(static_cast<std::uint32_t>(vertices.size()))
     , vertex_buffer_(
           device,
           vertices.size_bytes(),
