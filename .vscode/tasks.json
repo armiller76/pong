@@ -2,18 +2,29 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "CMake Build",
+            "label": "CMake: Configure (Debug)",
             "type": "shell",
             "command": "cmake",
-            "args": [
-                "--build",
-                "build"
-            ],
+            "args": ["--preset", "debug"],
+            "group": "build"
+        },
+        {
+            "label": "CMake: Configure (No Tests)",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["--preset", "debug-no-tests"],
+            "group": "build"
+        },
+        {
+            "label": "CMake: Build (No Tests)",
+            "type": "shell",
+            "command": "cmake",
+            "args": ["--build", "build-no-tests", "--config", "Debug"],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": ["$msCompile"]
+            "dependsOn": ["CMake: Configure (No Tests)"]
         }
     ]
 }
