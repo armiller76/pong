@@ -1,5 +1,7 @@
 add_executable(Pong pong.cpp)
 
+add_dependencies(Pong shaders)
+
 add_subdirectory(engine)
 add_subdirectory(utils)
 add_subdirectory(platform)
