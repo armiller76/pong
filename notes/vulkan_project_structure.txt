@@ -1,189 +1,151 @@
-## VulkanRenderer with Dynamic Rendering
+# Vulkan Rendering Architecture (Current)
 
-### Why Dynamic Rendering is Better
-- No render pass objects needed
-- No framebuffers needed
-- Specify attachments at render time (more flexible)
-- Less boilerplate, cleaner code
-- Perfect for modern Vulkan applications
+This project uses modern Vulkan with dynamic rendering and C++ RAII wrappers (vulkan-hpp vk::raii). 
+The design avoids legacy render pass/framebuffer objects and focuses on clear ownership and testable components.
+// TODO if the goal is testable components, you should probably actually have tests for them.
 
-### Prerequisites Check
-- Ensure your device supports dynamic rendering (extension or Vulkan 1.3+)
-- Enable the feature during device creation
-- You'll need to update VulkanDevice to enable `dynamicRendering` feature
+- Dynamic Rendering (VK_KHR_dynamic_rendering / Vulkan 1.3)
+- RAII for all Vulkan resources (vk::raii::Device, Buffer, ImageView, etc.)
+- Clear separation between “assets” (Shader, Mesh data) and “GPU objects” (pipelines, buffers)
+- ResourceManager owns resources by value; others hold references
 
-### Revised Class Structure
+## Core Modules and Ownership
 
-**Core Responsibilities:**
-- Manage graphics pipeline (without render pass dependency)
-- Handle per-frame synchronization
-- Orchestrate image acquisition and presentation
-- Record rendering commands dynamically
+- VulkanDevice (engine/vulkan)
+  - Owns instance, physical/logical device, queues, features (incl. dynamic rendering)
+- VulkanSurface (engine/vulkan)
+  - Wraps platform surface (Win32)
+- VulkanSwapchain (engine/vulkan)
+  - Owns swapchain, format/extent, and per-image vk::raii::ImageView
+- VulkanCommandContext (engine/vulkan)
+  - Per-frame command buffers, fences, semaphores (frames-in-flight)
+- VulkanRenderer (engine/vulkan)
+  - Creates and owns pipeline layout and graphics pipeline(s)
+  - Orchestrates frame flow, dynamic rendering begin/end, submission, presentation
+- GpuBuffer (engine/vulkan)
+  - RAII buffer + memory allocation, upload helpers
+- Vertex (graphics)
+  - Uses glm types; provides binding/attribute descriptions for pipeline
+- Mesh (graphics)
+  - GPU-side mesh (vertex_count + GpuBuffer for vertices). Test factories available
+- Shader (graphics)
+  - Pure data: name + std::vector<uint32_t> SPIR-V + vk::ShaderStageFlagBits (no filesystem)
+- ResourceManager (engine)
+  - Owns Shaders and Meshes in unordered_maps keyed by name
+  - API: load(...)/get<T>(...) (templated get; overloaded or templated load)
+  - Loads SPIR-V via File helper; constructs Shader; creates Mesh from vertices
+  - Returns T& (manager retains ownership; callers hold non-owning references)
 
-**Suggested Members:**
+## Frame Flow (High Level)
 
-```cpp
-class VulkanRenderer {
-private:
-    // References
-    const VulkanDevice& device_;
-    VulkanSwapchain& swapchain_;
-    VulkanCommandContext& command_context_;
-    
-    // Graphics pipeline (no render pass needed!)
-    vk::raii::PipelineLayout pipeline_layout_;
-    vk::raii::Pipeline graphics_pipeline_;
-    
-    // Synchronization (per frame in flight)
-    std::vector<vk::raii::Semaphore> image_available_semaphores_;
-    std::vector<vk::raii::Semaphore> render_finished_semaphores_;
-    std::vector<vk::raii::Fence> in_flight_fences_;
-    
-    // Frame tracking
-    uint32_t current_frame_ = 0;
-    static constexpr uint32_t max_frames_in_flight_ = 2;
-    uint32_t current_image_index_ = 0;
-    
-public:
-    VulkanRenderer(const VulkanDevice&, VulkanSwapchain&, VulkanCommandContext&);
-    
-    void begin_frame();
-    void begin_rendering();  // Starts dynamic rendering
-    void end_rendering();    // Ends dynamic rendering
-    void end_frame();
-    
-    // Drawing interface
-    void draw_quad(/* position, color, etc. */);
-};
-```
-
-### Implementation Phases
-
-**Phase 1: Synchronization Setup**
-- Create semaphores and fences for frame-in-flight management
-- Initialize to proper states (fences signaled)
-
-**Phase 2: Pipeline Creation (Simplified)**
-- Create pipeline layout
-- Build graphics pipeline with:
-  - Shader stages (vertex/fragment)
-  - Vertex input state
-  - Dynamic rendering info (color attachment format, no render pass!)
-  - Rasterization/blend/etc. states
-  - Use `VkPipelineRenderingCreateInfo` instead of render pass
-
-**Phase 3: Frame Management**
-```cpp
 begin_frame():
-  - Wait on current frame's fence
-  - Acquire next swapchain image
-  - Reset fence
+- Wait for current frame fence
+- Acquire next swapchain image → image index
+- Reset fence, reset/re-begin command buffer
 
 begin_rendering():
-  - Get command buffer from context
-  - Begin command buffer recording
-  - Use vkCmdBeginRendering with:
-    - Color attachment (swapchain image view)
-    - Render area
-    - Clear values
-  - Bind pipeline
+- Transition the acquired image to COLOR_ATTACHMENT_OPTIMAL (if not handled by implicit subpass; with dynamic rendering you add an explicit barrier if needed)
+- Build VkRenderingInfo with the swapchain image view
+- vkCmdBeginRendering
+
+draw:
+- Bind pipeline
+- Bind vertex buffers
+- vkCmdDraw (or vkCmdDrawIndexed)
 
 end_rendering():
-  - vkCmdEndRendering
+- vkCmdEndRendering
 
 end_frame():
-  - End command buffer
-  - Submit with semaphore dependencies
-  - Queue present
-  - Advance frame counter
-```
+- Transition image to PRESENT_SRC_KHR (explicit barrier)
+- End command buffer, submit with semaphores
+- Present on the queue
+- Advance frame index
 
-**Phase 4: Drawing**
-- Record draw commands between begin/end rendering
-- Push constants for per-object data (position, color)
+## Graphics Pipeline (Dynamic Rendering)
 
-### Key Differences from Render Pass Approach
+- Pipeline layout: currently minimal/empty; grow with push constants/descriptors later
+- Shader stages: vertex + fragment created from temporary vk::raii::ShaderModule
+  - Modules are created during pipeline build from Shader.spirv() and destroyed immediately after
+- Vertex input: from Vertex::get_binding_description() and get_attribute_descriptions()
+- Input assembly: triangle list
+- Viewport/scissor: dynamic states recommended
+- Rasterization: fill, cull back, CCW
+- Color blend: write to RGBA, blending off (enable later if needed)
+- Multisample: 1x (no MSAA)
+- Depth: none for Pong
+- Dynamic rendering chain:
+  - VkPipelineRenderingCreateInfo with colorAttachmentCount = 1 and swapchain format
+  - Attach via pNext to VkGraphicsPipelineCreateInfo
 
-**No Framebuffers:**
-- Directly reference swapchain image views in `vkCmdBeginRendering`
-- No pre-created framebuffer objects
+## Dynamic Rendering Structures
 
-**No Render Pass:**
-- Pipeline creation uses `VkPipelineRenderingCreateInfo`
-- Specify color/depth formats at pipeline creation
-- Actual attachment binding happens at render time
+Pipeline creation (pseudocode):
+- VkPipelineRenderingCreateInfo renderingInfo{ colorAttachmentCount=1, pColorAttachmentFormats=&swapchainFormat }
 
-**More Flexibility:**
-- Can change attachments between frames easily
-- Simpler for multi-pass rendering (if needed later)
-- Less state to manage
+Begin rendering (per frame/image):
+- VkRenderingAttachmentInfo colorAttachment{ imageView=currentImageView, layout=COLOR_ATTACHMENT_OPTIMAL, loadOp=CLEAR, storeOp=STORE, clearValue=clear_color }
+- VkRenderingInfo info{ renderArea.extent=swapchainExtent, layerCount=1, colorAttachmentCount=1, pColorAttachments=&colorAttachment }
+- vkCmdBeginRendering(cmd, &info)
 
-### Dynamic Rendering Structures You'll Use
+## Synchronization
 
-**Pipeline Creation:**
-```cpp
-VkPipelineRenderingCreateInfo rendering_info{
-    .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-    .colorAttachmentCount = 1,
-    .pColorAttachmentFormats = &swapchain_format,  // from swapchain
-    .depthAttachmentFormat = VK_FORMAT_UNDEFINED,  // no depth for Pong
-};
-// Chain to VkGraphicsPipelineCreateInfo.pNext
-```
+- Frames-in-flight: typically 2
+- Per-frame:
+  - Fence: wait/reset per frame
+  - Acquire semaphore (imageAvailable)
+  - Render-finished semaphore (renderFinished)
+- Submit: waits on imageAvailable, signals renderFinished
+- Present: waits on renderFinished
 
-**Begin Rendering:**
-```cpp
-VkRenderingAttachmentInfo color_attachment{
-    .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-    .imageView = current_swapchain_image_view,
-    .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-    .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-    .clearValue = { .color = {{0.0f, 0.0f, 0.0f, 1.0f}} },
-};
+## Assets and Resource Management
 
-VkRenderingInfo rendering_info{
-    .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-    .renderArea = { .extent = swapchain_extent },
-    .layerCount = 1,
-    .colorAttachmentCount = 1,
-    .pColorAttachments = &color_attachment,
-};
+- Shader (data-only):
+  - name: string
+  - stage: vk::ShaderStageFlagBits
+  - spirv: vector<uint32_t>
+  - No filesystem or Vulkan dependency
+- ResourceManager:
+  - Loads SPIR-V using File helper (validation/utilities live in engine/file.*)
+  - Constructs Shader and caches by name
+  - Creates Mesh from vertex data (host-visible/coherent for now)
+  - API shapes:
+    - load(name, path, stage) -> Shader&
+    - load(name, span<Vertex>) -> Mesh&
+    - get<T>(name) -> T&; contains<T>(name) -> bool
+  - Manager outlives users; consumers store references
 
-vkCmdBeginRendering(command_buffer, &rendering_info);
-```
+## Mesh Handling
+- Current Mesh class is GPU-side (vertex buffer + count)
+- Memory properties (current):
+  - HostVisible | HostCoherent for simplicity and quick uploads
+- Future optimization:
+  - DeviceLocal vertex buffer with staging buffer (TransferSrc → TransferDst copy)
+- Roadmap:
+  - Optional index buffer
+  - MeshData (CPU-side) → Mesh (GPU-side) upload path
 
-### Updated Implementation Order
+## Current State vs Old Document
+- Updated/Added:
+  - Explicit module list and ownership boundaries (Device/Surface/Swapchain/Renderer)
+  - ResourceManager that owns Shader and Mesh by value, API for load/get
+  - Shader is filesystem-agnostic (loader does file I/O; Shader stores SPIR-V + stage)
+  - Mesh is GPU-side with GpuBuffer; test factories for triangle/rectangle
+  - Vertex uses glm types with proper binding/attribute descriptions
+- Pending implementation details (WIP):
+  - VulkanRenderer::begin_frame/end_frame/begin_rendering/end_rendering (recording + barriers)
+  - Graphics pipeline creation using VkPipelineRenderingCreateInfo
+  - Swapchain image layout transitions (to COLOR_ATTACHMENT_OPTIMAL and to PRESENT_SRC_KHR)
+  - vertex.h: complete get_attribute_descriptions()
 
-1. **Enable Dynamic Rendering:**
-   - Update VulkanDevice to enable the feature
-   - Check for VK_KHR_dynamic_rendering or Vulkan 1.3
+## Implementation Order (Next Steps)
 
-2. **Create Synchronization Primitives:**
-   - Semaphores and fences for frame management
-
-3. **Build Graphics Pipeline:**
-   - Use PipelineRenderingCreateInfo (no render pass!)
-   - Specify swapchain format
-
-4. **Implement Frame Flow:**
-   - Acquire → BeginRendering → Draw → EndRendering → Present
-
-5. **Add Drawing Methods:**
-   - Simple quad rendering for Pong elements
-
-### Benefits for Your Pong Project
-
-**Simpler:**
-- Fewer Vulkan objects to manage
-- No render pass/framebuffer lifecycle
-
-**More Modern:**
-- Industry-moving toward dynamic rendering
-- Better learning path for modern Vulkan
-
-**Flexible:**
-- Easy to add post-processing passes later
-- Simpler multi-view rendering if needed
-
-Would you like guidance on enabling dynamic rendering in your VulkanDevice, or would you prefer to start with the pipeline creation strategy for dynamic rendering?
+1) Tidy up and integrate resource manager
+2) Refactor Mesh 
+3) Create pipeline layout + pipeline (dynamic rendering pipeline)
+4) Implement frame flow in VulkanRenderer (acquire → begin cmd → begin rendering → draw → end → submit → present)
+5) Integrate ResourceManager:
+   - Load triangle shaders (vert/frag) and build pipeline once
+   - Create test Mesh and draw it
+6) Add push constants (mat4) for simple transforms
+7) Optional: split MeshData (CPU) vs Mesh (GPU) for content tooling
