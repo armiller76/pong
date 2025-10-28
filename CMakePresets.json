@@ -4,43 +4,49 @@
         {
             "name": "debug",
             "displayName": "Debug (with tests)",
+            "generator": "Ninja Multi-Config",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "BUILD_TESTING": "ON"
+                "BUILD_TESTING": "ON",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
         },
         {
             "name": "debug-no-tests",
             "displayName": "Debug (no tests)",
+            "generator": "Ninja Multi-Config",
             "binaryDir": "${sourceDir}/build-no-tests",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "BUILD_TESTING": "OFF"
+                "BUILD_TESTING": "OFF",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
         },
         {
             "name": "release",
             "displayName": "Release",
+            "generator": "Ninja Multi-Config",
             "binaryDir": "${sourceDir}/build-release",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "BUILD_TESTING": "OFF"
+                "BUILD_TESTING": "OFF",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
         }
     ],
     "buildPresets": [
         {
             "name": "debug",
-            "configurePreset": "debug"
+            "configurePreset": "debug",
+            "configuration": "Debug"
         },
         {
             "name": "debug-no-tests",
-            "configurePreset": "debug-no-tests"
+            "configurePreset": "debug-no-tests",
+            "configuration": "Debug"
         },
         {
             "name": "release",
-            "configurePreset": "release"
+            "configurePreset": "release",
+            "configuration": "Release"
         }
     ]
 }
