@@ -23,7 +23,7 @@ ResourceManager::ResourceManager(const VulkanDevice &device)
 
 auto ResourceManager::load(const std::string &name, const std::filesystem::path &path, ShaderStage stage) -> Shader &
 {
-    const auto key = get_resource_id(name);
+    const auto key = get_resource_id_(name);
 
     if (auto entry = shaders_.find(key); entry != shaders_.end())
     {
@@ -33,18 +33,19 @@ auto ResourceManager::load(const std::string &name, const std::filesystem::path 
 
     auto spirv = File(path).data();
     auto [entry, inserted] = shaders_.try_emplace(key);
+    arm::ensure(inserted, "failed to load shader: {}", name);
+
     auto &shader = entry->second;
     shader.name = name;
     shader.stage = stage;
     shader.spirv.assign_range(spirv);
 
-    arm::ensure(inserted, "failed to load shader: {}", name);
-    return entry->second;
+    return shader;
 }
 
 auto ResourceManager::load(const std::string &name, std::span<const Vertex> vertices) -> Mesh &
 {
-    const auto key = get_resource_id(name);
+    const auto key = get_resource_id_(name);
 
     if (auto entry = meshes_.find(key); entry != meshes_.end())
     {
@@ -56,6 +57,11 @@ auto ResourceManager::load(const std::string &name, std::span<const Vertex> vert
 
     arm::ensure(inserted, "failed to load mesh: {}", name);
     return entry->second;
+}
+
+constexpr auto ResourceManager::get_resource_id_(std::string_view str) -> std::uint64_t
+{
+    return pong::hash_string(str);
 }
 
 }
