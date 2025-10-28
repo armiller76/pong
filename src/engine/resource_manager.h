@@ -1,38 +1,49 @@
 #pragma once
 
 #include <filesystem>
-#include <map>
 #include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
 
+#include "engine/vulkan/vulkan_utils.h"
+#include "graphics/mesh.h"
+#include "graphics/shader.h"
+#include "graphics/vertex.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
+
+namespace
+{
+
+constexpr auto get_resource_id(std::string_view str) -> std::uint64_t
+{
+    return pong::hash_string(str);
+}
+
+}
 
 namespace pong
 {
 
 class VulkanDevice;
-class Mesh;
-class Shader;
-struct Vertex;
 
 class ResourceManager
 {
   public:
     explicit ResourceManager(const VulkanDevice &device);
 
-    auto load(std::string_view name, const std::filesystem::path &path, ::vk::ShaderStageFlagBits stage) -> Shader &;
-    auto load(std::string_view name, std::span<const Vertex> vertices) -> Mesh &;
+    auto load(const std::string &name, const std::filesystem::path &path, ShaderStage stage) -> Shader &;
+    auto load(const std::string &name, std::span<const Vertex> vertices) -> Mesh &;
 
     template <typename T>
     auto get(std::string_view name) -> T &
     {
         auto &map = get_map_<T>();
-        if (auto entry = map.find(name); entry != map.end())
+        auto key = get_resource_id(name);
+        if (auto entry = map.find(key); entry != map.end())
         {
             return entry->second;
         }
@@ -43,19 +54,18 @@ class ResourceManager
     template <typename T>
     auto contains(std::string_view name) const -> bool
     {
-        return get_map_<T>().contains(name);
+        auto key = get_resource_id(name);
+        return get_map_<T>().contains(key);
     }
 
   private:
     const VulkanDevice &device_;
 
-    template <typename V>
-    using ResourceMap = std::unordered_map<std::string, V, std::hash<std::string_view>, std::equal_to<>>;
-    ResourceMap<Shader> shaders_;
-    ResourceMap<Mesh> meshes_;
+    std::unordered_map<std::uint64_t, Shader> shaders_;
+    std::unordered_map<std::uint64_t, Mesh> meshes_;
 
     template <typename T>
-    auto get_map_() -> ResourceMap<T> &
+    auto get_map_() -> std::unordered_map<std::uint64_t, T> &
     {
         if constexpr (std::is_same_v<T, Shader>)
         {
@@ -68,10 +78,11 @@ class ResourceManager
         else
         {
             arm::ensure(!sizeof(T), "invalid resource type in ResourceManager::get_map_()");
+            std::unreachable();
         }
     }
     template <typename T>
-    auto get_map_() const -> const ResourceMap<T> &
+    auto get_map_() const -> const std::unordered_map<std::uint64_t, T> &
     {
         if constexpr (std::is_same_v<T, Shader>)
         {
@@ -84,6 +95,7 @@ class ResourceManager
         else
         {
             arm::ensure(!sizeof(T), "invalid resource type in ResourceManager::get_map_() const");
+            std::unreachable();
         }
     }
 };
