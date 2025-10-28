@@ -1,32 +1,27 @@
 #pragma once
 
-#include <cstdint>
-#include <filesystem>
-#include <span>
+#include <cstddef>
 #include <string>
+#include <string_view>
 #include <vector>
 
-namespace vk
-{
-enum class ShaderStageFlagBits;
-}
+#include "utils/hash.h"
 
 namespace pong
 {
 
-class Shader
+enum class ShaderStage
 {
-  public:
-    explicit Shader(std::string name, std::vector<std::uint32_t> spirv, ::vk::ShaderStageFlagBits stage);
+    Vertex,
+    Fragment,
+    Compute
+};
 
-    auto name() const -> const std::string &;
-    auto spirv() const -> std::span<const std::uint32_t>;
-    auto stage() const -> ::vk::ShaderStageFlagBits;
-
-  private:
-    std::string name_;
-    std::vector<std::uint32_t> spirv_;
-    ::vk::ShaderStageFlagBits stage_;
+struct Shader
+{
+    std::string name;
+    std::vector<std::byte> spirv;
+    ShaderStage stage;
 };
 
 }
