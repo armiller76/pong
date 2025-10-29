@@ -16,7 +16,7 @@ target_compile_definitions(
           APP_VERSION_PATCH=${PROJECT_VERSION_PATCH})
 
 add_library(ponglib STATIC)
-target_link_libraries(ponglib PUBLIC engine platform utils)
+target_link_libraries(ponglib PUBLIC engine graphics platform utils)
 
 target_link_libraries(Pong PRIVATE Vulkan::Vulkan ponglib)
 target_include_directories(
