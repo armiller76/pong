@@ -4,10 +4,10 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/vulkan_command_context.h"
-#include "engine/vulkan_surface.h"
-#include "engine/vulkan_swapchain.h"
 #include "graphics/color.h"
+#include "vulkan_command_context.h"
+#include "vulkan_surface.h"
+#include "vulkan_swapchain.h"
 
 namespace pong
 {
@@ -16,7 +16,10 @@ class VulkanDevice;
 class VulkanRenderer
 {
   public:
-    VulkanRenderer(const VulkanDevice &device, const VulkanSurface &surface);
+    VulkanRenderer(
+        const VulkanDevice &device,
+        const VulkanSurface &surface,
+        const Color clear_color = {0.5f, 1.0f, 0.0f, 1.0f});
 
     auto begin_frame() -> void;
     auto end_frame() -> void;
@@ -37,6 +40,10 @@ class VulkanRenderer
 
     std::uint32_t current_image_index_{0};
     bool framebuffer_resized_ = false;
+
+    // TODO this is where you left off when you went gallavanting off to write a resource/asset manager
+    auto load_shaders_() -> void;
+    auto create_graphics_pipeline_() -> void;
 };
 
 }
