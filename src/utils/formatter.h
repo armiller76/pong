@@ -38,11 +38,11 @@ struct ToStringCPO
     {
         return to_string(obj);
     }
-};
+}; // struct ToStringCPO
 
 inline constexpr auto to_string = ToStringCPO{};
 
-}
+} // namespace arm::util
 
 // actual implementation of the formatter
 template <class T>
@@ -57,8 +57,8 @@ struct Formatter
     {
         return std::format_to(ctx.out(), "{}", util::to_string(obj));
     }
-};
-}
+}; // struct Formatter
+} // namespace arm
 
 // concept to check if a type can be formatted
 template <class T>
