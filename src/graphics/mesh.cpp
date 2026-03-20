@@ -12,13 +12,14 @@
 namespace pong
 {
 
-Mesh::Mesh(const VulkanDevice &device, std::span<const Vertex> vertices)
+Mesh::Mesh(std::string name, const VulkanDevice &device, std::span<const Vertex> vertices)
     : vertex_count_(static_cast<std::uint32_t>(vertices.size()))
     , vertex_buffer_(
           device,
           vertices.size_bytes(),
           ::vk::BufferUsageFlagBits::eVertexBuffer,
           ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible)
+    , name_{std::move(name)}
 {
     arm::ensure(!vertices.empty(), "cannot create Mesh with no vertices");
     arm::ensure(vertices.size() <= UINT32_MAX, "too many vertices (uint32_t max)");
@@ -43,13 +44,18 @@ auto Mesh::size_bytes() const noexcept -> std::size_t
     return vertex_count_ * sizeof(Vertex);
 }
 
+auto Mesh::name() const noexcept -> std::string_view
+{
+    return name_;
+}
+
 auto Mesh::create_test_triangle(const VulkanDevice &device) -> Mesh
 {
     constexpr auto vertices = std::array<Vertex, 3>{
         {{.position = {0.0f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
          {.position = {0.5f, 0.5f}, .color = {0.0f, 1.0f, 0.0f}},
          {.position = {-0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}}}};
-    return Mesh(device, vertices);
+    return Mesh("test_triangle", device, vertices);
 }
 
 auto Mesh::create_test_rectangle(const VulkanDevice &device) -> Mesh
@@ -61,7 +67,7 @@ auto Mesh::create_test_rectangle(const VulkanDevice &device) -> Mesh
          {.position = {0.5f, 0.5f}, .color = {1.0f, 1.0f, 1.0f}},
          {.position = {-0.5f, 0.5f}, .color = {1.0f, 1.0f, 1.0f}},
          {.position = {-0.5f, -0.5f}, .color = {1.0f, 1.0f, 1.0f}}}};
-    return Mesh(device, vertices);
+    return Mesh("test_rectangle", device, vertices);
 }
 
 } // namespace pong
