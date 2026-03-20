@@ -7,7 +7,7 @@ The design avoids legacy render pass/framebuffer objects and focuses on clear ow
 - Dynamic Rendering (VK_KHR_dynamic_rendering / Vulkan 1.3)
 - RAII for all Vulkan resources (vk::raii::Device, Buffer, ImageView, etc.)
 - Clear separation between “assets” (Shader, Mesh data) and “GPU objects” (pipelines, buffers)
-- ResourceManager owns resources by value; others hold references
+- ResourceManager owns resources by value; others hold references // TODO reference lifetime an issue? think vector resizing!
 
 ## Core Modules and Ownership
 
@@ -35,6 +35,7 @@ The design avoids legacy render pass/framebuffer objects and focuses on clear ow
   - API: load(...)/get<T>(...) (templated get; overloaded or templated load)
   - Loads SPIR-V via File helper; constructs Shader; creates Mesh from vertices
   - Returns T& (manager retains ownership; callers hold non-owning references)
+  // TODO make sure reference lifetime won't be an issue? vector/map resize?
 
 ## Frame Flow (High Level)
 
