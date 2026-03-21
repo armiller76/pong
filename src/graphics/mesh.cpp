@@ -12,36 +12,56 @@
 namespace pong
 {
 
-Mesh::Mesh(std::string name, const VulkanDevice &device, std::span<const Vertex> vertices)
-    : vertex_count_(static_cast<std::uint32_t>(vertices.size()))
-    , vertex_buffer_(
-          device,
-          vertices.size_bytes(),
-          ::vk::BufferUsageFlagBits::eVertexBuffer,
-          ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible)
+Mesh::Mesh(
+    std::string name,
+    const VulkanDevice &device,
+    std::span<const Vertex> vertices,
+    std::span<const std::uint32_t> indices)
+    : vertices_cpu_{vertices.begin(), vertices.end()}
+    , indices_cpu_{indices.begin(), indices.end()}
+    , vertex_buffer_gpu_{device, vertices.size_bytes(), ::vk::BufferUsageFlagBits::eVertexBuffer, ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible}
+    , index_buffer_gpu_{device, indices.size_bytes(), ::vk::BufferUsageFlagBits::eIndexBuffer, ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible}
     , name_{std::move(name)}
 {
     arm::ensure(!vertices.empty(), "cannot create Mesh with no vertices");
     arm::ensure(vertices.size() <= UINT32_MAX, "too many vertices (uint32_t max)");
+    vertex_buffer_gpu_.upload(vertices.data(), vertices.size_bytes());
 
-    vertex_buffer_.upload(vertices.data(), vertices.size_bytes());
+    arm::ensure(!indices.empty(), "cannot create Mesh with no indices");
+    arm::ensure(indices.size() <= UINT32_MAX, "too many indices (uint32_t max)");
+    index_buffer_gpu_.upload(indices.data(), indices.size_bytes());
 
-    arm::log::debug("Created Mesh: vertices={} bytes={}", vertex_count_, vertices.size_bytes());
+    arm::log::debug("Created Mesh: vertices={} indices={}", vertices_cpu_.size(), indices_cpu_.size());
 }
 
 auto Mesh::vertex_count() const noexcept -> std::uint32_t
 {
-    return vertex_count_;
+    return static_cast<uint32_t>(vertices_cpu_.size());
 }
 
 auto Mesh::vertex_buffer() const noexcept -> const GpuBuffer &
 {
-    return vertex_buffer_;
+    return vertex_buffer_gpu_;
 }
 
-auto Mesh::size_bytes() const noexcept -> std::size_t
+auto Mesh::vertices() const noexcept -> std::span<const Vertex>
 {
-    return vertex_count_ * sizeof(Vertex);
+    return vertices_cpu_;
+}
+
+auto Mesh::index_count() const noexcept -> std::uint32_t
+{
+    return static_cast<uint32_t>(indices_cpu_.size());
+}
+
+auto Mesh::index_buffer() const noexcept -> const GpuBuffer &
+{
+    return index_buffer_gpu_;
+}
+
+auto Mesh::indices() const noexcept -> std::span<const std::uint32_t>
+{
+    return indices_cpu_;
 }
 
 auto Mesh::name() const noexcept -> std::string_view
@@ -49,25 +69,34 @@ auto Mesh::name() const noexcept -> std::string_view
     return name_;
 }
 
-auto Mesh::create_test_triangle(const VulkanDevice &device) -> Mesh
-{
-    constexpr auto vertices = std::array<Vertex, 3>{
-        {{.position = {0.0f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
-         {.position = {0.5f, 0.5f}, .color = {0.0f, 1.0f, 0.0f}},
-         {.position = {-0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}}}};
-    return Mesh("test_triangle", device, vertices);
-}
+// auto Mesh::create_test_triangle(const VulkanDevice &device) -> Mesh
+// {
+//     constexpr auto vertices = std::array<Vertex, 3>{
+//         {{.position = {0.0f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
+//          {.position = {0.5f, 0.5f}, .color = {0.0f, 1.0f, 0.0f}},
+//          {.position = {-0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}}}};
+//     return Mesh("test_triangle", device, vertices);
+// }
 
 auto Mesh::create_test_rectangle(const VulkanDevice &device) -> Mesh
 {
-    constexpr auto vertices = std::array<Vertex, 6>{
-        {{.position = {-0.5f, -0.5f}, .color = {1.0f, 1.0f, 1.0f}},
-         {.position = {0.5f, -0.5f}, .color = {1.0f, 1.0f, 1.0f}},
-         {.position = {0.5f, 0.5f}, .color = {1.0f, 1.0f, 1.0f}},
-         {.position = {0.5f, 0.5f}, .color = {1.0f, 1.0f, 1.0f}},
-         {.position = {-0.5f, 0.5f}, .color = {1.0f, 1.0f, 1.0f}},
-         {.position = {-0.5f, -0.5f}, .color = {1.0f, 1.0f, 1.0f}}}};
-    return Mesh("test_rectangle", device, vertices);
+    const std::vector<Vertex> vertices = {
+        {{-0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+        {{0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}},
+        {{0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
+        {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}},
+    };
+
+    const std::vector<std::uint32_t> indices = {
+        0,
+        1,
+        2, // first triangle
+        2,
+        3,
+        0, // second triangle
+    };
+
+    return Mesh("test_rectangle", device, vertices, indices);
 }
 
 } // namespace pong
