@@ -22,8 +22,8 @@ class ResourceManager
   public:
     explicit ResourceManager(const VulkanDevice &device);
 
-    auto load(const std::string &name, const std::filesystem::path &path, ShaderStage stage) -> Shader &;
-    auto load(const std::string &name, std::span<const Vertex> vertices) -> Mesh &;
+    auto load(std::string name, const std::filesystem::path &path, ShaderStage stage) -> Shader &;
+    auto load(Mesh mesh) -> Mesh &;
 
     template <typename T>
     auto get(std::string_view name) -> T &;

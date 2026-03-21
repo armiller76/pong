@@ -21,7 +21,7 @@ ResourceManager::ResourceManager(const VulkanDevice &device)
     arm::log::debug("ResourceManager constructor");
 }
 
-auto ResourceManager::load(const std::string &name, const std::filesystem::path &path, ShaderStage stage) -> Shader &
+auto ResourceManager::load(std::string name, const std::filesystem::path &path, ShaderStage stage) -> Shader &
 {
     const auto key = get_resource_id_(name);
 
@@ -31,31 +31,29 @@ auto ResourceManager::load(const std::string &name, const std::filesystem::path 
         return entry->second;
     }
 
-    auto spirv = File(path).data();
     auto [entry, inserted] = shaders_.try_emplace(key);
     arm::ensure(inserted, "failed to load shader: {}", name);
 
-    auto &shader = entry->second;
-    shader.name = name;
-    shader.stage = stage;
-    shader.spirv.assign_range(spirv);
+    entry->second.name = std::move(name);
+    entry->second.stage = stage;
+    entry->second.spirv.assign_range(File(path).data());
 
-    return shader;
+    return entry->second;
 }
 
-auto ResourceManager::load(const std::string &name, std::span<const Vertex> vertices) -> Mesh &
+auto ResourceManager::load(Mesh mesh) -> Mesh &
 {
-    const auto key = get_resource_id_(name);
+    const auto key = get_resource_id_(mesh.name());
 
     if (auto entry = meshes_.find(key); entry != meshes_.end())
     {
-        arm::log::warn("mesh already loaded: {} (skipping)", name);
+        arm::log::warn("mesh already loaded: {} (skipping)", mesh.name());
         return entry->second;
     }
 
-    auto [entry, inserted] = meshes_.try_emplace(key, device_, vertices);
+    auto [entry, inserted] = meshes_.try_emplace(key, std::move(mesh));
+    arm::ensure(inserted, "failed to load mesh: {}", mesh.name());
 
-    arm::ensure(inserted, "failed to load mesh: {}", name);
     return entry->second;
 }
 
