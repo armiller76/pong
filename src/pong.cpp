@@ -11,6 +11,7 @@
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_surface.h"
 #include "engine/vulkan/vulkan_swapchain.h"
+#include "graphics/mesh.h"
 #include "graphics/shader.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"
@@ -45,7 +46,9 @@ int main()
 
         auto file = std::filesystem::path(project_root + "/assets/shaders/src/simple.vert");
         auto resources = pong::ResourceManager(vk_device);
-        resources.load("simple.vert", file, pong::ShaderStage::Vertex);
+        [[maybe_unused]] auto &simple_vertex_shader = resources.load("simple.vert", file, pong::ShaderStage::Vertex);
+        [[maybe_unused]] auto &test_rectangle_mesh =
+            resources.load(std::move(pong::Mesh::create_test_rectangle(vk_device)));
 
         while (!window.should_close())
         {
