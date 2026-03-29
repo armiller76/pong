@@ -6,5 +6,6 @@ target_sources(
           vulkan_device.cpp
           vulkan_swapchain.cpp
           vulkan_command_context.cpp
+          vulkan_pipeline_factory.cpp
 )
 target_link_libraries(engine PUBLIC Vulkan::Vulkan)

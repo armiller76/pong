@@ -43,7 +43,6 @@ class VulkanRenderer
 
     // TODO this is where you left off when you went gallavanting off to write a resource/asset manager
     auto load_shaders_() -> void;
-    auto create_graphics_pipeline_() -> void;
 };
 
 }
