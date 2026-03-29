@@ -90,4 +90,14 @@ auto ensure(std::unique_ptr<T, D> &obj, std::format_string<Args...> msg, Args &&
     ensure(!!obj, msg, std::forward<Args>(args)...);
 }
 
+/**
+ * Trap for code paths that have not yet been implemented.
+ */
+[[noreturn]] inline auto not_implemented() -> void
+{
+    log::error("Not Implemented!");
+    log::error("{}", std::stacktrace::current(2));
+    std::terminate();
 }
+
+} // namespace arm
