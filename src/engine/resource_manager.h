@@ -26,7 +26,7 @@ class ResourceManager
     auto load(Mesh mesh) -> Mesh &;
 
     template <typename T>
-    auto get(std::string_view name) -> T &;
+    auto get(this auto &&self, std::string_view name) -> auto &&;
 
     template <typename T>
     auto contains(std::string_view name) const -> bool;
@@ -38,18 +38,18 @@ class ResourceManager
     std::unordered_map<std::uint64_t, Mesh> meshes_;
 
     template <typename T>
-    auto get_map_() -> std::unordered_map<std::uint64_t, T> &;
+    auto get_map_(this auto &&self) -> auto &&;
 
-    template <typename T>
-    auto get_map_() const -> const std::unordered_map<std::uint64_t, T> &;
-
-    static constexpr auto get_resource_id_(std::string_view str) -> std::uint64_t;
+    static constexpr auto get_resource_id_(std::string_view str) -> std::uint64_t
+    {
+        return pong::hash_string(str);
+    }
 };
 
 template <typename T>
-auto ResourceManager::get(std::string_view name) -> T &
+auto ResourceManager::get(this auto &&self, std::string_view name) -> auto &&
 {
-    auto &map = get_map_<T>();
+    auto &map = self.get_map_<T>();
     auto key = get_resource_id_(name);
     if (auto entry = map.find(key); entry != map.end())
     {
@@ -67,15 +67,15 @@ auto ResourceManager::contains(std::string_view name) const -> bool
 }
 
 template <typename T>
-auto ResourceManager::get_map_() -> std::unordered_map<std::uint64_t, T> &
+auto ResourceManager::get_map_(this auto &&self) -> auto &&
 {
     if constexpr (std::is_same_v<T, Shader>)
     {
-        return shaders_;
+        return self.shaders_;
     }
     else if constexpr (std::is_same_v<T, Mesh>)
     {
-        return meshes_;
+        return self.meshes_;
     }
     else
     {
@@ -84,21 +84,4 @@ auto ResourceManager::get_map_() -> std::unordered_map<std::uint64_t, T> &
     }
 }
 
-template <typename T>
-auto ResourceManager::get_map_() const -> const std::unordered_map<std::uint64_t, T> &
-{
-    if constexpr (std::is_same_v<T, Shader>)
-    {
-        return shaders_;
-    }
-    else if constexpr (std::is_same_v<T, Mesh>)
-    {
-        return meshes_;
-    }
-    else
-    {
-        arm::ensure(!sizeof(T), "invalid resource type in ResourceManager::get_map_() const");
-        std::unreachable();
-    }
-}
 }
