@@ -1,8 +1,7 @@
 #pragma once
 
-#include <cstddef>
+#include <cstdint>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "utils/hash.h"
@@ -20,8 +19,13 @@ enum class ShaderStage
 struct Shader
 {
     std::string name;
-    std::vector<std::byte> spirv;
+    std::vector<std::uint32_t> spirv;
     ShaderStage stage;
+
+    auto spirv_view() const -> std::span<const std::uint32_t>
+    {
+        return {spirv.data(), spirv.data() + spirv.size()};
+    }
 };
 
 }
