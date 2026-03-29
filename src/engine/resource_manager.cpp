@@ -36,7 +36,7 @@ auto ResourceManager::load(std::string name, const std::filesystem::path &path, 
 
     entry->second.name = std::move(name);
     entry->second.stage = stage;
-    entry->second.spirv.assign_range(File(path).data());
+    entry->second.spirv.assign_range(File(path).as_spirv());
 
     return entry->second;
 }
@@ -55,11 +55,6 @@ auto ResourceManager::load(Mesh mesh) -> Mesh &
     arm::ensure(inserted, "failed to load mesh: {}", mesh.name());
 
     return entry->second;
-}
-
-constexpr auto ResourceManager::get_resource_id_(std::string_view str) -> std::uint64_t
-{
-    return pong::hash_string(str);
 }
 
 }
