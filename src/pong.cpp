@@ -9,6 +9,7 @@
 #include "engine/vulkan/vulkan_command_context.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_instance.h"
+#include "engine/vulkan/vulkan_renderer.h"
 #include "engine/vulkan/vulkan_surface.h"
 #include "engine/vulkan/vulkan_swapchain.h"
 #include "graphics/mesh.h"
@@ -44,15 +45,30 @@ int main()
         const auto vk_surface = window.create_vulkan_surface(vk_instance);
         const auto vk_device = pong::VulkanDevice(vk_instance, vk_surface);
 
-        auto file = std::filesystem::path(project_root + "/assets/shaders/src/simple.vert");
-        auto resources = pong::ResourceManager(vk_device);
-        [[maybe_unused]] auto &simple_vertex_shader = resources.load("simple.vert", file, pong::ShaderStage::Vertex);
-        [[maybe_unused]] auto &test_rectangle_mesh =
-            resources.load(std::move(pong::Mesh::create_test_rectangle(vk_device)));
+        auto resource_manager = pong::ResourceManager(vk_device);
 
+        auto vert_file = std::filesystem::path(project_root + "/assets/shaders/bin/simple_vert.spv");
+        //[[maybe_unused]] auto &simple_vertex_shader =
+        resource_manager.load("simple.vert", vert_file, pong::ShaderStage::Vertex);
+
+        auto frag_file = std::filesystem::path(project_root + "/assets/shaders/bin/simple_frag.spv");
+        //[[maybe_unused]] auto &simple_fragment_shader =
+        resource_manager.load("simple.frag", frag_file, pong::ShaderStage::Fragment);
+
+        //[[maybe_unused]] auto &test_rectangle_mesh =
+        resource_manager.load(std::move(pong::Mesh::create_test_rectangle(vk_device)));
+
+        auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, resource_manager);
+
+        auto frame_count = 0zu;
         while (!window.should_close())
         {
             window.process_events();
+
+            vk_renderer.begin_frame();
+            //  draw stuff
+            vk_renderer.end_frame();
+            ++frame_count;
         }
 
         std::println("Hello Pong");
