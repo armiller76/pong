@@ -69,14 +69,22 @@ auto Mesh::name() const noexcept -> std::string_view
     return name_;
 }
 
-// auto Mesh::create_test_triangle(const VulkanDevice &device) -> Mesh
-// {
-//     constexpr auto vertices = std::array<Vertex, 3>{
-//         {{.position = {0.0f, -0.5f}, .color = {1.0f, 0.0f, 0.0f}},
-//          {.position = {0.5f, 0.5f}, .color = {0.0f, 1.0f, 0.0f}},
-//          {.position = {-0.5f, 0.5f}, .color = {0.0f, 0.0f, 1.0f}}}};
-//     return Mesh("test_triangle", device, vertices);
-// }
+auto Mesh::create_test_triangle(const VulkanDevice &device) -> Mesh
+{
+    const std::vector<Vertex> vertices = {
+        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+    };
+
+    const std::vector<std::uint32_t> indices = {
+        0,
+        1,
+        2,
+    };
+
+    return Mesh("test_triangle", device, vertices, indices);
+}
 
 auto Mesh::create_test_rectangle(const VulkanDevice &device) -> Mesh
 {
@@ -89,11 +97,11 @@ auto Mesh::create_test_rectangle(const VulkanDevice &device) -> Mesh
 
     const std::vector<std::uint32_t> indices = {
         0,
-        1,
-        2, // first triangle
         2,
+        1, // first triangle
+        0,
         3,
-        0, // second triangle
+        2, // second triangle
     };
 
     return Mesh("test_rectangle", device, vertices, indices);

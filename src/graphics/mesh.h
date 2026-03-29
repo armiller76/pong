@@ -39,7 +39,7 @@ class Mesh
 
     auto name() const noexcept -> std::string_view;
 
-    // static auto create_test_triangle(const VulkanDevice &device) -> Mesh;
+    static auto create_test_triangle(const VulkanDevice &device) -> Mesh;
     static auto create_test_rectangle(const VulkanDevice &device) -> Mesh;
 
   private:
