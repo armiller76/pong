@@ -14,6 +14,12 @@ class VulkanCommandContext
 
   public:
     VulkanCommandContext(const VulkanDevice &device, std::uint32_t frames_in_flight = 2u);
+    ~VulkanCommandContext() = default;
+
+    VulkanCommandContext(const VulkanCommandContext &) = delete;
+    VulkanCommandContext &operator=(VulkanCommandContext &&) = delete;
+    VulkanCommandContext(VulkanCommandContext &&) = delete;
+    VulkanCommandContext &operator=(const VulkanCommandContext &&) = delete;
 
     auto wait_current_frame() -> void;
     auto advance_frame() -> void;

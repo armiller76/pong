@@ -24,6 +24,12 @@ class VulkanRenderer
         const ResourceManager &resource_manager,
         const Color clear_color = {0.5f, 1.0f, 0.0f, 1.0f});
     // TODO rule of 5
+    ~VulkanRenderer() = default;
+
+    VulkanRenderer(const VulkanRenderer &) = delete;
+    VulkanRenderer &operator=(VulkanRenderer &&) = delete;
+    VulkanRenderer(VulkanRenderer &&) = delete;
+    VulkanRenderer &operator=(const VulkanRenderer &&) = delete;
 
     auto begin_frame() -> void;
     auto end_frame() -> void;
