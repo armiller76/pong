@@ -111,46 +111,6 @@ auto VulkanCommandContext::advance_frame() -> void
     current_frame_ = (current_frame_ + 1) % frames_in_flight_;
 }
 
-auto VulkanCommandContext::current_command_buffer() -> ::vk::raii::CommandBuffer &
-{
-    return command_buffers_[current_frame_];
-}
-
-auto VulkanCommandContext::current_command_buffer() const -> const ::vk::raii::CommandBuffer &
-{
-    return command_buffers_[current_frame_];
-}
-
-auto VulkanCommandContext::current_fence() -> ::vk::raii::Fence &
-{
-    return fences_[current_frame_];
-}
-
-auto VulkanCommandContext::current_fence() const -> const ::vk::raii::Fence &
-{
-    return fences_[current_frame_];
-}
-
-auto VulkanCommandContext::current_image_available_semaphore() -> ::vk::raii::Semaphore &
-{
-    return image_available_semaphores_[current_frame_];
-}
-
-auto VulkanCommandContext::current_image_available_semaphore() const -> const ::vk::raii::Semaphore &
-{
-    return image_available_semaphores_[current_frame_];
-}
-
-auto VulkanCommandContext::current_render_finished_semaphore() -> ::vk::raii::Semaphore &
-{
-    return render_finished_semaphores_[current_frame_];
-}
-
-auto VulkanCommandContext::current_render_finished_semaphore() const -> const ::vk::raii::Semaphore &
-{
-    return render_finished_semaphores_[current_frame_];
-}
-
 auto VulkanCommandContext::frames_in_flight() const -> std::uint32_t
 {
     return frames_in_flight_;

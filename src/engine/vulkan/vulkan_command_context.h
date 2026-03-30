@@ -24,14 +24,10 @@ class VulkanCommandContext
     auto wait_current_frame() -> void;
     auto advance_frame() -> void;
 
-    auto current_command_buffer() -> ::vk::raii::CommandBuffer &;
-    auto current_command_buffer() const -> const ::vk::raii::CommandBuffer &;
-    auto current_fence() -> ::vk::raii::Fence &;
-    auto current_fence() const -> const ::vk::raii::Fence &;
-    auto current_image_available_semaphore() -> ::vk::raii::Semaphore &;
-    auto current_image_available_semaphore() const -> const ::vk::raii::Semaphore &;
-    auto current_render_finished_semaphore() -> ::vk::raii::Semaphore &;
-    auto current_render_finished_semaphore() const -> const ::vk::raii::Semaphore &;
+    auto current_command_buffer(this auto &&self) -> auto &&;
+    auto current_fence(this auto &&self) -> auto &&;
+    auto current_image_available_semaphore(this auto &&self) -> auto &&;
+    auto current_render_finished_semaphore(this auto &&self) -> auto &&;
 
     auto frames_in_flight() const -> std::uint32_t;
     auto current_frame_index() const -> std::uint32_t;
@@ -47,5 +43,25 @@ class VulkanCommandContext
     std::vector<::vk::raii::Semaphore> image_available_semaphores_;
     std::vector<::vk::raii::Semaphore> render_finished_semaphores_;
 };
+
+auto VulkanCommandContext::current_command_buffer(this auto &&self) -> auto &&
+{
+    return self.command_buffers_[self.current_frame_];
+}
+
+auto VulkanCommandContext::current_fence(this auto &&self) -> auto &&
+{
+    return self.fences_[self.current_frame_];
+}
+
+auto VulkanCommandContext::current_image_available_semaphore(this auto &&self) -> auto &&
+{
+    return self.image_available_semaphores_[self.current_frame_];
+}
+
+auto VulkanCommandContext::current_render_finished_semaphore(this auto &&self) -> auto &&
+{
+    return self.render_finished_semaphores_[self.current_frame_];
+}
 
 }
