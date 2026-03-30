@@ -79,8 +79,8 @@ auto Mesh::create_test_triangle(const VulkanDevice &device) -> Mesh
 
     const std::vector<std::uint32_t> indices = {
         0,
-        1,
         2,
+        1,
     };
 
     return Mesh("test_triangle", device, vertices, indices);
@@ -97,9 +97,9 @@ auto Mesh::create_test_rectangle(const VulkanDevice &device) -> Mesh
 
     const std::vector<std::uint32_t> indices = {
         0,
-        2,
+        3,
         1, // first triangle
-        0,
+        1,
         3,
         2, // second triangle
     };
