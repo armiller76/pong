@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vulkan/vulkan_raii.hpp>
+// #include <vulkan/vulkan_raii.hpp>
 
 #include "graphics/shader.h"
 #include "utils/exception.h"
@@ -20,11 +20,11 @@ inline auto to_vk_stage(ShaderStage stage) -> ::vk::ShaderStageFlagBits
     }
 }
 
-[[nodiscard]] inline auto create_vk_shader_module(const vk::raii::Device &device, const Shader &shader)
-    -> ::vk::raii::ShaderModule
-{
-    return device.createShaderModule(
-        {{}, shader.spirv.size(), reinterpret_cast<const uint32_t *>(shader.spirv.data())});
-}
+//[[nodiscard]] inline auto create_vk_shader_module(const vk::raii::Device &device, const Shader &shader)
+//    -> ::vk::raii::ShaderModule
+//{
+//    return device.createShaderModule(
+//        {{}, shader.spirv.size(), reinterpret_cast<const uint32_t *>(shader.spirv.data())});
+//}
 
 }
