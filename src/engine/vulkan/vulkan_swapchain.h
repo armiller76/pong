@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -22,6 +23,7 @@ class VulkanSwapchain
     auto extent() const -> ::vk::Extent2D;
     auto images() const -> const std::vector<::vk::Image> &;
     auto image_views() const -> const std::vector<::vk::raii::ImageView> &;
+    auto image_count() const -> std::uint32_t;
 
   private:
     const VulkanDevice &device_;

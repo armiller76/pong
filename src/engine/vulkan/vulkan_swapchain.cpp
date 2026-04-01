@@ -53,6 +53,11 @@ auto VulkanSwapchain::image_views() const -> const std::vector<::vk::raii::Image
     return image_views_;
 }
 
+auto VulkanSwapchain::image_count() const -> std::uint32_t
+{
+    return static_cast<std::uint32_t>(images_.size());
+}
+
 auto VulkanSwapchain::create_() -> void
 {
     const auto capabilities = device_.physical_device().getSurfaceCapabilitiesKHR(surface_.get());
