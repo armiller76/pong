@@ -55,20 +55,15 @@ int main()
         //[[maybe_unused]] auto &simple_fragment_shader =
         resource_manager.load("simple.frag", frag_file, pong::ShaderStage::Fragment);
 
-        //[[maybe_unused]] auto &test_rectangle_mesh =
-        resource_manager.load(std::move(pong::Mesh::create_test_rectangle(vk_device)));
+        auto &test_triangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_triangle(vk_device)));
 
-        auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, resource_manager);
+        auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, resource_manager, 2u);
 
-        auto frame_count = 0zu;
         while (!window.should_close())
         {
             window.process_events();
 
-            vk_renderer.begin_frame();
-            //  draw stuff
-            vk_renderer.end_frame();
-            ++frame_count;
+            vk_renderer.render(test_triangle_mesh);
         }
 
         std::println("Hello Pong");
