@@ -13,14 +13,18 @@
 #include "vulkan_instance.h"
 #include "vulkan_surface.h"
 
-
-namespace pong
+namespace
 {
 
 static constexpr uint32_t DISCRETE_GPU_BONUS = 500;
 static constexpr uint32_t INTEGRATED_GPU_BONUS = 250;
 static constexpr uint32_t COMBINED_QUEUE_BONUS = 50;
 static constexpr uint32_t SEPARATE_QUEUE_BONUS = 25;
+
+} // anonymous namespace
+
+namespace pong
+{
 
 VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &surface)
     : physical_device_({})

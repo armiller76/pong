@@ -19,7 +19,7 @@ struct VulkanDeviceInfo
     bool supports_api13;
     bool supports_dynamic_rendering;
     bool supports_sync2;
-};
+}; // struct VulkanDeviceInfo
 
 class VulkanDevice
 {
@@ -51,6 +51,6 @@ class VulkanDevice
 
     auto score_device(VulkanDeviceInfo &info, const VulkanSurface &surface, const ::vk::raii::PhysicalDevice &device)
         -> bool;
-};
+}; // class VulkanDevice
 
-}
+} // namespace pong

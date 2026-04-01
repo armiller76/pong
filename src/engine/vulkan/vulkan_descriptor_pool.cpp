@@ -19,7 +19,7 @@ VulkanDescriptorPool::VulkanDescriptorPool(
     const std::uint32_t max_frames_in_flight)
     : device_{device}
     , uniform_buffers_{uniform_buffers}
-    , max_frames_{max_frames_in_flight}
+    , frames_in_flight_{max_frames_in_flight}
     , pool_{create_pool_()}
 {
     arm::log::debug("VulkanDescriptorPool constructor");
@@ -30,32 +30,11 @@ auto VulkanDescriptorPool::native_handle() const -> ::vk::DescriptorPool
     return *pool_;
 }
 
-auto VulkanDescriptorPool::create_pool_() -> ::vk::raii::DescriptorPool
-{
-    auto vertex_pool_size = ::vk::DescriptorPoolSize{};
-    vertex_pool_size.type = ::vk::DescriptorType::eUniformBuffer;
-    vertex_pool_size.descriptorCount = max_frames_;
-
-    auto pool_sizes = std::array{
-        vertex_pool_size,
-    };
-
-    auto pool_create_info = ::vk::DescriptorPoolCreateInfo{};
-    pool_create_info.sType = ::vk::StructureType::eDescriptorPoolCreateInfo;
-    pool_create_info.pNext = nullptr;
-    pool_create_info.flags = ::vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-    pool_create_info.maxSets = max_frames_;
-    pool_create_info.poolSizeCount = static_cast<std::uint32_t>(pool_sizes.size());
-    pool_create_info.pPoolSizes = pool_sizes.data();
-
-    return device_.native_handle().createDescriptorPool(pool_create_info);
-}
-
 auto VulkanDescriptorPool::allocate_descriptor_sets(
     const ::vk::DescriptorSetLayout &layout,
-    std::uint32_t max_frames_in_flight) -> std::vector<vk::raii::DescriptorSet>
+    std::uint32_t frames_in_flight) -> std::vector<vk::raii::DescriptorSet>
 {
-    auto layouts = std::vector<::vk::DescriptorSetLayout>(max_frames_in_flight, layout);
+    auto layouts = std::vector<::vk::DescriptorSetLayout>(frames_in_flight, layout);
 
     auto descriptor_set_allocate_info = ::vk::DescriptorSetAllocateInfo{};
     descriptor_set_allocate_info.sType = ::vk::StructureType::eDescriptorSetAllocateInfo;
@@ -66,7 +45,7 @@ auto VulkanDescriptorPool::allocate_descriptor_sets(
 
     auto descriptor_sets = device_.native_handle().allocateDescriptorSets(descriptor_set_allocate_info);
 
-    for (std::size_t i = 0; i < max_frames_in_flight; ++i)
+    for (std::size_t i = 0; i < frames_in_flight; ++i)
     {
         auto ubo_mvp_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
         ubo_mvp_descriptor_buffer_info.buffer = uniform_buffers_.at(i).native_handle();
@@ -94,5 +73,26 @@ auto VulkanDescriptorPool::allocate_descriptor_sets(
 
     return descriptor_sets;
 } // allocate_descriptor_sets
+
+auto VulkanDescriptorPool::create_pool_() -> ::vk::raii::DescriptorPool
+{
+    auto vertex_pool_size = ::vk::DescriptorPoolSize{};
+    vertex_pool_size.type = ::vk::DescriptorType::eUniformBuffer;
+    vertex_pool_size.descriptorCount = frames_in_flight_;
+
+    auto pool_sizes = std::array{
+        vertex_pool_size,
+    };
+
+    auto pool_create_info = ::vk::DescriptorPoolCreateInfo{};
+    pool_create_info.sType = ::vk::StructureType::eDescriptorPoolCreateInfo;
+    pool_create_info.pNext = nullptr;
+    pool_create_info.flags = ::vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+    pool_create_info.maxSets = frames_in_flight_;
+    pool_create_info.poolSizeCount = static_cast<std::uint32_t>(pool_sizes.size());
+    pool_create_info.pPoolSizes = pool_sizes.data();
+
+    return device_.native_handle().createDescriptorPool(pool_create_info);
+} // create_pool_
 
 } // namespace pong

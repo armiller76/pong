@@ -36,7 +36,7 @@ class VulkanDescriptorPool
 
     const VulkanDevice &device_;
     const std::vector<GpuBuffer> &uniform_buffers_;
-    std::uint32_t max_frames_;
+    std::uint32_t frames_in_flight_;
     ::vk::raii::DescriptorPool pool_;
 };
 
