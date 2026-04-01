@@ -13,9 +13,13 @@
 namespace pong
 {
 
-VulkanCommandContext::VulkanCommandContext(const VulkanDevice &device, std::uint32_t frames_in_flight)
+VulkanCommandContext::VulkanCommandContext(
+    const VulkanDevice &device,
+    std::uint32_t swap_chain_image_count,
+    std::uint32_t frames_in_flight)
     : device_{device}
     , frames_in_flight_{frames_in_flight}
+    , swap_chain_image_count_{swap_chain_image_count}
     , current_frame_{0}
 {
     arm::log::debug("VulkanCommandContext constructor");
@@ -60,43 +64,45 @@ VulkanCommandContext::VulkanCommandContext(const VulkanDevice &device, std::uint
     }
 #endif
 
-    image_available_semaphores_.reserve(frames_in_flight_);
-    render_finished_semaphores_.reserve(frames_in_flight_);
     fences_.reserve(frames_in_flight_);
+    image_available_semaphores_.reserve(frames_in_flight_);
+    render_finished_semaphores_.reserve(swap_chain_image_count_);
 
     auto semaphore_info = ::vk::SemaphoreCreateInfo{};
     auto fence_info = ::vk::FenceCreateInfo{};
     fence_info.flags = ::vk::FenceCreateFlagBits::eSignaled;
-    for (std::size_t i = 0; i < frames_in_flight_; ++i)
-    {
-        image_available_semaphores_.emplace_back(device_.get(), semaphore_info);
-        render_finished_semaphores_.emplace_back(device_.get(), semaphore_info);
-        fences_.emplace_back(device_.get(), fence_info);
-    }
-#ifndef NDEBUG
     for (std::uint32_t i = 0; i < frames_in_flight_; ++i)
     {
+        fences_.emplace_back(device_.get(), fence_info);
+        image_available_semaphores_.emplace_back(device_.get(), semaphore_info);
+#ifndef NDEBUG
+        debug_name_str = std::format("Fence {}", i);
+        debug_name_info.pObjectName = debug_name_str.c_str();
+        debug_name_info.objectType = ::vk::ObjectType::eFence;
+        debug_name_info.objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkFence>(*fences_[i]));
+        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+
         debug_name_str = std::format("Image Available Semaphore {}", i);
         debug_name_info.pObjectName = debug_name_str.c_str();
         debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
         debug_name_info.objectHandle =
             reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*image_available_semaphores_[i]));
         device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+#endif
+    }
 
+    for (std::uint32_t i = 0; i < swap_chain_image_count_; ++i)
+    {
+        render_finished_semaphores_.emplace_back(device_.get(), semaphore_info);
+#ifndef NDEBUG
         debug_name_str = std::format("Render Finished Semaphore {}", i);
         debug_name_info.pObjectName = debug_name_str.c_str();
         debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
         debug_name_info.objectHandle =
             reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*render_finished_semaphores_[i]));
         device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
-
-        debug_name_str = std::format("Fence {}", i);
-        debug_name_info.pObjectName = debug_name_str.c_str();
-        debug_name_info.objectType = ::vk::ObjectType::eFence;
-        debug_name_info.objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkFence>(*fences_[i]));
-        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
-    }
 #endif
+    }
 }
 
 auto VulkanCommandContext::wait_current_frame() -> void
