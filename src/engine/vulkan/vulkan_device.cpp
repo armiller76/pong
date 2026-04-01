@@ -183,7 +183,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
         supports_sync2_ ? "Supported" : "Not Supported");
 }
 
-auto VulkanDevice::get() const -> const ::vk::raii::Device &
+auto VulkanDevice::native_handle() const -> const ::vk::raii::Device &
 {
     return device_;
 }

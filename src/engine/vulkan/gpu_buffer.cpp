@@ -6,6 +6,7 @@
 
 #include "engine/vulkan/vulkan_device.h"
 #include "utils/error.h"
+#include "utils/log.h"
 
 namespace pong
 {
@@ -15,35 +16,39 @@ GpuBuffer::GpuBuffer(
     ::vk::DeviceSize size,
     ::vk::BufferUsageFlags usage,
     ::vk::MemoryPropertyFlags memory_flags)
-    : device_(device)
-    , size_(size)
-    , memory_({})
-    , buffer_({})
-    , memory_flags_(memory_flags)
+    : device_{device}
+    , size_{size}
+    , buffer_(
+          [&]() -> ::vk::raii::Buffer
+          {
+              auto buffer_info = ::vk::BufferCreateInfo{};
+              buffer_info.size = size;
+              buffer_info.usage = usage;
+              buffer_info.sharingMode = ::vk::SharingMode::eExclusive;
+              return device_.native_handle().createBuffer(buffer_info);
+          }())
+    , memory_(
+          [&]() -> ::vk::raii::DeviceMemory
+          {
+              auto memory_requirements = buffer_.getMemoryRequirements();
+              auto memory_info = ::vk::MemoryAllocateInfo{};
+              memory_info.allocationSize = memory_requirements.size;
+              memory_info.memoryTypeIndex = device_.find_memory_type_index(memory_requirements, memory_flags);
+              auto memory = device_.native_handle().allocateMemory(memory_info);
+              buffer_.bindMemory(*memory, 0);
+              return memory;
+          }())
+    , memory_flags_{memory_flags}
 {
-    auto buffer_info = ::vk::BufferCreateInfo{};
-    buffer_info.size = size_;
-    buffer_info.usage = usage;
-    buffer_info.sharingMode = ::vk::SharingMode::eExclusive;
-
-    buffer_ = device_.get().createBuffer(buffer_info);
-
-    auto memory_requirements = buffer_.getMemoryRequirements();
-
-    auto memory_info = ::vk::MemoryAllocateInfo{};
-    memory_info.allocationSize = memory_requirements.size;
-    memory_info.memoryTypeIndex = device_.find_memory_type_index(memory_requirements, memory_flags_);
-
-    memory_ = device_.get().allocateMemory(memory_info);
-    buffer_.bindMemory(*memory_, 0);
+    arm::log::debug("GpuBuffer Constructor: {} - {} bytes", ::vk::to_string(usage), size);
 }
 
-auto GpuBuffer::map() -> void *
+auto GpuBuffer::map(this auto &&self) -> auto &&
 {
     arm::ensure(
-        (memory_flags_ & ::vk::MemoryPropertyFlagBits::eHostVisible) == ::vk::MemoryPropertyFlagBits::eHostVisible,
+        (self.memory_flags_ & ::vk::MemoryPropertyFlagBits::eHostVisible) == ::vk::MemoryPropertyFlagBits::eHostVisible,
         "mapping requires HOST_VISIBLE memory");
-    return memory_.mapMemory(0, size_);
+    return self.memory_.mapMemory(0, size_);
 }
 
 auto GpuBuffer::unmap() -> void
@@ -68,7 +73,7 @@ auto GpuBuffer::upload(const void *data, std::size_t bytes, std::size_t offset) 
         flush_range.memory = *memory_;
         flush_range.offset = offset;
         flush_range.size = bytes;
-        device_.get().flushMappedMemoryRanges({flush_range});
+        device_.native_handle().flushMappedMemoryRanges({flush_range});
     }
 }
 
@@ -82,4 +87,4 @@ auto GpuBuffer::size() const -> ::vk::DeviceSize
     return size_;
 }
 
-}
+} // namespace pong

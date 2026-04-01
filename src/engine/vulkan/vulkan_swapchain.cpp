@@ -114,7 +114,7 @@ auto VulkanSwapchain::create_() -> void
     swapchain_create_info.clipped = VK_TRUE;
     swapchain_create_info.oldSwapchain = *swapchain_ != VK_NULL_HANDLE ? *swapchain_ : ::vk::SwapchainKHR{};
 
-    swapchain_ = ::vk::raii::SwapchainKHR{device_.get(), swapchain_create_info};
+    swapchain_ = ::vk::raii::SwapchainKHR{device_.native_handle(), swapchain_create_info};
 
     images_ = swapchain_.getImages();
     image_views_.clear();
@@ -137,7 +137,7 @@ auto VulkanSwapchain::create_() -> void
         image_view_create_info.subresourceRange.baseArrayLayer = 0;
         image_view_create_info.subresourceRange.layerCount = 1;
 
-        image_views_.emplace_back(device_.get(), image_view_create_info);
+        image_views_.emplace_back(device_.native_handle(), image_view_create_info);
     }
 }
 

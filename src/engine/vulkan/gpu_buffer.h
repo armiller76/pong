@@ -6,6 +6,7 @@
 
 namespace pong
 {
+
 class VulkanDevice;
 
 class GpuBuffer
@@ -23,7 +24,7 @@ class GpuBuffer
     GpuBuffer(const GpuBuffer &) = delete;
     GpuBuffer &operator=(const GpuBuffer &) = delete;
 
-    auto map() -> void *;
+    auto map(this auto &&self) -> auto &&;
     auto unmap() -> void;
     auto upload(const void *data, std::size_t bytes, std::size_t offset = 0) -> void;
 
@@ -32,10 +33,10 @@ class GpuBuffer
 
   private:
     const VulkanDevice &device_;
-    ::vk::DeviceSize size_{0};
-    ::vk::raii::DeviceMemory memory_;
+    ::vk::DeviceSize size_{0}; // could be const but could cause move assignment issues
     ::vk::raii::Buffer buffer_;
+    ::vk::raii::DeviceMemory memory_;
     ::vk::MemoryPropertyFlags memory_flags_;
-};
+}; // class GpuBuffer
 
-}
+} // namespace pong

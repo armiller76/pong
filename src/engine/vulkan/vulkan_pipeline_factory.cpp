@@ -44,7 +44,7 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     vertex_ubo_layout_create_info.pBindings = layout_bindings.data();
 
     auto descriptor_set_layouts = std::vector<::vk::raii::DescriptorSetLayout>{};
-    descriptor_set_layouts.emplace_back(device_.get(), vertex_ubo_layout_create_info);
+    descriptor_set_layouts.emplace_back(device_.native_handle(), vertex_ubo_layout_create_info);
 
     // TODO get rid of this garbage
     auto descriptor_set_pipeline_layout_array = std::vector{*descriptor_set_layouts.at(0)};
@@ -55,7 +55,7 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     pipeline_layout_create_info.pSetLayouts = descriptor_set_pipeline_layout_array.data();
     pipeline_layout_create_info.pushConstantRangeCount = 0;
     pipeline_layout_create_info.pPushConstantRanges = nullptr;
-    auto pipeline_layout = device_.get().createPipelineLayout(pipeline_layout_create_info);
+    auto pipeline_layout = device_.native_handle().createPipelineLayout(pipeline_layout_create_info);
 
     auto formats = std::array<::vk::Format, 1>{swapchain_format};
     auto rendering_create_info = ::vk::PipelineRenderingCreateInfoKHR{};
@@ -69,7 +69,7 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     vertex_create_info.sType = ::vk::StructureType::eShaderModuleCreateInfo;
     vertex_create_info.codeSize = vertex_shader.spirv_view().size_bytes();
     vertex_create_info.pCode = vertex_shader.spirv_view().data();
-    auto vertex = device_.get().createShaderModule(vertex_create_info);
+    auto vertex = device_.native_handle().createShaderModule(vertex_create_info);
     auto vertex_stage_create_info = ::vk::PipelineShaderStageCreateInfo{};
     vertex_stage_create_info.sType = ::vk::StructureType::ePipelineShaderStageCreateInfo;
     vertex_stage_create_info.pNext = nullptr;
@@ -84,7 +84,7 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     fragment_create_info.sType = ::vk::StructureType::eShaderModuleCreateInfo;
     fragment_create_info.codeSize = fragment_shader.spirv_view().size_bytes();
     fragment_create_info.pCode = fragment_shader.spirv_view().data();
-    auto fragment = device_.get().createShaderModule(fragment_create_info);
+    auto fragment = device_.native_handle().createShaderModule(fragment_create_info);
     auto fragment_stage_create_info = ::vk::PipelineShaderStageCreateInfo{};
     fragment_stage_create_info.sType = ::vk::StructureType::ePipelineShaderStageCreateInfo;
     fragment_stage_create_info.pNext = nullptr;
@@ -224,7 +224,7 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     pipeline_create_info.basePipelineIndex = 0;
 
     // TODO add pipeline caching
-    auto pipeline = device_.get().createGraphicsPipeline(nullptr, pipeline_create_info);
+    auto pipeline = device_.native_handle().createGraphicsPipeline(nullptr, pipeline_create_info);
     // TODO probably need some error checking, or will vulkan debug utils and validation catch it anyway?
 
     return {

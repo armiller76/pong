@@ -26,7 +26,7 @@ class VulkanDevice
   public:
     VulkanDevice(const VulkanInstance &instance, const VulkanSurface &surface);
 
-    auto get() const -> const ::vk::raii::Device &;
+    auto native_handle() const -> const ::vk::raii::Device &;
     auto physical_device() const -> const ::vk::raii::PhysicalDevice &;
 
     auto graphics_queue() const -> ::vk::Queue;

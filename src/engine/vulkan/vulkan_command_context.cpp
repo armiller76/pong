@@ -33,13 +33,13 @@ VulkanCommandContext::VulkanCommandContext(
     auto pool_create_info = ::vk::CommandPoolCreateInfo{};
     pool_create_info.flags = ::vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
     pool_create_info.queueFamilyIndex = device_.graphics_queue_family_index();
-    command_pool_ = ::vk::raii::CommandPool{device_.get(), pool_create_info};
+    command_pool_ = ::vk::raii::CommandPool{device_.native_handle(), pool_create_info};
 #ifndef NDEBUG
     debug_name_str = "Graphics Command Pool";
     debug_name_info.pObjectName = debug_name_str.c_str();
     debug_name_info.objectType = ::vk::ObjectType::eCommandPool;
     debug_name_info.objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkCommandPool>(*command_pool_));
-    device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+    device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
 #endif
 
     command_buffers_.reserve(frames_in_flight_);
@@ -47,7 +47,7 @@ VulkanCommandContext::VulkanCommandContext(
     cb_allocate_info.commandPool = *command_pool_;
     cb_allocate_info.level = ::vk::CommandBufferLevel::ePrimary;
     cb_allocate_info.commandBufferCount = frames_in_flight_;
-    auto buffers = ::vk::raii::CommandBuffers{device_.get(), cb_allocate_info};
+    auto buffers = ::vk::raii::CommandBuffers{device_.native_handle(), cb_allocate_info};
     for (auto &buffer : buffers)
     {
         command_buffers_.emplace_back(std::move(buffer));
@@ -60,7 +60,7 @@ VulkanCommandContext::VulkanCommandContext(
         debug_name_info.objectType = ::vk::ObjectType::eCommandBuffer;
         debug_name_info.objectHandle =
             reinterpret_cast<std::uint64_t>(static_cast<::VkCommandBuffer>(*command_buffers_[i]));
-        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+        device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
     }
 #endif
 
@@ -73,44 +73,44 @@ VulkanCommandContext::VulkanCommandContext(
     fence_info.flags = ::vk::FenceCreateFlagBits::eSignaled;
     for (std::uint32_t i = 0; i < frames_in_flight_; ++i)
     {
-        fences_.emplace_back(device_.get(), fence_info);
-        image_available_semaphores_.emplace_back(device_.get(), semaphore_info);
+        fences_.emplace_back(device_.native_handle(), fence_info);
+        image_available_semaphores_.emplace_back(device_.native_handle(), semaphore_info);
 #ifndef NDEBUG
         debug_name_str = std::format("Fence {}", i);
         debug_name_info.pObjectName = debug_name_str.c_str();
         debug_name_info.objectType = ::vk::ObjectType::eFence;
         debug_name_info.objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkFence>(*fences_[i]));
-        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+        device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
 
         debug_name_str = std::format("Image Available Semaphore {}", i);
         debug_name_info.pObjectName = debug_name_str.c_str();
         debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
         debug_name_info.objectHandle =
             reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*image_available_semaphores_[i]));
-        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+        device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
 #endif
     }
 
     for (std::uint32_t i = 0; i < swap_chain_image_count_; ++i)
     {
-        render_finished_semaphores_.emplace_back(device_.get(), semaphore_info);
+        render_finished_semaphores_.emplace_back(device_.native_handle(), semaphore_info);
 #ifndef NDEBUG
         debug_name_str = std::format("Render Finished Semaphore {}", i);
         debug_name_info.pObjectName = debug_name_str.c_str();
         debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
         debug_name_info.objectHandle =
             reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*render_finished_semaphores_[i]));
-        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
+        device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
 #endif
     }
 }
 
 auto VulkanCommandContext::wait_current_frame() -> void
 {
-    auto result = device_.get().waitForFences(*current_fence(), VK_TRUE, UINT64_MAX);
+    auto result = device_.native_handle().waitForFences(*current_fence(), VK_TRUE, UINT64_MAX);
     arm::ensure(result == ::vk::Result::eSuccess, "Failed to wait for fence");
 
-    device_.get().resetFences(*current_fence());
+    device_.native_handle().resetFences(*current_fence());
 }
 
 auto VulkanCommandContext::advance_frame() -> void

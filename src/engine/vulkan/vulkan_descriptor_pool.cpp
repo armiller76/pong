@@ -48,7 +48,7 @@ auto VulkanDescriptorPool::create_pool_() -> ::vk::raii::DescriptorPool
     pool_create_info.poolSizeCount = static_cast<std::uint32_t>(pool_sizes.size());
     pool_create_info.pPoolSizes = pool_sizes.data();
 
-    return device_.get().createDescriptorPool(pool_create_info);
+    return device_.native_handle().createDescriptorPool(pool_create_info);
 }
 
 auto VulkanDescriptorPool::allocate_descriptor_sets(
@@ -64,7 +64,7 @@ auto VulkanDescriptorPool::allocate_descriptor_sets(
     descriptor_set_allocate_info.descriptorSetCount = static_cast<std::uint32_t>(layouts.size());
     descriptor_set_allocate_info.pSetLayouts = layouts.data();
 
-    auto descriptor_sets = device_.get().allocateDescriptorSets(descriptor_set_allocate_info);
+    auto descriptor_sets = device_.native_handle().allocateDescriptorSets(descriptor_set_allocate_info);
 
     for (std::size_t i = 0; i < max_frames_in_flight; ++i)
     {
@@ -89,7 +89,7 @@ auto VulkanDescriptorPool::allocate_descriptor_sets(
             ubo_write_descriptor_set,
         };
 
-        device_.get().updateDescriptorSets(descriptors, {});
+        device_.native_handle().updateDescriptorSets(descriptors, {});
     }
 
     return descriptor_sets;
