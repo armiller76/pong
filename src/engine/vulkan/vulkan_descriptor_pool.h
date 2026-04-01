@@ -1,9 +1,11 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "gpu_buffer.h"
 #include "vulkan_device.h"
 
 namespace pong
@@ -12,19 +14,28 @@ namespace pong
 class VulkanDescriptorPool
 {
   public:
-    VulkanDescriptorPool(const VulkanDevice &device, const std::uint32_t max_frames_in_flight);
+    VulkanDescriptorPool(
+        const VulkanDevice &device,
+        const std::vector<GpuBuffer> &uniform_buffers,
+        const std::uint32_t max_frames_in_flight);
     ~VulkanDescriptorPool() = default;
 
     VulkanDescriptorPool(const VulkanDescriptorPool &) = delete;
     VulkanDescriptorPool &operator=(VulkanDescriptorPool &&) = delete;
 
     VulkanDescriptorPool(VulkanDescriptorPool &&) = default;
-    VulkanDescriptorPool &operator=(const VulkanDescriptorPool &&) = default;
+    VulkanDescriptorPool &operator=(const VulkanDescriptorPool &&) = delete;
+
+    auto native_handle() const -> ::vk::DescriptorPool;
+
+    auto allocate_descriptor_sets(const ::vk::DescriptorSetLayout &layout, std::uint32_t max_frames_in_flight)
+        -> std::vector<vk::raii::DescriptorSet>;
 
   private:
     auto create_pool_() -> ::vk::raii::DescriptorPool;
 
     const VulkanDevice &device_;
+    const std::vector<GpuBuffer> &uniform_buffers_;
     std::uint32_t max_frames_;
     ::vk::raii::DescriptorPool pool_;
 };
