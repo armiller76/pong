@@ -4,16 +4,21 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "gpu_buffer.h"
 #include "graphics/shader.h"
 #include "graphics/vertex.h"
+#include "utils/log.h"
+#include "vulkan_descriptor_pool.h"
 #include "vulkan_device.h"
 
 namespace pong
 {
 
-VulkanPipelineFactory::VulkanPipelineFactory(const VulkanDevice &device)
+VulkanPipelineFactory::VulkanPipelineFactory(const VulkanDevice &device, const VulkanDescriptorPool &descriptor_pool)
     : device_{device}
+    , descriptor_pool_{descriptor_pool}
 {
+    arm::log::debug("VulkanPipelineFactory constructor");
 }
 
 auto VulkanPipelineFactory::create_graphics_pipeline(
@@ -21,14 +26,35 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     const Shader &fragment_shader,
     ::vk::Format swapchain_format) -> VulkanPipelineResources
 {
-    // TODO descriptor sets and push constants empty for now until we start using uniforms and such
-    auto descriptor_sets = std::vector<::vk::DescriptorSetLayout>();
-    auto push_constants = std::vector<::vk::PushConstantRange>();
+    // TODO bloated method, tidy up somehow
+    auto vertex_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
+    vertex_ubo_layout_binding.binding = 0;
+    vertex_ubo_layout_binding.descriptorType = ::vk::DescriptorType::eUniformBuffer;
+    vertex_ubo_layout_binding.descriptorCount = 1;
+    vertex_ubo_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eVertex;
+    vertex_ubo_layout_binding.pImmutableSamplers = nullptr;
+
+    auto layout_bindings = std::vector{vertex_ubo_layout_binding};
+
+    auto vertex_ubo_layout_create_info = ::vk::DescriptorSetLayoutCreateInfo{};
+    vertex_ubo_layout_create_info.sType = ::vk::StructureType::eDescriptorSetLayoutCreateInfo;
+    vertex_ubo_layout_create_info.pNext = nullptr;
+    vertex_ubo_layout_create_info.flags = {};
+    vertex_ubo_layout_create_info.bindingCount = static_cast<std::uint32_t>(layout_bindings.size());
+    vertex_ubo_layout_create_info.pBindings = layout_bindings.data();
+
+    auto descriptor_set_layouts = std::vector<::vk::raii::DescriptorSetLayout>{};
+    descriptor_set_layouts.emplace_back(device_.get(), vertex_ubo_layout_create_info);
+
+    // TODO get rid of this garbage
+    auto descriptor_set_pipeline_layout_array = std::vector{*descriptor_set_layouts.at(0)};
+
     auto pipeline_layout_create_info = ::vk::PipelineLayoutCreateInfo{};
-    pipeline_layout_create_info.setLayoutCount = static_cast<std::uint32_t>(descriptor_sets.size());
-    pipeline_layout_create_info.pSetLayouts = descriptor_sets.data();
-    pipeline_layout_create_info.pushConstantRangeCount = static_cast<std::uint32_t>(push_constants.size());
-    pipeline_layout_create_info.pPushConstantRanges = push_constants.data();
+    pipeline_layout_create_info.setLayoutCount =
+        static_cast<std::uint32_t>(descriptor_set_pipeline_layout_array.size());
+    pipeline_layout_create_info.pSetLayouts = descriptor_set_pipeline_layout_array.data();
+    pipeline_layout_create_info.pushConstantRangeCount = 0;
+    pipeline_layout_create_info.pPushConstantRanges = nullptr;
     auto pipeline_layout = device_.get().createPipelineLayout(pipeline_layout_create_info);
 
     auto formats = std::array<::vk::Format, 1>{swapchain_format};
@@ -201,7 +227,11 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     auto pipeline = device_.get().createGraphicsPipeline(nullptr, pipeline_create_info);
     // TODO probably need some error checking, or will vulkan debug utils and validation catch it anyway?
 
-    return {.layout = std::move(pipeline_layout), .pipeline = std::move(pipeline)};
-};
+    return {
+        .layout = std::move(pipeline_layout),
+        .pipeline = std::move(pipeline),
+        .descriptor_set_layouts = std::move(descriptor_set_layouts),
+    };
+}
 
 } // namespace pong
