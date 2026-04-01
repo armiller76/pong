@@ -15,7 +15,7 @@ class GpuBuffer
         const VulkanDevice &device,
         ::vk::DeviceSize size,
         ::vk::BufferUsageFlags usage,
-        ::vk::MemoryPropertyFlags memory);
+        ::vk::MemoryPropertyFlags memory_flags);
     ~GpuBuffer() = default;
 
     GpuBuffer(GpuBuffer &&) noexcept = default;
@@ -27,7 +27,7 @@ class GpuBuffer
     auto unmap() -> void;
     auto upload(const void *data, std::size_t bytes, std::size_t offset = 0) -> void;
 
-    auto get() const -> ::vk::Buffer;
+    auto native_handle() const -> ::vk::Buffer;
     auto size() const -> ::vk::DeviceSize;
 
   private:

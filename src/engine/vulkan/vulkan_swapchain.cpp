@@ -28,7 +28,7 @@ auto VulkanSwapchain::recreate() -> void
     create_();
 }
 
-auto VulkanSwapchain::get() const -> const ::vk::raii::SwapchainKHR &
+auto VulkanSwapchain::native_handle() const -> const ::vk::raii::SwapchainKHR &
 {
     return swapchain_;
 }

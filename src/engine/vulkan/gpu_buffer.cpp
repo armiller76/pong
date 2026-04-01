@@ -14,12 +14,12 @@ GpuBuffer::GpuBuffer(
     const VulkanDevice &device,
     ::vk::DeviceSize size,
     ::vk::BufferUsageFlags usage,
-    ::vk::MemoryPropertyFlags memory)
+    ::vk::MemoryPropertyFlags memory_flags)
     : device_(device)
     , size_(size)
     , memory_({})
     , buffer_({})
-    , memory_flags_(memory)
+    , memory_flags_(memory_flags)
 {
     auto buffer_info = ::vk::BufferCreateInfo{};
     buffer_info.size = size_;
@@ -72,7 +72,7 @@ auto GpuBuffer::upload(const void *data, std::size_t bytes, std::size_t offset) 
     }
 }
 
-auto GpuBuffer::get() const -> ::vk::Buffer
+auto GpuBuffer::native_handle() const -> ::vk::Buffer
 {
     return *buffer_;
 }

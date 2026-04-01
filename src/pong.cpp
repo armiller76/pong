@@ -72,7 +72,7 @@ int main()
         }
 
         std::println("Hello Pong");
-        return 0;
+        return EXIT_SUCCESS;
     }
     catch (::vk::SystemError &e)
     {

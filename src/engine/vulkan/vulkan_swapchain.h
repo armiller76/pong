@@ -16,7 +16,7 @@ class VulkanSwapchain
 
     auto recreate() -> void;
 
-    auto get() const -> const ::vk::raii::SwapchainKHR &;
+    auto native_handle() const -> const ::vk::raii::SwapchainKHR &;
 
     auto format() const -> ::vk::Format;
     auto extent() const -> ::vk::Extent2D;
