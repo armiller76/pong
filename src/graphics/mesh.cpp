@@ -1,7 +1,10 @@
 #include "mesh.h"
 
 #include <array>
+#include <format>
 #include <span>
+#include <string>
+#include <string_view>
 
 #include "glm_wrapper.h"
 
@@ -13,7 +16,7 @@ namespace pong
 {
 
 Mesh::Mesh(
-    std::string name,
+    std::string_view name,
     const VulkanDevice &device,
     std::span<const Vertex> vertices,
     std::span<const std::uint32_t> indices)
@@ -21,7 +24,7 @@ Mesh::Mesh(
     , indices_cpu_{indices.begin(), indices.end()}
     , vertex_buffer_gpu_{device, vertices.size_bytes(), ::vk::BufferUsageFlagBits::eVertexBuffer, ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible}
     , index_buffer_gpu_{device, indices.size_bytes(), ::vk::BufferUsageFlagBits::eIndexBuffer, ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible}
-    , name_{std::move(name)}
+    , name_{std::format("mesh_{}", name)}
 {
     arm::ensure(!vertices.empty(), "cannot create Mesh with no vertices");
     arm::ensure(vertices.size() <= UINT32_MAX, "too many vertices (uint32_t max)");

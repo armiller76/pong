@@ -18,7 +18,7 @@ class Mesh
 {
   public:
     Mesh(
-        std::string name,
+        std::string_view name,
         const VulkanDevice &device,
         std::span<const Vertex> vertices,
         std::span<const std::uint32_t> indices);
