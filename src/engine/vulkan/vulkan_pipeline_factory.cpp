@@ -1,5 +1,6 @@
 #include "vulkan_pipeline_factory.h"
 
+#include <cstdint>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -27,10 +28,13 @@ VulkanPipelineFactory::VulkanPipelineFactory(
 }
 
 auto VulkanPipelineFactory::create_graphics_pipeline(
-    const Shader &vertex_shader,
-    const Shader &fragment_shader,
+    std::uint64_t vertex_shader_id,
+    std::uint64_t fragment_shader_id,
     ::vk::Format swapchain_format) -> VulkanPipelineResources
 {
+    auto &vertex_shader = resource_manager_.get<Shader>(vertex_shader_id);
+    auto &fragment_shader = resource_manager_.get<Shader>(fragment_shader_id);
+
     // TODO bloated method, tidy up somehow
     auto vertex_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
     vertex_ubo_layout_binding.binding = 0;

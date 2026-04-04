@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -35,8 +36,8 @@ class VulkanPipelineFactory
     VulkanPipelineFactory &operator=(const VulkanPipelineFactory &&) = delete;
 
     auto create_graphics_pipeline(
-        const Shader &vertex_shader,
-        const Shader &fragment_shader,
+        std::uint64_t vertex_shader_id,
+        std::uint64_t fragment_shader_id,
         ::vk::Format swapchain_format) -> VulkanPipelineResources;
 
   private:

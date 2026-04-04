@@ -5,6 +5,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "core/entity.h"
 #include "engine/resource_manager.h"
 #include "gpu_buffer.h"
 #include "graphics/color.h"
@@ -26,8 +27,8 @@ class VulkanRenderer
     VulkanRenderer(
         const VulkanDevice &device,
         const VulkanSurface &surface,
-        const ResourceManager &resource_manager,
-        const std::uint32_t max_frames_in_flight,
+        ResourceManager &resource_manager,
+        std::uint32_t max_frames_in_flight,
         const Color clear_color = {0.5f, 1.0f, 0.0f, 1.0f});
     ~VulkanRenderer() = default;
 
@@ -38,11 +39,11 @@ class VulkanRenderer
 
     auto framebuffer_resized() -> void;
     auto set_clear_color(const Color &color) -> void;
-    auto render(const Mesh &mesh /*Scene &scene, Camera &camera, etc.*/) -> void;
+    auto render(const std::vector<Entity> &entities /*Scene &scene, Camera &camera, etc.*/) -> void;
 
   private:
     auto prepare_frame_() -> void;
-    auto record_(const Mesh &mesh) -> void;
+    auto record_(const std::vector<Entity> &entities) -> void;
     auto end_frame_() -> void;
     auto transition_(std::uint32_t swap_chain_image_index, transition_info info) -> void;
 
@@ -50,7 +51,7 @@ class VulkanRenderer
 
     const VulkanDevice &device_;
     const VulkanSurface &surface_;
-    const ResourceManager &resource_manager_;
+    ResourceManager &resource_manager_;
     VulkanSwapchain swapchain_;
     VulkanCommandContext command_context_;
     std::vector<GpuBuffer> uniform_buffers_;
@@ -58,6 +59,7 @@ class VulkanRenderer
     VulkanPipelineFactory pipeline_factory_;
     VulkanPipelineResources pipeline_resources_;
     std::vector<::vk::raii::DescriptorSet> descriptor_sets_;
+    std::vector<std::uint32_t> render_order_;
     ::vk::ClearColorValue clear_color_;
 
     std::uint32_t current_swap_chain_image_index_{0};

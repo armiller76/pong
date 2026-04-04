@@ -2,9 +2,11 @@
 
 #include <array>
 #include <cstddef>
+#include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "core/entity.h"
 #include "engine/resource_manager.h"
 #include "engine/ubo.h"
 #include "graphics/color.h"
@@ -20,8 +22,8 @@ namespace pong
 VulkanRenderer::VulkanRenderer(
     const VulkanDevice &device,
     const VulkanSurface &surface,
-    const ResourceManager &resource_manager,
-    const std::uint32_t max_frames_in_flight,
+    ResourceManager &resource_manager,
+    std::uint32_t max_frames_in_flight,
     const Color clear_color)
     : max_frames_in_flight_{max_frames_in_flight}
     , device_{device}
@@ -44,14 +46,15 @@ VulkanRenderer::VulkanRenderer(
               return buffers;
           }())
     , descriptor_pool_{device_, uniform_buffers_, max_frames_in_flight_}
-    , pipeline_factory_{device_, descriptor_pool_}
+    , pipeline_factory_{device_, descriptor_pool_, resource_manager_}
     , pipeline_resources_{pipeline_factory_.create_graphics_pipeline(
-          resource_manager_.get<Shader>("simple.vert"),
-          resource_manager_.get<Shader>("simple.frag"),
+          resource_manager_.get_resource_id("simple.vert"),
+          resource_manager_.get_resource_id("simple.frag"),
           swapchain_.format())}
     , descriptor_sets_{descriptor_pool_.allocate_descriptor_sets(
           pipeline_resources_.descriptor_set_layouts.at(0),
           max_frames_in_flight_)}
+    , render_order_{}
     , clear_color_{clear_color.r, clear_color.g, clear_color.b, clear_color.a}
 {
     arm::log::debug("VulkanRenderer constructor");
@@ -69,10 +72,10 @@ auto VulkanRenderer::set_clear_color(const Color &color) -> void
     clear_color_ = {color.r, color.g, color.b, color.a};
 }
 
-auto VulkanRenderer::render(const Mesh &mesh /*Scene &scene, Camera &camera, etc*/) -> void
+auto VulkanRenderer::render(const std::vector<Entity> &entities /*Scene &scene, Camera &camera, etc*/) -> void
 {
     prepare_frame_();
-    record_(mesh /*scene, camera, etc*/);
+    record_(entities /*scene, camera, etc*/);
     end_frame_();
 }
 
@@ -102,10 +105,12 @@ auto VulkanRenderer::prepare_frame_() -> void
     }
 }
 
-auto VulkanRenderer::record_(const Mesh &mesh /*pass in stuff to draw*/) -> void
+auto VulkanRenderer::record_(const std::vector<Entity> &entities /*pass in stuff to draw*/) -> void
 {
     auto &command_buffer = command_context_.current_command_buffer();
     auto command_buffer_begin_info = ::vk::CommandBufferBeginInfo{::vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
+    // TODO change entity here
+    auto &mesh = resource_manager_.get<Mesh>(entities.at(0).mesh_handle());
 
     command_buffer.reset();
     command_buffer.begin(command_buffer_begin_info);
@@ -139,6 +144,7 @@ auto VulkanRenderer::record_(const Mesh &mesh /*pass in stuff to draw*/) -> void
 
     command_buffer.beginRendering(rendering_info);
     command_buffer.bindPipeline(::vk::PipelineBindPoint::eGraphics, pipeline_resources_.pipeline);
+
     command_buffer.bindVertexBuffers(0, {mesh.vertex_buffer().native_handle()}, {0});
     command_buffer.bindIndexBuffer({mesh.index_buffer().native_handle()}, 0, ::vk::IndexType::eUint32);
     command_buffer.setViewport(

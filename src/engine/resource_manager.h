@@ -21,15 +21,23 @@ class ResourceManager
 {
   public:
     explicit ResourceManager(const VulkanDevice &device);
+    ~ResourceManager() = default;
 
-    auto load(std::string name, const std::filesystem::path &path, ShaderStage stage) -> Shader &;
-    auto load(Mesh mesh) -> Mesh &;
+    ResourceManager(const ResourceManager &) = delete;
+    ResourceManager &operator=(ResourceManager &&) = delete;
+    ResourceManager(ResourceManager &&) = delete;
+    ResourceManager &operator=(const ResourceManager &&) = delete;
+
+    auto load(std::string name, const std::filesystem::path &path, ShaderStage stage) -> std::uint64_t;
+    auto load(Mesh mesh) -> std::uint64_t;
 
     template <typename T>
-    auto get(this auto &&self, std::string_view name) -> auto &&;
+    auto get(this auto &&self, std::uint64_t resource_id) -> auto &&;
 
-    template <typename T>
-    auto contains(std::string_view name) const -> bool;
+    template <typename T, typename Q>
+    auto contains(Q query) const -> bool;
+
+    static constexpr auto get_resource_id(std::string_view str) -> std::uint64_t;
 
   private:
     const VulkanDevice &device_;
@@ -39,31 +47,38 @@ class ResourceManager
 
     template <typename T>
     auto get_map_(this auto &&self) -> auto &&;
-
-    static constexpr auto get_resource_id_(std::string_view str) -> std::uint64_t
-    {
-        return pong::hash_string(str);
-    }
 };
 
 template <typename T>
-auto ResourceManager::get(this auto &&self, std::string_view name) -> auto &&
+auto ResourceManager::get(this auto &&self, std::uint64_t resource_id) -> auto &&
 {
     auto &map = self.get_map_<T>();
-    auto key = get_resource_id_(name);
-    if (auto entry = map.find(key); entry != map.end())
+    if (auto entry = map.find(resource_id); entry != map.end())
     {
         return entry->second;
     }
-    arm::ensure(false, "resource does not exist: {}", name);
-    std::terminate();
+    arm::ensure(false, "resource_id not found");
+    std::unreachable();
 }
 
-template <typename T>
-auto ResourceManager::contains(std::string_view name) const -> bool
+template <typename T, typename Q>
+auto ResourceManager::contains(Q query) const -> bool
 {
-    auto key = get_resource_id_(name);
-    return get_map_<T>().contains(key);
+    auto &map = get_map_<T>();
+    if constexpr (std::is_convertible_v<Q, std::string_view>)
+    {
+        auto key = get_resource_id(query);
+        return map.contains(key);
+    }
+    else if constexpr (std::is_same_v<Q, std::uint64_t>)
+    {
+        return map.contains(query);
+    }
+    else
+    {
+        static_assert(sizeof(T) == 0, "unsupported resource type");
+        std::unreachable();
+    }
 }
 
 template <typename T>
@@ -79,9 +94,14 @@ auto ResourceManager::get_map_(this auto &&self) -> auto &&
     }
     else
     {
-        arm::ensure(!sizeof(T), "invalid resource type in ResourceManager::get_map_()");
+        static_assert(sizeof(T) == 0, "unsupported resource type");
         std::unreachable();
     }
 }
 
+constexpr auto ResourceManager::get_resource_id(std::string_view str) -> std::uint64_t
+{
+    return pong::hash_string(str);
 }
+
+} // namespace pong
