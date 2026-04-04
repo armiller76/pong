@@ -4,6 +4,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/resource_manager.h"
 #include "gpu_buffer.h"
 #include "graphics/shader.h"
 #include "vulkan_descriptor_pool.h"
@@ -22,7 +23,10 @@ struct VulkanPipelineResources
 class VulkanPipelineFactory
 {
   public:
-    explicit VulkanPipelineFactory(const VulkanDevice &device, const VulkanDescriptorPool &descriptor_pool);
+    explicit VulkanPipelineFactory(
+        const VulkanDevice &device,
+        const VulkanDescriptorPool &descriptor_pool,
+        const ResourceManager &resource_manager);
     ~VulkanPipelineFactory() = default;
 
     VulkanPipelineFactory(const VulkanPipelineFactory &) = delete;
@@ -38,6 +42,7 @@ class VulkanPipelineFactory
   private:
     const VulkanDevice &device_;
     const VulkanDescriptorPool &descriptor_pool_;
+    const ResourceManager &resource_manager_;
 }; // class VulkanPipelineFactory
 
 } // namespace pong

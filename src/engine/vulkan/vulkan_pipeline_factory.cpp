@@ -4,6 +4,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/resource_manager.h"
 #include "gpu_buffer.h"
 #include "graphics/shader.h"
 #include "graphics/vertex.h"
@@ -14,9 +15,13 @@
 namespace pong
 {
 
-VulkanPipelineFactory::VulkanPipelineFactory(const VulkanDevice &device, const VulkanDescriptorPool &descriptor_pool)
+VulkanPipelineFactory::VulkanPipelineFactory(
+    const VulkanDevice &device,
+    const VulkanDescriptorPool &descriptor_pool,
+    const ResourceManager &resource_manager)
     : device_{device}
     , descriptor_pool_{descriptor_pool}
+    , resource_manager_{resource_manager}
 {
     arm::log::debug("VulkanPipelineFactory constructor");
 }
