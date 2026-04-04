@@ -11,10 +11,10 @@
 namespace pong
 {
 
-Entity::Entity(std::string_view name, Mesh &mesh, Transform &transform)
+Entity::Entity(std::string_view name, std::uint64_t mesh_handle, Transform transform)
     : name_{name}
-    , mesh_{mesh}
-    , transform_{transform}
+    , mesh_handle_{mesh_handle}
+    , transform_{std::move(transform)}
 {
 }
 
@@ -38,14 +38,37 @@ auto Entity::name() const -> std::string_view
     return name_;
 }
 
-auto Entity::mesh() const -> const Mesh &
+auto Entity::mesh_handle() const -> std::uint64_t
 {
-    return mesh_;
+    return mesh_handle_;
 }
 
-auto Entity::transform(this auto &&self) -> auto &&
+auto Entity::transform() -> Transform &
 {
-    return self.transform_;
+    return transform_;
 }
 
+auto Entity::transform() const -> const Transform &
+{
+    return transform_;
 }
+
+auto Entity::set_position(::glm::vec3 position) -> void
+{
+    // TODO GIGO
+    transform_.position = position;
+}
+
+auto Entity::set_scale(::glm::vec3 scale) -> void
+{
+    // TODO GIGO
+    transform_.scale = scale;
+}
+
+auto Entity::set_rotation(::glm::quat rotation) -> void
+{
+    // TODO GIGO
+    transform_.rotation = rotation;
+}
+
+} // namespace pong

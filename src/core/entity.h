@@ -13,21 +13,31 @@ namespace pong
 class Entity
 {
   public:
-    Entity(std::string_view name, Mesh &mesh, Transform &transform);
+    Entity(std::string_view name, std::uint64_t mesh_handle, Transform transform);
 
     auto set_active(bool active) -> void;
     auto is_active() const -> bool;
 
     auto name() const -> std::string_view;
 
-    auto mesh() const -> const Mesh &;
+    auto mesh_handle() const -> std::uint64_t;
 
-    auto transform(this auto &&self) -> auto &&;
+    auto transform() -> Transform &;
+    auto transform() const -> const Transform &;
+
+    auto set_position(::glm::vec3 position) -> void;
+    // auto translate(/* what goes here? *?) -> void;
+
+    auto set_scale(::glm::vec3 scale) -> void;
+    // auto scale_by(::glm::vec3 scale_by) -> void; or something?
+
+    auto set_rotation(::glm::quat rotation) -> void;
+    // auto rotate_by(::glm::quat rotation? ::glm::vecsomething?) -> void;
 
   private:
     bool active_ = true;
     std::string name_;
-    Mesh &mesh_;
+    std::uint64_t mesh_handle_;
     Transform transform_;
 };
 
