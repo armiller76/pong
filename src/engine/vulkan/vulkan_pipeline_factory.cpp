@@ -58,12 +58,17 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     // TODO get rid of this garbage
     auto descriptor_set_pipeline_layout_array = std::vector{*descriptor_set_layouts.at(0)};
 
+    auto model_push_constant_range = ::vk::PushConstantRange{};
+    model_push_constant_range.stageFlags = ::vk::ShaderStageFlagBits::eVertex | ::vk::ShaderStageFlagBits::eFragment;
+    model_push_constant_range.offset = 0;
+    model_push_constant_range.size = sizeof(::glm::mat4);
+
     auto pipeline_layout_create_info = ::vk::PipelineLayoutCreateInfo{};
     pipeline_layout_create_info.setLayoutCount =
         static_cast<std::uint32_t>(descriptor_set_pipeline_layout_array.size());
     pipeline_layout_create_info.pSetLayouts = descriptor_set_pipeline_layout_array.data();
-    pipeline_layout_create_info.pushConstantRangeCount = 0;
-    pipeline_layout_create_info.pPushConstantRanges = nullptr;
+    pipeline_layout_create_info.pushConstantRangeCount = 1;
+    pipeline_layout_create_info.pPushConstantRanges = &model_push_constant_range;
     auto pipeline_layout = device_.native_handle().createPipelineLayout(pipeline_layout_create_info);
 
     auto formats = std::array<::vk::Format, 1>{swapchain_format};

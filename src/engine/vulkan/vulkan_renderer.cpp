@@ -107,11 +107,11 @@ auto VulkanRenderer::prepare_frame_() -> void
 
 auto VulkanRenderer::record_(const std::vector<Entity> &entities /*pass in stuff to draw*/) -> void
 {
+    const auto frame_index = command_context_.current_frame_index();
     auto &command_buffer = command_context_.current_command_buffer();
-    auto command_buffer_begin_info = ::vk::CommandBufferBeginInfo{::vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
-    // TODO change entity here
-    auto &mesh = resource_manager_.get<Mesh>(entities.at(0).mesh_handle());
 
+    const auto command_buffer_begin_info =
+        ::vk::CommandBufferBeginInfo{::vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
     command_buffer.reset();
     command_buffer.begin(command_buffer_begin_info);
 
@@ -145,8 +145,6 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities /*pass in stuff
     command_buffer.beginRendering(rendering_info);
     command_buffer.bindPipeline(::vk::PipelineBindPoint::eGraphics, pipeline_resources_.pipeline);
 
-    command_buffer.bindVertexBuffers(0, {mesh.vertex_buffer().native_handle()}, {0});
-    command_buffer.bindIndexBuffer({mesh.index_buffer().native_handle()}, 0, ::vk::IndexType::eUint32);
     command_buffer.setViewport(
         0,
         ::vk::Viewport{
@@ -158,12 +156,34 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities /*pass in stuff
             1.0f});
     command_buffer.setScissor(0, ::vk::Rect2D{::vk::Offset2D{0, 0}, swapchain_.extent()});
     command_buffer.bindDescriptorSets(
-        ::vk::PipelineBindPoint::eGraphics,
-        pipeline_resources_.layout,
-        0,
-        *descriptor_sets_.at(command_context_.current_frame_index()),
-        nullptr);
-    command_buffer.drawIndexed(mesh.index_count(), 1, 0, 0, 0);
+        ::vk::PipelineBindPoint::eGraphics, pipeline_resources_.layout, 0, *descriptor_sets_.at(frame_index), nullptr);
+
+    const auto last_mesh = static_cast<Mesh *>(nullptr);
+    for (auto &entity : entities)
+    {
+        // get mesh and update vertex/index buffers if it changed since last draw
+        auto &mesh = resource_manager_.get<Mesh>(entity.mesh_handle());
+        if (&mesh != last_mesh)
+        {
+            command_buffer.bindVertexBuffers(0, {mesh.vertex_buffer().native_handle()}, {0});
+            command_buffer.bindIndexBuffer({mesh.index_buffer().native_handle()}, 0, ::vk::IndexType::eUint32);
+        }
+
+        // update view/projection matrix data into UBO
+        auto dummy_view_proj = ubo_vp{
+            .view = ::glm::mat4(1.0f),
+            .proj = ::glm::mat4(1.0f),
+        };
+        uniform_buffers_[frame_index].upload(&dummy_view_proj, sizeof(dummy_view_proj));
+
+        // update model matrix. note that pong::Transform is overloaded to implicitly convert to a mat4
+        const auto model = ::glm::mat4(entity.transform());
+        command_buffer.pushConstants<::glm::mat4>(
+            *pipeline_resources_.layout, ::vk::ShaderStageFlagBits::eVertex, 0u, model);
+
+        // draw the current entity
+        command_buffer.drawIndexed(mesh.index_count(), 1, 0, 0, 0);
+    }
     command_buffer.endRendering();
 
     transition_(current_swap_chain_image_index_, transition_info::color_optimal_to_present());
