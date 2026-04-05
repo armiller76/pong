@@ -47,10 +47,10 @@ auto VulkanDescriptorPool::allocate_descriptor_sets(
 
     for (std::size_t i = 0; i < frames_in_flight; ++i)
     {
-        auto ubo_mvp_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
-        ubo_mvp_descriptor_buffer_info.buffer = uniform_buffers_.at(i).native_handle();
-        ubo_mvp_descriptor_buffer_info.offset = 0;
-        ubo_mvp_descriptor_buffer_info.range = sizeof(ubo_mvp);
+        auto ubo_vp_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
+        ubo_vp_descriptor_buffer_info.buffer = uniform_buffers_.at(i).native_handle();
+        ubo_vp_descriptor_buffer_info.offset = 0;
+        ubo_vp_descriptor_buffer_info.range = sizeof(ubo_vp);
 
         auto ubo_write_descriptor_set = ::vk::WriteDescriptorSet{};
         ubo_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
@@ -61,7 +61,7 @@ auto VulkanDescriptorPool::allocate_descriptor_sets(
         ubo_write_descriptor_set.descriptorCount = 1;
         ubo_write_descriptor_set.descriptorType = ::vk::DescriptorType::eUniformBuffer;
         ubo_write_descriptor_set.pImageInfo = nullptr;
-        ubo_write_descriptor_set.pBufferInfo = &ubo_mvp_descriptor_buffer_info;
+        ubo_write_descriptor_set.pBufferInfo = &ubo_vp_descriptor_buffer_info;
         ubo_write_descriptor_set.pTexelBufferView = nullptr;
 
         auto descriptors = std::array{

@@ -39,7 +39,7 @@ VulkanRenderer::VulkanRenderer(
               {
                   buffers.push_back(
                       {device,
-                       ::vk::DeviceSize{sizeof(ubo_mvp)},
+                       ::vk::DeviceSize{sizeof(ubo_vp)},
                        ::vk::BufferUsageFlagBits::eUniformBuffer,
                        ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible});
               }
