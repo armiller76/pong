@@ -2,6 +2,8 @@
 
 #include <array>
 #include <cstddef>
+#include <ranges>
+#include <tuple>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -103,11 +105,6 @@ auto VulkanRenderer::prepare_frame_() -> void
         }
         throw arm::Exception("Unable to aquire swapchain image ({})", ::vk::to_string(result));
     }
-}
-
-auto VulkanRenderer::record_(const std::vector<Entity> &entities /*pass in stuff to draw*/) -> void
-{
-    const auto frame_index = command_context_.current_frame_index();
     auto &command_buffer = command_context_.current_command_buffer();
 
     const auto command_buffer_begin_info =
@@ -116,6 +113,12 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities /*pass in stuff
     command_buffer.begin(command_buffer_begin_info);
 
     transition_(current_swap_chain_image_index_, transition_info::undef_to_color_optimal());
+}
+
+auto VulkanRenderer::record_(const std::vector<Entity> &entities /*pass in stuff to draw*/) -> void
+{
+    const auto frame_index = command_context_.current_frame_index();
+    auto &command_buffer = command_context_.current_command_buffer();
 
     auto rendering_attachment_info = ::vk::RenderingAttachmentInfo{};
     rendering_attachment_info.sType = ::vk::StructureType::eRenderingAttachmentInfo;
@@ -158,40 +161,54 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities /*pass in stuff
     command_buffer.bindDescriptorSets(
         ::vk::PipelineBindPoint::eGraphics, pipeline_resources_.layout, 0, *descriptor_sets_.at(frame_index), nullptr);
 
-    const auto last_mesh = static_cast<Mesh *>(nullptr);
-    for (auto &entity : entities)
+    // update view/projection matrix data into UBO
+    auto dummy_view_proj = ubo_vp{
+        .view = ::glm::mat4(1.0f),
+        .proj = ::glm::mat4(1.0f),
+    };
+    uniform_buffers_[frame_index].upload(&dummy_view_proj, sizeof(dummy_view_proj));
+
+    render_order_ = std::views::iota(std::size_t{0}, entities.size()) | std::ranges::to<std::vector<std::size_t>>();
+    std::ranges::sort(
+        render_order_,
+        {},
+        [&](std::size_t i)
+        {
+            constexpr auto pipeline_id = std::uint64_t{0}; // for future use
+            constexpr auto material_id = std::uint64_t{0}; // for future use
+            return std::tuple{pipeline_id, material_id, entities[i].mesh_handle()};
+        });
+
+    auto last_mesh = static_cast<const Mesh *>(nullptr);
+    for (auto &i : render_order_)
     {
         // get mesh and update vertex/index buffers if it changed since last draw
-        auto &mesh = resource_manager_.get<Mesh>(entity.mesh_handle());
+        auto &mesh = resource_manager_.get<Mesh>(entities[i].mesh_handle());
         if (&mesh != last_mesh)
         {
+            last_mesh = &mesh;
             command_buffer.bindVertexBuffers(0, {mesh.vertex_buffer().native_handle()}, {0});
             command_buffer.bindIndexBuffer({mesh.index_buffer().native_handle()}, 0, ::vk::IndexType::eUint32);
         }
 
-        // update view/projection matrix data into UBO
-        auto dummy_view_proj = ubo_vp{
-            .view = ::glm::mat4(1.0f),
-            .proj = ::glm::mat4(1.0f),
-        };
-        uniform_buffers_[frame_index].upload(&dummy_view_proj, sizeof(dummy_view_proj));
-
         // update model matrix. note that pong::Transform is overloaded to implicitly convert to a mat4
-        const auto model = ::glm::mat4(entity.transform());
+        const auto model = ::glm::mat4(entities[i].transform());
         command_buffer.pushConstants<::glm::mat4>(
             *pipeline_resources_.layout, ::vk::ShaderStageFlagBits::eVertex, 0u, model);
 
         // draw the current entity
         command_buffer.drawIndexed(mesh.index_count(), 1, 0, 0, 0);
     }
-    command_buffer.endRendering();
 
-    transition_(current_swap_chain_image_index_, transition_info::color_optimal_to_present());
-    command_buffer.end();
+    command_buffer.endRendering();
 }
 
 auto VulkanRenderer::end_frame_() -> void
 {
+    auto &command_buffer = command_context_.current_command_buffer();
+    transition_(current_swap_chain_image_index_, transition_info::color_optimal_to_present());
+    command_buffer.end();
+
     auto wait_for = ::vk::PipelineStageFlags{::vk::PipelineStageFlagBits::eColorAttachmentOutput};
     auto submit_info = ::vk::SubmitInfo{};
     submit_info.waitSemaphoreCount = 1;

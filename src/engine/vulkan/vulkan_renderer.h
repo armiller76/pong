@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -59,7 +60,7 @@ class VulkanRenderer
     VulkanPipelineFactory pipeline_factory_;
     VulkanPipelineResources pipeline_resources_;
     std::vector<::vk::raii::DescriptorSet> descriptor_sets_;
-    std::vector<std::uint32_t> render_order_;
+    std::vector<std::size_t> render_order_;
     ::vk::ClearColorValue clear_color_;
 
     std::uint32_t current_swap_chain_image_index_{0};
