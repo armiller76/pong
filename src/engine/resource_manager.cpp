@@ -41,19 +41,15 @@ auto ResourceManager::load(std::string name, const std::filesystem::path &path, 
     return key;
 }
 
-auto ResourceManager::load(Mesh mesh) -> std::uint64_t
+auto ResourceManager::load(Mesh &&mesh) -> std::uint64_t
 {
     const auto key = get_resource_id(mesh.name());
 
-    if (auto entry = meshes_.find(key); entry != meshes_.end())
+    auto [it, inserted] = meshes_.try_emplace(key, std::move(mesh));
+    if (!inserted)
     {
-        arm::log::warn("mesh already loaded: {} (skipping)", mesh.name());
-        return key;
+        arm::log::warn("mesh already loaded: {} (skipping)", it->second.name());
     }
-
-    auto [entry, inserted] = meshes_.try_emplace(key, std::move(mesh));
-    arm::ensure(inserted, "failed to load mesh: {}", mesh.name());
-
     return key;
 }
 

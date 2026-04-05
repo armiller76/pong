@@ -29,7 +29,7 @@ class ResourceManager
     ResourceManager &operator=(const ResourceManager &&) = delete;
 
     auto load(std::string name, const std::filesystem::path &path, ShaderStage stage) -> std::uint64_t;
-    auto load(Mesh mesh) -> std::uint64_t;
+    auto load(Mesh &&mesh) -> std::uint64_t;
 
     template <typename T>
     auto get(this auto &&self, std::uint64_t resource_id) -> auto &&;
