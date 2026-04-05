@@ -29,7 +29,7 @@ class VulkanRenderer
         const VulkanSurface &surface,
         ResourceManager &resource_manager,
         std::uint32_t max_frames_in_flight,
-        const Color clear_color = {0.5f, 1.0f, 0.0f, 1.0f});
+        const Color clear_color = {0.42f, 0.42f, 0.42f, 1.0f});
     ~VulkanRenderer() = default;
 
     VulkanRenderer(const VulkanRenderer &) = delete;
