@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <print>
@@ -8,12 +9,10 @@
 
 #include "core/entity.h"
 #include "engine/resource_manager.h"
-#include "engine/vulkan/vulkan_command_context.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_renderer.h"
 #include "engine/vulkan/vulkan_surface.h"
-#include "engine/vulkan/vulkan_swapchain.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
 #include "math/transform.h"
@@ -64,16 +63,24 @@ int main()
         auto test_rectangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_rectangle(vk_device)));
         auto default_transform = pong::Transform{};
         auto test_triangle = pong::Entity("test-triangle", test_triangle_mesh, default_transform);
+        test_triangle.transform().position = {0.5f, 0.0f, 0.0f};
         auto test_rectangle = pong::Entity("test-rectangle", test_rectangle_mesh, default_transform);
+        test_rectangle.transform().position = {-0.5f, 0.0f, 0.0f};
         auto entities = std::vector{test_triangle, test_rectangle};
 
         auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, resource_manager, 2u);
 
+        auto prev_time = std::chrono::high_resolution_clock::now();
         while (!window.should_close())
         {
+            auto start_time = std::chrono::high_resolution_clock::now();
+            auto delta = start_time - prev_time;
+            prev_time = start_time;
+            entities[0].rotate_by(
+                ::glm::vec3(0, 0, ::glm::radians(std::chrono::duration<float>(delta).count() * 45.0f)));
+
             window.process_events();
-            // update_this();
-            // update_that();
+
             vk_renderer.render(entities);
         }
 
