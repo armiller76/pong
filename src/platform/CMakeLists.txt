@@ -6,6 +6,6 @@ add_library(
 target_sources(platform PRIVATE win32_window.cpp)
 target_include_directories(
   platform
-  PRIVATE ${CMAKE_SOURCE_DIR}/src
+  PRIVATE ${PROJECT_SOURCE_DIR}/src
           ${Vulkan_INCLUDE_DIRS}
 )
