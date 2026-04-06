@@ -15,6 +15,7 @@
 #include "engine/vulkan/vulkan_surface.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
+#include "imgui/imgui_wrapper.h"
 #include "math/transform.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"
@@ -76,8 +77,6 @@ int main()
             auto start_time = std::chrono::high_resolution_clock::now();
             auto delta = start_time - prev_time;
             prev_time = start_time;
-            entities[0].rotate_by(
-                ::glm::vec3(0, 0, ::glm::radians(std::chrono::duration<float>(delta).count() * 45.0f)));
 
             window.process_events();
 

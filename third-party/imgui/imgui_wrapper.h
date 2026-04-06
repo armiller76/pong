@@ -1,13 +1,26 @@
 #pragma once
 
+#include <vulkan/vulkan_raii.hpp>
+#include <windows.h>
+
+#include "imgui.h"
+#include "imgui_impl_vulkan.h"
+#include "imgui_impl_win32.h"
+
+#include "engine/vulkan/vulkan_utils.h"
+#include "utils/error.h"
+
 namespace pong
 {
+
+class VulkanDevice;
+class VulkanInstance;
 
 class ImguiWrapper
 
 {
   public:
-    ImguiWrapper();
+    ImguiWrapper(HWND hwnd, VulkanInstance &instance, VulkanDevice &device);
 
     auto initialize() -> void;
     auto shutdown() -> void;
@@ -20,6 +33,10 @@ class ImguiWrapper
     auto process_window_event() -> void;
 
   private:
+    ImGuiIO io;
+    HWND windows_handle_;
+    VulkanInstance &instance_;
+    VulkanDevice &device_;
 };
 
 }
