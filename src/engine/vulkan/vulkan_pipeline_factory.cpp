@@ -59,7 +59,7 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     auto descriptor_set_pipeline_layout_array = std::vector{*descriptor_set_layouts.at(0)};
 
     auto model_push_constant_range = ::vk::PushConstantRange{};
-    model_push_constant_range.stageFlags = ::vk::ShaderStageFlagBits::eVertex | ::vk::ShaderStageFlagBits::eFragment;
+    model_push_constant_range.stageFlags = ::vk::ShaderStageFlagBits::eVertex;
     model_push_constant_range.offset = 0;
     model_push_constant_range.size = sizeof(::glm::mat4);
 
