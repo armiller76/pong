@@ -22,16 +22,15 @@ target_compile_definitions(
 
 add_library(
   ponglib
-  INTERFACE
+  STATIC
 )
 target_link_libraries(
   ponglib
-  INTERFACE core
-            engine
-            graphics
-            imgui
-            platform
-            utils
+  PUBLIC core
+         engine
+         graphics
+         platform
+         utils
 )
 
 target_link_libraries(

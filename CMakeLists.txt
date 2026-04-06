@@ -26,13 +26,8 @@ find_package(
   REQUIRED
 )
 
-FetchContent_Declare(
-  imgui
-  GIT_REPOSITORY https://github.com/ocornut/imgui.git
-  GIT_TAG v1.92.7
-)
-FetchContent_MakeAvailable(imgui)
-add_subdirectory(third-party/imgui)
+add_subdirectory(assets/shaders)
+add_subdirectory(src)
 
 FetchContent_Declare(
   glm
@@ -65,6 +60,3 @@ if(BUILD_TESTING)
 
   add_subdirectory(tests)
 endif()
-
-add_subdirectory(assets/shaders)
-add_subdirectory(src)
