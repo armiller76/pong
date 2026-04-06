@@ -49,4 +49,5 @@ target_include_directories(
          ${CMAKE_CURRENT_SOURCE_DIR}/graphics
          ${CMAKE_CURRENT_SOURCE_DIR}/platform
          ${CMAKE_CURRENT_SOURCE_DIR}/utils
+         ${PROJECT_SOURCE_DIR}/third-party
 )

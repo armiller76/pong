@@ -5,7 +5,10 @@
 			"includePath": [
 				"${workspaceFolder}/src/**",
 				"${env:VULKAN_SDK}/Include",
-				"${workspaceFolder}/build/_deps/google_test-src/googletest/include"
+				"${workspaceFolder}/build/_deps/google_test-src/googletest/include",
+				"${workspaceFolder}/third-party/**",
+				"${workspaceFolder}/build/_deps/imgui-src",
+				"${workspaceFolder}/build/_deps/imgui-src/backends"
 			],
 			"defines": [
 				"_DEBUG",

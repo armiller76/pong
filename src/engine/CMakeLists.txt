@@ -16,4 +16,9 @@ target_include_directories(
   PUBLIC ${PROJECT_SOURCE_DIR}/src
          ${Vulkan_INCLUDE_DIRS}
 )
-target_link_libraries(engine PUBLIC glm::glm)
+
+target_link_libraries(
+  engine
+  PUBLIC glm::glm
+         imgui
+)
