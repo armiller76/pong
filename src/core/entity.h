@@ -26,13 +26,13 @@ class Entity
     auto transform() const -> const Transform &;
 
     auto set_position(::glm::vec3 position) -> void;
-    // auto translate(/* what goes here? *?) -> void;
+    auto translate(::glm::vec3 offset) -> void;
 
     auto set_scale(::glm::vec3 scale) -> void;
-    // auto scale_by(::glm::vec3 scale_by) -> void; or something?
+    auto scale(::glm::vec3 factor) -> void;
 
     auto set_rotation(::glm::quat rotation) -> void;
-    // auto rotate_by(::glm::quat rotation? ::glm::vecsomething?) -> void;
+    auto rotate_by(::glm::vec3 radians) -> void;
 
   private:
     bool active_ = true;

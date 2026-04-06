@@ -71,4 +71,22 @@ auto Entity::set_rotation(::glm::quat rotation) -> void
     transform_.rotation = rotation;
 }
 
+auto Entity::translate([[maybe_unused]] ::glm::vec3 offset) -> void
+{
+    // TODO Not Implemented
+    arm::not_implemented();
+}
+
+auto Entity::scale(::glm::vec3 factor) -> void
+{
+    // TODO GIGO
+    transform_.scale *= factor;
+}
+
+auto Entity::rotate_by(::glm::vec3 radians) -> void
+{
+    // TODO GIGO
+    transform_.rotation = ::glm::normalize(::glm::quat(radians) * transform_.rotation);
+}
+
 } // namespace pong
