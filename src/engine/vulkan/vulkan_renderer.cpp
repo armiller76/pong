@@ -12,11 +12,13 @@
 #include "engine/resource_manager.h"
 #include "engine/ubo.h"
 #include "graphics/color.h"
+#include "render_sort_key.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
 #include "vulkan_device.h"
 #include "vulkan_layout_transition.h"
+
 
 namespace pong
 {
@@ -176,7 +178,7 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities /*pass in stuff
         {
             constexpr auto pipeline_id = std::uint64_t{0}; // for future use
             constexpr auto material_id = std::uint64_t{0}; // for future use
-            return std::tuple{pipeline_id, material_id, entities[i].mesh_handle()};
+            return make_draw_sort_key(pipeline_id, material_id, entities[i].mesh_handle());
         });
 
     auto last_mesh = static_cast<const Mesh *>(nullptr);
