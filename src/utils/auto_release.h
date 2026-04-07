@@ -38,13 +38,13 @@ class AutoRelease
     AutoRelease(const AutoRelease &) = delete;
     auto operator=(const AutoRelease &) -> AutoRelease & = delete;
 
-    AutoRelease(AutoRelease &&other)
+    AutoRelease(AutoRelease &&other) noexcept
         : AutoRelease()
     {
         swap(other);
     }
 
-    auto operator=(AutoRelease &&other) -> AutoRelease &
+    auto operator=(AutoRelease &&other) noexcept -> AutoRelease &
     {
         AutoRelease new_obj{std::move(other)};
         swap(new_obj);

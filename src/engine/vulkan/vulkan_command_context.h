@@ -22,9 +22,9 @@ class VulkanCommandContext
     ~VulkanCommandContext() = default;
 
     VulkanCommandContext(const VulkanCommandContext &) = delete;
-    VulkanCommandContext &operator=(VulkanCommandContext &&) = delete;
+    VulkanCommandContext &operator=(const VulkanCommandContext &) = delete;
     VulkanCommandContext(VulkanCommandContext &&) = delete;
-    VulkanCommandContext &operator=(const VulkanCommandContext &&) = delete;
+    VulkanCommandContext &operator=(VulkanCommandContext &&) = delete;
 
     auto wait_current_frame() -> void;
     auto advance_frame() -> void;

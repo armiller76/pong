@@ -34,9 +34,9 @@ class VulkanRenderer
     ~VulkanRenderer() = default;
 
     VulkanRenderer(const VulkanRenderer &) = delete;
-    VulkanRenderer &operator=(VulkanRenderer &&) = delete;
+    VulkanRenderer &operator=(const VulkanRenderer &) = delete;
     VulkanRenderer(VulkanRenderer &&) = delete;
-    VulkanRenderer &operator=(const VulkanRenderer &&) = delete;
+    VulkanRenderer &operator=(VulkanRenderer &&) = delete;
 
     auto framebuffer_resized() -> void;
     auto set_clear_color(const Color &color) -> void;

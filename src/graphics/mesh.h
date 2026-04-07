@@ -27,7 +27,7 @@ class Mesh
     Mesh(Mesh &&) noexcept = default;
     Mesh &operator=(Mesh &&) noexcept = default;
     Mesh(const Mesh &) = delete;
-    Mesh &operator=(Mesh &) = delete;
+    Mesh &operator=(const Mesh &) = delete;
 
     auto vertex_count() const noexcept -> std::uint32_t;
     auto vertex_buffer() const noexcept -> const GpuBuffer &;

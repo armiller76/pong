@@ -21,10 +21,9 @@ class VulkanDescriptorPool
     ~VulkanDescriptorPool() = default;
 
     VulkanDescriptorPool(const VulkanDescriptorPool &) = delete;
-    VulkanDescriptorPool &operator=(VulkanDescriptorPool &&) = delete;
-
+    VulkanDescriptorPool &operator=(const VulkanDescriptorPool &) = delete;
     VulkanDescriptorPool(VulkanDescriptorPool &&) = default;
-    VulkanDescriptorPool &operator=(const VulkanDescriptorPool &&) = delete;
+    VulkanDescriptorPool &operator=(VulkanDescriptorPool &&) = delete;
 
     auto native_handle() const -> ::vk::DescriptorPool;
 

@@ -31,9 +31,9 @@ class VulkanPipelineFactory
     ~VulkanPipelineFactory() = default;
 
     VulkanPipelineFactory(const VulkanPipelineFactory &) = delete;
-    VulkanPipelineFactory &operator=(VulkanPipelineFactory &&) = delete;
+    VulkanPipelineFactory &operator=(const VulkanPipelineFactory &) = delete;
     VulkanPipelineFactory(VulkanPipelineFactory &&) = delete;
-    VulkanPipelineFactory &operator=(const VulkanPipelineFactory &&) = delete;
+    VulkanPipelineFactory &operator=(VulkanPipelineFactory &&) = delete;
 
     auto create_graphics_pipeline(
         std::uint64_t vertex_shader_id,

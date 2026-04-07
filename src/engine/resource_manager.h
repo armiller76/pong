@@ -24,9 +24,9 @@ class ResourceManager
     ~ResourceManager() = default;
 
     ResourceManager(const ResourceManager &) = delete;
-    ResourceManager &operator=(ResourceManager &&) = delete;
+    ResourceManager &operator=(const ResourceManager &) = delete;
     ResourceManager(ResourceManager &&) = delete;
-    ResourceManager &operator=(const ResourceManager &&) = delete;
+    ResourceManager &operator=(ResourceManager &&) = delete;
 
     auto load(std::string name, const std::filesystem::path &path, ShaderStage stage) -> std::uint64_t;
     auto load(Mesh &&mesh) -> std::uint64_t;
