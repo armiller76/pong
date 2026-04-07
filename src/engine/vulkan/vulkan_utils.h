@@ -6,7 +6,6 @@
 #include "utils/error.h"
 #include "utils/exception.h"
 
-
 namespace pong
 {
 
@@ -33,7 +32,6 @@ static inline auto check_vk_result(VkResult result) -> void
                 ::vk::to_string(static_cast<::vk::Result>(result)),
                 trace);
             std::terminate();
-            std::unreachable();
         }
     }
 }

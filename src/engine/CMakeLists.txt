@@ -14,6 +14,7 @@ target_sources(
 target_include_directories(
   engine
   PUBLIC ${PROJECT_SOURCE_DIR}/src
+         ${PROJECT_SOURCE_DIR}/third-party
          ${Vulkan_INCLUDE_DIRS}
 )
 
