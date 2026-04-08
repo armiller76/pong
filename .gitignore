@@ -1,4 +1,5 @@
 build/
 build-no-tests/
 assets/shaders/bin/
+third-party/imgui/imgui.ini
 .github/
