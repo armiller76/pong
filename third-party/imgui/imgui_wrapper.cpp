@@ -1,5 +1,6 @@
 #include "imgui_wrapper.h"
 
+#include <string_view>
 #include <vulkan/vulkan_raii.hpp>
 #include <windows.h>
 
@@ -17,16 +18,21 @@
 namespace pong
 {
 
-ImguiWrapper::ImguiWrapper(HWND hwnd, VulkanRenderer &renderer, const VulkanInstance &instance)
+ImguiWrapper::ImguiWrapper(
+    HWND hwnd,
+    VulkanRenderer &renderer,
+    const VulkanInstance &instance,
+    std::string_view project_root)
     : io{[]()
          {
              IMGUI_CHECKVERSION();
              ::ImGui::CreateContext();
-             return ::ImGui::GetIO();
+             return &::ImGui::GetIO();
          }()}
     , windows_handle_{hwnd}
     , vk_renderer_{renderer}
     , vk_instance_{instance}
+    , ini_file_{std::move(std::string(std::string(project_root) + "/third-party/imgui/imgui.ini"))}
 {
     initialize();
 }
@@ -38,8 +44,8 @@ ImguiWrapper::~ImguiWrapper()
 
 auto ImguiWrapper::initialize() -> void
 {
-    io.IniFilename = "third-party/imgui/imgui.ini";
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io->IniFilename = ini_file_.c_str();
+    io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
     ::ImGui_ImplWin32_Init(windows_handle_);
@@ -95,12 +101,12 @@ auto ImguiWrapper::begin_frame() -> void
 auto ImguiWrapper::render() -> void
 {
     ::ImGui::Render();
-    draw_data_ = *::ImGui::GetDrawData();
+    draw_data_ = ::ImGui::GetDrawData();
 }
 
 auto ImguiWrapper::get_draw_data() -> ImDrawData *
 {
-    return &draw_data_;
+    return draw_data_;
 }
 
 }

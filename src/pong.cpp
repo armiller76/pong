@@ -78,7 +78,7 @@ int main()
         main_camera.set_position({5.0f, 0.0f, 5.0f});
         main_camera.set_view_target({0.0f, 0.0f, 0.0f});
         auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, main_camera, resource_manager, 2u);
-        auto imgui = pong::ImguiWrapper{window.win32_handles().window, vk_renderer, vk_instance};
+        auto imgui = pong::ImguiWrapper{window.win32_handles().window, vk_renderer, vk_instance, project_root};
 
         auto increasing = true;
         auto x_target = 0.0f;

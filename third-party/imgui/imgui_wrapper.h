@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+#include <string_view>
 #include <vulkan/vulkan_raii.hpp>
 #include <windows.h>
 
@@ -22,7 +24,7 @@ class ImguiWrapper
 
 {
   public:
-    ImguiWrapper(HWND hwnd, VulkanRenderer &renderer, const VulkanInstance &instance);
+    ImguiWrapper(HWND hwnd, VulkanRenderer &renderer, const VulkanInstance &instance, std::string_view project_root);
     ~ImguiWrapper();
 
     ImguiWrapper(const ImguiWrapper &) = delete;                         // copy constructor
@@ -41,11 +43,12 @@ class ImguiWrapper
     auto process_window_event() -> void;
 
   private:
-    ImGuiIO io;
+    ImGuiIO *io;
     HWND windows_handle_;
     VulkanRenderer &vk_renderer_;
     const VulkanInstance &vk_instance_;
-    ImDrawData draw_data_;
+    ImDrawData *draw_data_;
+    std::string ini_file_;
 };
 
 }
