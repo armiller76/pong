@@ -19,7 +19,7 @@ class VulkanSwapchain
 
     auto native_handle() const -> const ::vk::raii::SwapchainKHR &;
 
-    auto format() const -> ::vk::Format;
+    auto format(this auto &&self) -> auto &&;
     auto extent() const -> ::vk::Extent2D;
     auto images() const -> const std::vector<::vk::Image> &;
     auto image_views() const -> const std::vector<::vk::raii::ImageView> &;
@@ -47,5 +47,10 @@ class VulkanSwapchain
     static auto choose_extent_(const ::vk::SurfaceCapabilitiesKHR &capabilities) -> ::vk::Extent2D;
 
 }; // class VulkanSwapchain
+
+auto VulkanSwapchain::format(this auto &&self) -> auto &&
+{
+    return self.surface_format_;
+}
 
 } // namespace pong

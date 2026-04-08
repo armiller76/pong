@@ -33,11 +33,6 @@ auto VulkanSwapchain::native_handle() const -> const ::vk::raii::SwapchainKHR &
     return swapchain_;
 }
 
-auto VulkanSwapchain::format() const -> ::vk::Format
-{
-    return surface_format_;
-}
-
 auto VulkanSwapchain::extent() const -> ::vk::Extent2D
 {
     return extent_;
