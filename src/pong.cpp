@@ -62,14 +62,18 @@ int main()
             pong::ShaderStage::Fragment);
         auto test_triangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_triangle(vk_device)));
         auto test_rectangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_rectangle(vk_device)));
-        auto default_transform = pong::Transform{};
-        auto test_triangle = pong::Entity("test-triangle", test_triangle_mesh, default_transform);
-        test_triangle.transform().position = {0.5f, 0.0f, 0.0f};
-        auto test_rectangle = pong::Entity("test-rectangle", test_rectangle_mesh, default_transform);
-        test_rectangle.transform().position = {-0.5f, 0.0f, 0.0f};
-        auto entities = std::vector{test_triangle, test_rectangle};
+        auto transform = pong::Transform{};
+        transform.position = {0.5f, 0.0f, 0.0f};
+        auto test_triangle = pong::Entity{"test_triangle", test_triangle_mesh, transform};
+        transform.position = {-0.5f, 0.0f, 0.0f};
+        auto test_rectangle = pong::Entity{"test_rectangle", test_rectangle_mesh, transform};
+        auto entities = std::vector{
+            test_triangle,
+            test_rectangle,
+        };
 
         auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, resource_manager, 2u);
+        auto imgui = pong::ImguiWrapper{window.win32_handles().window, vk_renderer, vk_instance};
 
         auto prev_time = std::chrono::high_resolution_clock::now();
         while (!window.should_close())
@@ -80,7 +84,10 @@ int main()
 
             window.process_events();
 
-            vk_renderer.render(entities);
+            imgui.begin_frame();
+            imgui.render(); // calls ImGui::EndFrame()
+
+            vk_renderer.render(entities, imgui.get_draw_data());
         }
 
         return EXIT_SUCCESS;
