@@ -12,13 +12,13 @@
 #include "engine/resource_manager.h"
 #include "engine/ubo.h"
 #include "graphics/color.h"
+#include "imgui/imgui_wrapper.h"
 #include "render_sort_key.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
 #include "vulkan_device.h"
 #include "vulkan_layout_transition.h"
-
 
 namespace pong
 {
@@ -76,10 +76,10 @@ auto VulkanRenderer::set_clear_color(const Color &color) -> void
     clear_color_ = {color.r, color.g, color.b, color.a};
 }
 
-auto VulkanRenderer::render(const std::vector<Entity> &entities /*Scene &scene, Camera &camera, etc*/) -> void
+auto VulkanRenderer::render(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data) -> void
 {
     prepare_frame_();
-    record_(entities /*scene, camera, etc*/);
+    record_(entities, imgui_draw_data);
     end_frame_();
 }
 
@@ -117,7 +117,7 @@ auto VulkanRenderer::prepare_frame_() -> void
     transition_(current_swap_chain_image_index_, transition_info::undef_to_color_optimal());
 }
 
-auto VulkanRenderer::record_(const std::vector<Entity> &entities /*pass in stuff to draw*/) -> void
+auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data) -> void
 {
     const auto frame_index = command_context_.current_frame_index();
     auto &command_buffer = command_context_.current_command_buffer();
@@ -200,6 +200,11 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities /*pass in stuff
 
         // draw the current entity
         command_buffer.drawIndexed(mesh.index_count(), 1, 0, 0, 0);
+    }
+
+    if (imgui_draw_data != nullptr)
+    {
+        ImGui_ImplVulkan_RenderDrawData(imgui_draw_data, *command_buffer);
     }
 
     command_buffer.endRendering();

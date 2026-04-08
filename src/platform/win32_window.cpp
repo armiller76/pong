@@ -6,10 +6,13 @@
 
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_surface.h"
+#include "imgui.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
 #include "utils/util.h"
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 namespace pong
 {
@@ -87,6 +90,11 @@ auto Win32Window::process_events() -> void
 
 auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT
 {
+    if (ImGui_ImplWin32_WndProcHandler(window, msg, wParam, lParam))
+    {
+        return true;
+    }
+
     switch (msg)
     {
         case WM_SIZE:

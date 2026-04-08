@@ -13,30 +13,39 @@
 namespace pong
 {
 
+class VulkanDescriptorPool;
 class VulkanDevice;
 class VulkanInstance;
+class VulkanRenderer;
 
 class ImguiWrapper
 
 {
   public:
-    ImguiWrapper(HWND hwnd, VulkanInstance &instance, VulkanDevice &device);
+    ImguiWrapper(HWND hwnd, VulkanRenderer &renderer, const VulkanInstance &instance);
+    ~ImguiWrapper();
+
+    ImguiWrapper(const ImguiWrapper &) = delete;                         // copy constructor
+    auto operator=(const ImguiWrapper &) -> ImguiWrapper & = delete;     // copy assignment
+    ImguiWrapper(ImguiWrapper &&) noexcept = delete;                     // move constructor
+    auto operator=(ImguiWrapper &&) noexcept -> ImguiWrapper & = delete; // move assignment
 
     auto initialize() -> void;
     auto shutdown() -> void;
 
     auto begin_frame() -> void;
     auto render() -> void;
-    auto end_frame() -> void;
 
+    auto get_draw_data() -> ImDrawData *;
     auto swapchain_recreated_callback() -> void;
     auto process_window_event() -> void;
 
   private:
     ImGuiIO io;
     HWND windows_handle_;
-    VulkanInstance &instance_;
-    VulkanDevice &device_;
+    VulkanRenderer &vk_renderer_;
+    const VulkanInstance &vk_instance_;
+    ImDrawData draw_data_;
 };
 
 }
@@ -53,9 +62,11 @@ Create ImGui context.
 Initialize Win32 backend with HWND from win32_window.h.
 Initialize Vulkan backend using your existing Vulkan objects and dynamic rendering settings.
 Use swapchain format from vulkan_swapchain.h and queue/device from vulkan_device.h.
+
 Per-frame start
 Call NewFrame for Vulkan backend, Win32 backend, and Dear ImGui.
 Expose a method like begin_frame so game code can build widgets.
+
 Per-frame render
 Call ImGui::Render and ImGui_ImplVulkan_RenderDrawData with current command buffer.
 This should happen inside your existing dynamic rendering region between beginRendering and endRendering in
@@ -67,6 +78,7 @@ Event forwarding
 Forward Win32 messages to ImGui first inside win32_window.cpp:88 (or in the static callback path at
 win32_window.cpp:192). If ImGui consumes the message, return immediately. Main loop Build UI each frame in loop around
 pong.cpp:74, pong.cpp:82, pong.cpp:84. Sequence: process events, begin imgui frame, define widgets, renderer render.
+
 Renderer integration
 Either:
 pass wrapper into renderer and let renderer call its render_draw_data during record, or

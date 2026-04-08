@@ -18,12 +18,16 @@
 #include "vulkan_surface.h"
 #include "vulkan_swapchain.h"
 
+struct ImDrawData;
+
 namespace pong
 {
+
 class VulkanDevice;
 
 class VulkanRenderer
 {
+
   public:
     VulkanRenderer(
         const VulkanDevice &device,
@@ -40,11 +44,11 @@ class VulkanRenderer
 
     auto framebuffer_resized() -> void;
     auto set_clear_color(const Color &color) -> void;
-    auto render(const std::vector<Entity> &entities /*Scene &scene, Camera &camera, etc.*/) -> void;
+    auto render(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data) -> void;
 
   private:
     auto prepare_frame_() -> void;
-    auto record_(const std::vector<Entity> &entities) -> void;
+    auto record_(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data = nullptr) -> void;
     auto end_frame_() -> void;
     auto transition_(std::uint32_t swap_chain_image_index, transition_info info) -> void;
 
@@ -65,6 +69,8 @@ class VulkanRenderer
 
     std::uint32_t current_swap_chain_image_index_{0};
     bool framebuffer_resized_ = false;
+
+    friend class ImguiWrapper;
 };
 
 }
