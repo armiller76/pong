@@ -11,6 +11,7 @@
 #include "core/entity.h"
 #include "engine/resource_manager.h"
 #include "engine/ubo.h"
+#include "graphics/camera.h"
 #include "graphics/color.h"
 #include "imgui/imgui_wrapper.h"
 #include "render_sort_key.h"
@@ -26,12 +27,14 @@ namespace pong
 VulkanRenderer::VulkanRenderer(
     const VulkanDevice &device,
     const VulkanSurface &surface,
+    const Camera &camera,
     ResourceManager &resource_manager,
     std::uint32_t max_frames_in_flight,
     const Color clear_color)
     : max_frames_in_flight_{max_frames_in_flight}
     , device_{device}
     , surface_{surface}
+    , camera_{camera}
     , resource_manager_{resource_manager}
     , swapchain_{device_, surface_}
     , command_context_{device_, swapchain_.image_count(), max_frames_in_flight_}
@@ -164,11 +167,14 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
         ::vk::PipelineBindPoint::eGraphics, pipeline_resources_.layout, 0, *descriptor_sets_.at(frame_index), nullptr);
 
     // update view/projection matrix data into UBO
-    auto dummy_view_proj = ubo_vp{
-        .view = ::glm::mat4(1.0f),
-        .proj = ::glm::mat4(1.0f),
-    };
-    uniform_buffers_[frame_index].upload(&dummy_view_proj, sizeof(dummy_view_proj));
+    auto temp_view_proj = ubo_vp{
+        .view = camera_.get_view_matrix(),
+        .proj = ::glm::perspective(
+            ::glm::radians(45.0f),
+            static_cast<float>(swapchain_.extent().width) / swapchain_.extent().height,
+            0.1f,
+            100.0f)};
+    uniform_buffers_[frame_index].upload(&temp_view_proj, sizeof(temp_view_proj));
 
     render_order_ = std::views::iota(std::size_t{0}, entities.size()) | std::ranges::to<std::vector<std::size_t>>();
     std::ranges::sort(

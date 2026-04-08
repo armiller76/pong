@@ -9,6 +9,7 @@
 #include "core/entity.h"
 #include "engine/resource_manager.h"
 #include "gpu_buffer.h"
+#include "graphics/camera.h"
 #include "graphics/color.h"
 #include "graphics/mesh.h"
 #include "vulkan_command_context.h"
@@ -32,6 +33,7 @@ class VulkanRenderer
     VulkanRenderer(
         const VulkanDevice &device,
         const VulkanSurface &surface,
+        const Camera &camera,
         ResourceManager &resource_manager,
         std::uint32_t max_frames_in_flight,
         const Color clear_color = {0.42f, 0.42f, 0.42f, 1.0f});
@@ -56,6 +58,7 @@ class VulkanRenderer
 
     const VulkanDevice &device_;
     const VulkanSurface &surface_;
+    const Camera &camera_;
     ResourceManager &resource_manager_;
     VulkanSwapchain swapchain_;
     VulkanCommandContext command_context_;
