@@ -75,9 +75,9 @@ auto Mesh::name() const noexcept -> std::string_view
 auto Mesh::create_test_triangle(const VulkanDevice &device) -> Mesh
 {
     const std::vector<Vertex> vertices = {
-        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
+        {{0.0f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
     };
 
     const std::vector<std::uint32_t> indices = {
@@ -92,10 +92,10 @@ auto Mesh::create_test_triangle(const VulkanDevice &device) -> Mesh
 auto Mesh::create_test_rectangle(const VulkanDevice &device) -> Mesh
 {
     const std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, -0.5f}, {1.0f, 0.0f, 1.0f}},
-        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 1.0f}},
+        {{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}},
+        {{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}},
     };
 
     const std::vector<std::uint32_t> indices = {

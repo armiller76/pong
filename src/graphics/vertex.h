@@ -11,7 +11,7 @@ namespace pong
 
 struct Vertex
 {
-    ::glm::vec2 position;
+    ::glm::vec3 position;
     ::glm::vec3 color;
 
     static auto get_binding_description() -> ::vk::VertexInputBindingDescription
@@ -25,18 +25,18 @@ struct Vertex
 
     static auto get_attribute_descriptions() -> std::array<::vk::VertexInputAttributeDescription, 2>
     {
-        auto pos_entry = ::vk::VertexInputAttributeDescription{};
-        pos_entry.location = 0;
-        pos_entry.binding = 0;
-        pos_entry.format = ::vk::Format::eR32G32Sfloat;
-        pos_entry.offset = offsetof(Vertex, position);
-        auto col_entry = ::vk::VertexInputAttributeDescription{};
-        col_entry.location = 1;
-        col_entry.binding = 0;
-        col_entry.format = ::vk::Format::eR32G32B32Sfloat;
-        col_entry.offset = offsetof(Vertex, color);
+        auto position_entry = ::vk::VertexInputAttributeDescription{};
+        position_entry.location = 0;
+        position_entry.binding = 0;
+        position_entry.format = ::vk::Format::eR32G32B32Sfloat;
+        position_entry.offset = offsetof(Vertex, position);
+        auto color_entry = ::vk::VertexInputAttributeDescription{};
+        color_entry.location = 1;
+        color_entry.binding = 0;
+        color_entry.format = ::vk::Format::eR32G32B32Sfloat;
+        color_entry.offset = offsetof(Vertex, color);
 
-        return std::array<::vk::VertexInputAttributeDescription, 2>{{pos_entry, col_entry}};
+        return std::array<::vk::VertexInputAttributeDescription, 2>{{position_entry, color_entry}};
     }
 };
 
