@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <print>
@@ -13,6 +14,7 @@
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_renderer.h"
 #include "engine/vulkan/vulkan_surface.h"
+#include "graphics/camera.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
 #include "imgui/imgui_wrapper.h"
@@ -63,18 +65,23 @@ int main()
         auto test_triangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_triangle(vk_device)));
         auto test_rectangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_rectangle(vk_device)));
         auto transform = pong::Transform{};
-        transform.position = {0.5f, 0.0f, 0.0f};
+        transform.position = {0.5f, 0.0f, -5.0f};
         auto test_triangle = pong::Entity{"test_triangle", test_triangle_mesh, transform};
-        transform.position = {-0.5f, 0.0f, 0.0f};
+        transform.position = {-0.5f, 0.0f, -4.0f};
         auto test_rectangle = pong::Entity{"test_rectangle", test_rectangle_mesh, transform};
         auto entities = std::vector{
             test_triangle,
             test_rectangle,
         };
 
-        auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, resource_manager, 2u);
+        auto main_camera = pong::Camera();
+        main_camera.set_position({5.0f, 0.0f, 5.0f});
+        main_camera.set_view_target({0.0f, 0.0f, 0.0f});
+        auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, main_camera, resource_manager, 2u);
         auto imgui = pong::ImguiWrapper{window.win32_handles().window, vk_renderer, vk_instance};
 
+        auto increasing = true;
+        auto x_target = 0.0f;
         auto prev_time = std::chrono::high_resolution_clock::now();
         while (!window.should_close())
         {
@@ -87,6 +94,12 @@ int main()
             imgui.begin_frame();
             imgui.render(); // calls ImGui::EndFrame()
 
+            x_target = increasing ? x_target + 0.01f : x_target - 0.01f;
+            if (::glm::abs(x_target) >= 5)
+            {
+                increasing = !increasing;
+            }
+            main_camera.set_view_target({x_target, 0.0f, 0.0f});
             vk_renderer.render(entities, imgui.get_draw_data());
         }
 
