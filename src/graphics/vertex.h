@@ -13,6 +13,8 @@ struct Vertex
 {
     ::glm::vec3 position;
     ::glm::vec3 color;
+    ::glm::vec3 normal;
+    ::glm::vec2 uv;
 
     static auto get_binding_description() -> ::vk::VertexInputBindingDescription
     {
@@ -23,7 +25,7 @@ struct Vertex
         return result;
     }
 
-    static auto get_attribute_descriptions() -> std::array<::vk::VertexInputAttributeDescription, 2>
+    static auto get_attribute_descriptions() -> auto
     {
         auto position_entry = ::vk::VertexInputAttributeDescription{};
         position_entry.location = 0;
@@ -35,8 +37,23 @@ struct Vertex
         color_entry.binding = 0;
         color_entry.format = ::vk::Format::eR32G32B32Sfloat;
         color_entry.offset = offsetof(Vertex, color);
+        auto normal_entry = ::vk::VertexInputAttributeDescription{};
+        normal_entry.location = 2;
+        normal_entry.binding = 0;
+        normal_entry.format = ::vk::Format::eR32G32B32Sfloat;
+        normal_entry.offset = offsetof(Vertex, normal);
+        auto texture_coordinate_entry = ::vk::VertexInputAttributeDescription{};
+        texture_coordinate_entry.location = 3;
+        texture_coordinate_entry.binding = 0;
+        texture_coordinate_entry.format = ::vk::Format::eR32G32Sfloat;
+        texture_coordinate_entry.offset = offsetof(Vertex, uv);
 
-        return std::array<::vk::VertexInputAttributeDescription, 2>{{position_entry, color_entry}};
+        return std::array{
+            position_entry,
+            color_entry,
+            normal_entry,
+            texture_coordinate_entry,
+        };
     }
 };
 

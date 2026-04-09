@@ -80,8 +80,13 @@ auto VulkanDescriptorPool::create_pool_() -> ::vk::raii::DescriptorPool
     vertex_pool_size.type = ::vk::DescriptorType::eUniformBuffer;
     vertex_pool_size.descriptorCount = frames_in_flight_;
 
+    auto sampler_pool_size = ::vk::DescriptorPoolSize{};
+    sampler_pool_size.type = ::vk::DescriptorType::eCombinedImageSampler;
+    sampler_pool_size.descriptorCount = frames_in_flight_;
+
     auto pool_sizes = std::array{
         vertex_pool_size,
+        sampler_pool_size,
     };
 
     auto pool_create_info = ::vk::DescriptorPoolCreateInfo{};

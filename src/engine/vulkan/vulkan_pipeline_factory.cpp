@@ -1,6 +1,7 @@
 #include "vulkan_pipeline_factory.h"
 
 #include <cstdint>
+#include <ranges>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -35,28 +36,38 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     auto &vertex_shader = resource_manager_.get<Shader>(vertex_shader_id);
     auto &fragment_shader = resource_manager_.get<Shader>(fragment_shader_id);
 
-    // TODO bloated method, tidy up somehow
     auto vertex_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
-    vertex_ubo_layout_binding.binding = 0;
+    vertex_ubo_layout_binding.binding = 0u;
     vertex_ubo_layout_binding.descriptorType = ::vk::DescriptorType::eUniformBuffer;
-    vertex_ubo_layout_binding.descriptorCount = 1;
+    vertex_ubo_layout_binding.descriptorCount = 1u;
     vertex_ubo_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eVertex;
     vertex_ubo_layout_binding.pImmutableSamplers = nullptr;
 
-    auto layout_bindings = std::vector{vertex_ubo_layout_binding};
+    auto texture_sampler_layout_binding = ::vk::DescriptorSetLayoutBinding{};
+    texture_sampler_layout_binding.binding = 1u;
+    texture_sampler_layout_binding.descriptorType = ::vk::DescriptorType::eCombinedImageSampler;
+    texture_sampler_layout_binding.descriptorCount = 1u;
+    texture_sampler_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eFragment;
+    texture_sampler_layout_binding.pImmutableSamplers = nullptr;
 
-    auto vertex_ubo_layout_create_info = ::vk::DescriptorSetLayoutCreateInfo{};
-    vertex_ubo_layout_create_info.sType = ::vk::StructureType::eDescriptorSetLayoutCreateInfo;
-    vertex_ubo_layout_create_info.pNext = nullptr;
-    vertex_ubo_layout_create_info.flags = {};
-    vertex_ubo_layout_create_info.bindingCount = static_cast<std::uint32_t>(layout_bindings.size());
-    vertex_ubo_layout_create_info.pBindings = layout_bindings.data();
+    auto layout_bindings = std::vector{
+        vertex_ubo_layout_binding,
+        texture_sampler_layout_binding,
+    };
+
+    auto descriptor_set_layout_create_info = ::vk::DescriptorSetLayoutCreateInfo{};
+    descriptor_set_layout_create_info.sType = ::vk::StructureType::eDescriptorSetLayoutCreateInfo;
+    descriptor_set_layout_create_info.pNext = nullptr;
+    descriptor_set_layout_create_info.flags = {};
+    descriptor_set_layout_create_info.bindingCount = static_cast<std::uint32_t>(layout_bindings.size());
+    descriptor_set_layout_create_info.pBindings = layout_bindings.data();
 
     auto descriptor_set_layouts = std::vector<::vk::raii::DescriptorSetLayout>{};
-    descriptor_set_layouts.emplace_back(device_.native_handle(), vertex_ubo_layout_create_info);
+    descriptor_set_layouts.emplace_back(device_.native_handle(), descriptor_set_layout_create_info);
 
-    // TODO get rid of this garbage
-    auto descriptor_set_pipeline_layout_array = std::vector{*descriptor_set_layouts.at(0)};
+    auto descriptor_set_pipeline_layout_array =
+        std::views::transform(descriptor_set_layouts, [](const auto &e) { return *e; })
+        | std::ranges::to<std::vector>();
 
     auto model_push_constant_range = ::vk::PushConstantRange{};
     model_push_constant_range.stageFlags = ::vk::ShaderStageFlagBits::eVertex;
