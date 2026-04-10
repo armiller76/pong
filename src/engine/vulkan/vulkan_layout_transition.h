@@ -37,6 +37,18 @@ struct transition_info
             .dst_stage = ::vk::PipelineStageFlagBits2::eBottomOfPipe,
         };
     };
+
+    static auto undef_to_depth_optimal() -> transition_info
+    {
+        return transition_info{
+            .src_layout = ::vk::ImageLayout::eUndefined,
+            .dst_layout = ::vk::ImageLayout::eDepthAttachmentOptimal,
+            .src_access = {},
+            .dst_access = ::vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+            .src_stage = ::vk::PipelineStageFlagBits2::eTopOfPipe,
+            .dst_stage = ::vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+        };
+    }
 };
 
 }
