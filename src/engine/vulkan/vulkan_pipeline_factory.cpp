@@ -31,7 +31,9 @@ VulkanPipelineFactory::VulkanPipelineFactory(
 auto VulkanPipelineFactory::create_graphics_pipeline(
     std::uint64_t vertex_shader_id,
     std::uint64_t fragment_shader_id,
-    ::vk::Format swapchain_format) -> VulkanPipelineResources
+    ::vk::Format swapchain_format,
+    ::vk::Format depth_format) -> VulkanPipelineResources
+
 {
     auto &vertex_shader = resource_manager_.get<Shader>(vertex_shader_id);
     auto &fragment_shader = resource_manager_.get<Shader>(fragment_shader_id);
@@ -82,11 +84,11 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     pipeline_layout_create_info.pPushConstantRanges = &model_push_constant_range;
     auto pipeline_layout = device_.native_handle().createPipelineLayout(pipeline_layout_create_info);
 
-    auto formats = std::array<::vk::Format, 1>{swapchain_format};
+    auto formats = std::array{swapchain_format};
     auto rendering_create_info = ::vk::PipelineRenderingCreateInfoKHR{};
     rendering_create_info.colorAttachmentCount = static_cast<std::uint32_t>(formats.size());
     rendering_create_info.pColorAttachmentFormats = formats.data();
-    rendering_create_info.depthAttachmentFormat = ::vk::Format::eUndefined;
+    rendering_create_info.depthAttachmentFormat = depth_format;
 
     auto shader_stages = std::vector<::vk::PipelineShaderStageCreateInfo>();
 
@@ -144,7 +146,6 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
 
     [[maybe_unused]] auto tesselation_state_create_info = ::vk::PipelineTessellationStateCreateInfo{};
 
-    // TODO confirm counts should be 1 each for dynamic?
     //  Viewport and Scissor are dynamic
     //  pNext can be any combination of the following, but no more than one of each:
     //  VkPipelineViewportCoarseSampleOrderStateCreateInfoNV,
@@ -194,7 +195,20 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     multisample_state_create_info.alphaToCoverageEnable = VK_FALSE;
     multisample_state_create_info.alphaToOneEnable = VK_FALSE;
 
-    [[maybe_unused]] auto depth_stencil_state_create_info = ::vk::PipelineDepthStencilStateCreateInfo{};
+    auto depth_stencil_state_create_info = ::vk::PipelineDepthStencilStateCreateInfo{};
+    depth_stencil_state_create_info.sType = ::vk::StructureType::ePipelineDepthStencilStateCreateInfo;
+    depth_stencil_state_create_info.pNext = nullptr;
+    depth_stencil_state_create_info.flags = {};
+    depth_stencil_state_create_info.depthTestEnable = ::vk::True;
+    depth_stencil_state_create_info.depthWriteEnable = ::vk::True;
+    depth_stencil_state_create_info.depthCompareOp = ::vk::CompareOp::eLess;
+    // future use:
+    //    depth_stencil_state_create_info.depthBoundsTestEnable = ;
+    //    depth_stencil_state_create_info.stencilTestEnable = ;
+    //    depth_stencil_state_create_info.front = ;
+    //    depth_stencil_state_create_info.back = ;
+    //    depth_stencil_state_create_info.minDepthBounds = ;
+
     auto color_blend_attachment_state = ::vk::PipelineColorBlendAttachmentState{};
     color_blend_attachment_state.blendEnable = VK_TRUE;
     color_blend_attachment_state.srcColorBlendFactor = ::vk::BlendFactor::eSrcAlpha;
@@ -239,7 +253,7 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     pipeline_create_info.pViewportState = &viewport_state_create_info;
     pipeline_create_info.pRasterizationState = &rasterization_state_create_info;
     pipeline_create_info.pMultisampleState = &multisample_state_create_info;
-    pipeline_create_info.pDepthStencilState = nullptr; // depth_stencil_state_create_info
+    pipeline_create_info.pDepthStencilState = &depth_stencil_state_create_info;
     pipeline_create_info.pColorBlendState = &color_blend_state_create_info;
     pipeline_create_info.pDynamicState = &dynamic_state_create_info;
     pipeline_create_info.layout = *pipeline_layout;

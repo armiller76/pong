@@ -38,7 +38,8 @@ class VulkanPipelineFactory
     auto create_graphics_pipeline(
         std::uint64_t vertex_shader_id,
         std::uint64_t fragment_shader_id,
-        ::vk::Format swapchain_format) -> VulkanPipelineResources;
+        ::vk::Format swapchain_format,
+        ::vk::Format depth_format) -> VulkanPipelineResources;
 
   private:
     const VulkanDevice &device_;
