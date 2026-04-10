@@ -42,7 +42,7 @@ struct transition_info
     {
         return transition_info{
             .src_layout = ::vk::ImageLayout::eUndefined,
-            .dst_layout = ::vk::ImageLayout::eDepthAttachmentOptimal,
+            .dst_layout = ::vk::ImageLayout::eDepthStencilAttachmentOptimal,
             .src_access = {},
             .dst_access = ::vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
             .src_stage = ::vk::PipelineStageFlagBits2::eTopOfPipe,

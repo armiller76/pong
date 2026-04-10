@@ -57,7 +57,8 @@ VulkanRenderer::VulkanRenderer(
     , pipeline_resources_{pipeline_factory_.create_graphics_pipeline(
           resource_manager_.get_resource_id("simple.vert"),
           resource_manager_.get_resource_id("simple.frag"),
-          swapchain_.format())}
+          swapchain_.format(),
+          swapchain_.depth_format())}
     , descriptor_sets_{descriptor_pool_.allocate_descriptor_sets(
           pipeline_resources_.descriptor_set_layouts.at(0),
           max_frames_in_flight_)}
@@ -117,7 +118,14 @@ auto VulkanRenderer::prepare_frame_() -> void
     command_buffer.reset();
     command_buffer.begin(command_buffer_begin_info);
 
-    transition_(current_swap_chain_image_index_, transition_info::undef_to_color_optimal());
+    transition_(
+        swapchain_.images().at(current_swap_chain_image_index_),
+        ::vk::ImageAspectFlagBits::eColor,
+        transition_info::undef_to_color_optimal());
+    transition_(
+        swapchain_.depth_image(),
+        ::vk::ImageAspectFlagBits::eDepth | ::vk::ImageAspectFlagBits::eStencil,
+        transition_info::undef_to_depth_optimal());
 }
 
 auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data) -> void
@@ -125,17 +133,29 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
     const auto frame_index = command_context_.current_frame_index();
     auto &command_buffer = command_context_.current_command_buffer();
 
-    auto rendering_attachment_info = ::vk::RenderingAttachmentInfo{};
-    rendering_attachment_info.sType = ::vk::StructureType::eRenderingAttachmentInfo;
-    rendering_attachment_info.pNext = nullptr;
-    rendering_attachment_info.imageView = swapchain_.image_views().at(current_swap_chain_image_index_);
-    rendering_attachment_info.imageLayout = transition_info::undef_to_color_optimal().dst_layout;
-    rendering_attachment_info.loadOp = ::vk::AttachmentLoadOp::eClear;
-    rendering_attachment_info.storeOp = ::vk::AttachmentStoreOp::eStore;
-    rendering_attachment_info.clearValue = clear_color_;
-    rendering_attachment_info.resolveMode = ::vk::ResolveModeFlagBits::eNone;
-    rendering_attachment_info.resolveImageView = nullptr;
-    rendering_attachment_info.resolveImageLayout = ::vk::ImageLayout::eUndefined;
+    auto color_attachment_info = ::vk::RenderingAttachmentInfo{};
+    color_attachment_info.sType = ::vk::StructureType::eRenderingAttachmentInfo;
+    color_attachment_info.pNext = nullptr;
+    color_attachment_info.imageView = swapchain_.image_views().at(current_swap_chain_image_index_);
+    color_attachment_info.imageLayout = transition_info::undef_to_color_optimal().dst_layout;
+    color_attachment_info.loadOp = ::vk::AttachmentLoadOp::eClear;
+    color_attachment_info.storeOp = ::vk::AttachmentStoreOp::eStore;
+    color_attachment_info.clearValue = ::vk::ClearColorValue(clear_color_);
+    color_attachment_info.resolveMode = ::vk::ResolveModeFlagBits::eNone;
+    color_attachment_info.resolveImageView = nullptr;
+    color_attachment_info.resolveImageLayout = ::vk::ImageLayout::eUndefined;
+
+    auto depth_attachment_info = ::vk::RenderingAttachmentInfo{};
+    depth_attachment_info.sType = ::vk::StructureType::eRenderingAttachmentInfo;
+    depth_attachment_info.pNext = nullptr;
+    depth_attachment_info.imageView = swapchain_.depth_image_view();
+    depth_attachment_info.imageLayout = transition_info::undef_to_depth_optimal().dst_layout;
+    depth_attachment_info.loadOp = ::vk::AttachmentLoadOp::eClear;
+    depth_attachment_info.storeOp = ::vk::AttachmentStoreOp::eDontCare;
+    depth_attachment_info.clearValue = ::vk::ClearDepthStencilValue{1.0f, 0};
+    depth_attachment_info.resolveMode = ::vk::ResolveModeFlagBits::eNone;
+    depth_attachment_info.resolveImageView = nullptr;
+    depth_attachment_info.resolveImageLayout = ::vk::ImageLayout::eUndefined;
 
     auto rendering_info = ::vk::RenderingInfo{};
     rendering_info.sType = ::vk::StructureType::eRenderingInfo;
@@ -146,8 +166,8 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
     rendering_info.layerCount = 1;
     rendering_info.viewMask = 0;
     rendering_info.colorAttachmentCount = 1;
-    rendering_info.pColorAttachments = &rendering_attachment_info;
-    rendering_info.pDepthAttachment = nullptr;
+    rendering_info.pColorAttachments = &color_attachment_info;
+    rendering_info.pDepthAttachment = &depth_attachment_info;
     rendering_info.pStencilAttachment = nullptr;
 
     command_buffer.beginRendering(rendering_info);
@@ -219,7 +239,10 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
 auto VulkanRenderer::end_frame_() -> void
 {
     auto &command_buffer = command_context_.current_command_buffer();
-    transition_(current_swap_chain_image_index_, transition_info::color_optimal_to_present());
+    transition_(
+        swapchain_.images().at(current_swap_chain_image_index_),
+        ::vk::ImageAspectFlagBits::eColor,
+        transition_info::color_optimal_to_present());
     command_buffer.end();
 
     auto wait_for = ::vk::PipelineStageFlags{::vk::PipelineStageFlagBits::eColorAttachmentOutput};
@@ -250,7 +273,7 @@ auto VulkanRenderer::end_frame_() -> void
     command_context_.advance_frame();
 }
 
-auto VulkanRenderer::transition_(std::uint32_t swap_chain_image_index, transition_info info) -> void
+auto VulkanRenderer::transition_(::vk::Image image, ::vk::ImageAspectFlags aspect_flags, transition_info info) -> void
 {
     auto barrier = ::vk::ImageMemoryBarrier2{};
     barrier.sType = ::vk::StructureType::eImageMemoryBarrier2;
@@ -264,9 +287,9 @@ auto VulkanRenderer::transition_(std::uint32_t swap_chain_image_index, transitio
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     // TODO is this safe? i think so if the compiler accepts it, but is it copying the image or moving or...what?
-    barrier.image = swapchain_.images().at(swap_chain_image_index);
+    barrier.image = image;
 
-    barrier.subresourceRange.aspectMask = ::vk::ImageAspectFlagBits::eColor;
+    barrier.subresourceRange.aspectMask = aspect_flags;
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = 1;
     barrier.subresourceRange.baseArrayLayer = 0;

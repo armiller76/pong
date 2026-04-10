@@ -52,7 +52,7 @@ class VulkanRenderer
     auto prepare_frame_() -> void;
     auto record_(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data = nullptr) -> void;
     auto end_frame_() -> void;
-    auto transition_(std::uint32_t swap_chain_image_index, transition_info info) -> void;
+    auto transition_(::vk::Image image, ::vk::ImageAspectFlags aspect_flags, transition_info info) -> void;
 
     std::uint32_t max_frames_in_flight_;
 
