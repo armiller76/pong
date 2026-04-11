@@ -37,6 +37,7 @@ class VulkanDevice
     auto supports_dynamic_rendering() const -> bool;
     auto find_memory_type_index(const ::vk::MemoryRequirements requirements, const ::vk::MemoryPropertyFlags flags)
         const -> std::uint32_t;
+    auto choose_depth_format_() -> ::vk::Format;
 
   private:
     ::vk::raii::PhysicalDevice physical_device_;
@@ -49,7 +50,7 @@ class VulkanDevice
     bool supports_dynamic_rendering_;
     bool supports_sync2_;
 
-    auto score_device(VulkanDeviceInfo &info, const VulkanSurface &surface, const ::vk::raii::PhysicalDevice &device)
+    auto score_device_(VulkanDeviceInfo &info, const VulkanSurface &surface, const ::vk::raii::PhysicalDevice &device)
         -> bool;
 }; // class VulkanDevice
 

@@ -110,9 +110,9 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
 
         if (has_extensions)
         {
-            if (score_device(vulkan_device_info, surface, physical_device))
+            if (score_device_(vulkan_device_info, surface, physical_device))
             {
-                // score_device returns true if the device has graphics and present support
+                // score_device_ returns true if the device has graphics and present support
                 device_infos.push_back(vulkan_device_info);
             }
             arm::log::debug(
@@ -241,7 +241,7 @@ auto VulkanDevice::find_memory_type_index(
     throw arm::Exception("unable to find usable gpu memory");
 }
 
-auto VulkanDevice::score_device(
+auto VulkanDevice::score_device_(
     VulkanDeviceInfo &info,
     const VulkanSurface &surface,
     const ::vk::raii::PhysicalDevice &device) -> bool
