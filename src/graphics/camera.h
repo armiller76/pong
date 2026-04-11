@@ -27,6 +27,8 @@ class Camera
     ::glm::vec3 eye_{0.0f, 0.0f, 5.0f};
     ::glm::vec3 center_{0.0f, 0.0f, 0.0f};
     ::glm::vec3 up_{0.0f, 1.0f, 0.0f};
+
+    auto validate_() -> void;
 };
 
 }
