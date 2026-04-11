@@ -4,6 +4,7 @@
 #include <string>
 
 #include "graphics/glm_wrapper.h"
+#include "math/utils.h"
 
 namespace pong
 {
@@ -18,10 +19,10 @@ class Transform
     {
     }
 
-    constexpr Transform(::glm::vec3 position, ::glm::vec3 scale, ::glm::quat rotation)
-        : position(position)
-        , scale(scale)
-        , rotation(rotation)
+    Transform(::glm::vec3 position, ::glm::vec3 scale, ::glm::quat rotation)
+        : position{position}
+        , scale{scale}
+        , rotation{normalize_safe(rotation)}
     {
     }
 
