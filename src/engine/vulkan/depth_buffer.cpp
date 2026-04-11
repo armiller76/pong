@@ -10,7 +10,7 @@ namespace pong
 
 DepthBuffer::DepthBuffer(const VulkanDevice &device, ::vk::Extent2D extent)
     : device_{&device}
-    , format_{::vk::Format::eUndefined} // TODO fix this
+    , format_{device_->choose_depth_format()}
     , image_{nullptr}
     , memory_{nullptr}
     , view_{nullptr}

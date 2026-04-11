@@ -242,7 +242,7 @@ auto VulkanDevice::find_memory_type_index(
     throw arm::Exception("unable to find usable gpu memory");
 }
 
-auto VulkanDevice::choose_depth_format_() -> ::vk::Format
+auto VulkanDevice::choose_depth_format() const -> ::vk::Format
 {
     // TODO Consider parameterizing preferred depth formats
     auto preferred = std::vector{

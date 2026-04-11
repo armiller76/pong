@@ -38,7 +38,7 @@ class VulkanDevice
     auto supports_dynamic_rendering() const -> bool;
     auto find_memory_type_index(const ::vk::MemoryRequirements requirements, const ::vk::MemoryPropertyFlags flags)
         const -> std::uint32_t;
-    auto choose_depth_format_() -> ::vk::Format;
+    auto choose_depth_format() const -> ::vk::Format;
 
     auto allocate_image(::vk::ImageCreateInfo &info, ::vk::MemoryPropertyFlags flags) const
         -> std::pair<::vk::raii::Image, ::vk::raii::DeviceMemory>;
