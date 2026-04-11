@@ -27,11 +27,14 @@
             "command": "cmake",
             "args": [
                 "--build",
-                "build-no-tests",
+                "build",
                 "--config",
                 "Debug"
             ],
-            "group": "build",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "dependsOn": [
                 "CMake: Configure (No Tests)"
             ],
@@ -41,10 +44,7 @@
             "label": "CMake: Build and Test (Debug)",
             "type": "shell",
             "command": "cmake --build build --config Debug ; ctest --test-dir build -C Debug --output-on-failure",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "group": "build",
             "dependsOn": [
                 "CMake: Configure (Debug)"
             ],

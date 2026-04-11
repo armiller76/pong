@@ -15,7 +15,7 @@
             "name": "debug-no-tests",
             "displayName": "Debug (no tests)",
             "generator": "Ninja Multi-Config",
-            "binaryDir": "${sourceDir}/build-no-tests",
+            "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
                 "BUILD_TESTING": "OFF",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
