@@ -32,7 +32,7 @@ class GpuBuffer
     auto size() const -> ::vk::DeviceSize;
 
   private:
-    const VulkanDevice &device_;
+    const VulkanDevice *device_;
     ::vk::DeviceSize size_{0}; // could be const but could cause move assignment issues
     ::vk::raii::Buffer buffer_;
     ::vk::raii::DeviceMemory memory_;

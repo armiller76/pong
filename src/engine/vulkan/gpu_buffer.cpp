@@ -16,7 +16,7 @@ GpuBuffer::GpuBuffer(
     ::vk::DeviceSize size,
     ::vk::BufferUsageFlags usage,
     ::vk::MemoryPropertyFlags memory_flags)
-    : device_{device}
+    : device_{&device}
     , size_{size}
     , buffer_(
           [&]() -> ::vk::raii::Buffer
@@ -25,7 +25,7 @@ GpuBuffer::GpuBuffer(
               buffer_info.size = size;
               buffer_info.usage = usage;
               buffer_info.sharingMode = ::vk::SharingMode::eExclusive;
-              return device_.native_handle().createBuffer(buffer_info);
+              return device_->native_handle().createBuffer(buffer_info);
           }())
     , memory_(
           [&]() -> ::vk::raii::DeviceMemory
@@ -33,8 +33,8 @@ GpuBuffer::GpuBuffer(
               auto memory_requirements = buffer_.getMemoryRequirements();
               auto memory_info = ::vk::MemoryAllocateInfo{};
               memory_info.allocationSize = memory_requirements.size;
-              memory_info.memoryTypeIndex = device_.find_memory_type_index(memory_requirements, memory_flags);
-              auto memory = device_.native_handle().allocateMemory(memory_info);
+              memory_info.memoryTypeIndex = device_->find_memory_type_index(memory_requirements, memory_flags);
+              auto memory = device_->native_handle().allocateMemory(memory_info);
               buffer_.bindMemory(*memory, 0);
               return memory;
           }())
@@ -73,7 +73,7 @@ auto GpuBuffer::upload(const void *data, std::size_t bytes, std::size_t offset) 
         flush_range.memory = *memory_;
         flush_range.offset = offset;
         flush_range.size = bytes;
-        device_.native_handle().flushMappedMemoryRanges({flush_range});
+        device_->native_handle().flushMappedMemoryRanges({flush_range});
     }
 }
 
