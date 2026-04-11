@@ -2,6 +2,8 @@ FetchContent_MakeAvailable(google_test)
 
 add_executable(
   unit_tests
+  auto_release_tests.cpp
+  camera_tests.cpp
   entity_tests.cpp
   error_tests.cpp
   exception_tests.cpp
@@ -19,6 +21,7 @@ target_link_libraries(
          gtest_main
          core
          engine
+         graphics
          platform
          utils
 )
