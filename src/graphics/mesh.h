@@ -6,7 +6,7 @@
 #include <string>
 #include <string_view>
 
-#include "engine/vulkan/gpu_buffer.h"
+#include "engine/vulkan/vulkan_gpu_buffer.h"
 #include "utils/log.h"
 #include "vertex.h"
 

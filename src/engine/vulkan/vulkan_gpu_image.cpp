@@ -1,4 +1,4 @@
-#include "gpu_image.h"
+#include "vulkan_gpu_image.h"
 
 #include <vulkan/vulkan_raii.hpp>
 

@@ -5,8 +5,9 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "gpu_buffer.h"
 #include "vulkan_device.h"
+#include "vulkan_gpu_buffer.h"
+
 
 namespace pong
 {

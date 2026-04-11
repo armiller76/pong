@@ -7,19 +7,18 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "core/entity.h"
-#include "depth_buffer.h"
 #include "engine/resource_manager.h"
-#include "gpu_buffer.h"
 #include "graphics/camera.h"
 #include "graphics/color.h"
 #include "graphics/mesh.h"
 #include "vulkan_command_context.h"
+#include "vulkan_depth_buffer.h"
 #include "vulkan_descriptor_pool.h"
+#include "vulkan_gpu_buffer.h"
 #include "vulkan_layout_transition.h"
 #include "vulkan_pipeline_factory.h"
 #include "vulkan_surface.h"
 #include "vulkan_swapchain.h"
-
 
 struct ImDrawData;
 

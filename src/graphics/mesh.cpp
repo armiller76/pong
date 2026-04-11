@@ -8,7 +8,7 @@
 
 #include "glm_wrapper.h"
 
-#include "engine/vulkan/gpu_buffer.h"
+#include "engine/vulkan/vulkan_gpu_buffer.h"
 #include "graphics/vertex.h"
 #include "utils/error.h"
 

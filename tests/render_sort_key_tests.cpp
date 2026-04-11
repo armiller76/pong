@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 
-#include "engine/vulkan/render_sort_key.h"
+#include "engine/vulkan/vulkan_render_sort_key.h"
 
 namespace pong
 {

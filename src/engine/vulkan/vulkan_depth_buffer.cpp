@@ -1,4 +1,4 @@
-#include "depth_buffer.h"
+#include "vulkan_depth_buffer.h"
 
 #include <vulkan/vulkan_raii.hpp>
 

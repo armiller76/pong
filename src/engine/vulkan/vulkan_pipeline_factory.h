@@ -6,10 +6,11 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "engine/resource_manager.h"
-#include "gpu_buffer.h"
 #include "graphics/shader.h"
 #include "vulkan_descriptor_pool.h"
 #include "vulkan_device.h"
+#include "vulkan_gpu_buffer.h"
+
 
 namespace pong
 {
