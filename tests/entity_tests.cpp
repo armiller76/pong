@@ -52,7 +52,7 @@ TEST(Entity, ScaleAndRotateByAreComposed)
     auto entity = Entity{"paddle", 9u, Transform{}};
     entity.set_scale({2.0f, 3.0f, 4.0f});
 
-    entity.scale({0.5f, 2.0f, 1.5f});
+    entity.scale_by({0.5f, 2.0f, 1.5f});
 
     EXPECT_FLOAT_EQ(entity.transform().scale.x, 1.0f);
     EXPECT_FLOAT_EQ(entity.transform().scale.y, 6.0f);
