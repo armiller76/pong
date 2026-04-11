@@ -10,6 +10,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "utils/error.h"
+#include "utils/exception.h"
 #include "vulkan_instance.h"
 #include "vulkan_surface.h"
 
@@ -241,6 +242,44 @@ auto VulkanDevice::find_memory_type_index(
     throw arm::Exception("unable to find usable gpu memory");
 }
 
+auto VulkanDevice::choose_depth_format_() -> ::vk::Format
+{
+    // TODO Consider parameterizing preferred depth formats
+    auto preferred = std::vector{
+        ::vk::Format::eD32SfloatS8Uint,
+        ::vk::Format::eD24UnormS8Uint,
+        ::vk::Format::eD32Sfloat,
+    };
+
+    for (const auto &entry : preferred)
+    {
+        auto format_properties = physical_device_.getFormatProperties(entry);
+        if (format_properties.optimalTilingFeatures & ::vk::FormatFeatureFlagBits::eDepthStencilAttachment)
+        {
+            return entry;
+        }
+    }
+    throw arm::Exception("Unable to find suitable format for depth buffer");
+}
+
+auto VulkanDevice::allocate_image(::vk::ImageCreateInfo &info, ::vk::MemoryPropertyFlags flags) const
+    -> std::pair<::vk::raii::Image, ::vk::raii::DeviceMemory>
+{
+    auto image = ::vk::raii::Image(device_, info);
+
+    auto memory_index = find_memory_type_index(image.getMemoryRequirements(), flags);
+    auto memory_allocate_info = ::vk::MemoryAllocateInfo{};
+    memory_allocate_info.sType = ::vk::StructureType::eMemoryAllocateInfo;
+    memory_allocate_info.pNext = nullptr;
+    memory_allocate_info.allocationSize = image.getMemoryRequirements().size;
+    memory_allocate_info.memoryTypeIndex = memory_index;
+    auto image_memory = ::vk::raii::DeviceMemory(device_, memory_allocate_info);
+
+    image.bindMemory(image_memory, 0);
+
+    return {std::move(image), std::move(image_memory)};
+}
+
 auto VulkanDevice::score_device_(
     VulkanDeviceInfo &info,
     const VulkanSurface &surface,
@@ -256,8 +295,8 @@ auto VulkanDevice::score_device_(
 
     for (std::uint32_t i = 0; i < queue_family_properties.size(); ++i)
     {
-        const auto has_graphics = (queue_family_properties[i].queueFlags & ::vk::QueueFlagBits::eGraphics) !=
-                                  static_cast<::vk::QueueFlags>(0);
+        const auto has_graphics = (queue_family_properties[i].queueFlags & ::vk::QueueFlagBits::eGraphics)
+                                  != static_cast<::vk::QueueFlags>(0);
         const auto has_present = surface.get_present_support(device, i);
 
         if (has_graphics && graphics_index == UINT32_MAX)

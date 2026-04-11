@@ -9,6 +9,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "core/entity.h"
+#include "depth_buffer.h"
 #include "engine/resource_manager.h"
 #include "engine/ubo.h"
 #include "graphics/camera.h"
@@ -52,13 +53,14 @@ VulkanRenderer::VulkanRenderer(
               }
               return buffers;
           }())
+    , depth_buffer_{device_, swapchain_.extent()}
     , descriptor_pool_{device_, uniform_buffers_, max_frames_in_flight_}
     , pipeline_factory_{device_, descriptor_pool_, resource_manager_}
     , pipeline_resources_{pipeline_factory_.create_graphics_pipeline(
           resource_manager_.get_resource_id("simple.vert"),
           resource_manager_.get_resource_id("simple.frag"),
           swapchain_.format(),
-          swapchain_.depth_format())}
+          depth_buffer_.format())}
     , descriptor_sets_{descriptor_pool_.allocate_descriptor_sets(
           pipeline_resources_.descriptor_set_layouts.at(0),
           max_frames_in_flight_)}
@@ -70,8 +72,8 @@ VulkanRenderer::VulkanRenderer(
 
 auto VulkanRenderer::framebuffer_resized() -> void
 {
-    // TODO anything else?
     swapchain_.recreate();
+    depth_buffer_ = {device_, swapchain_.extent()};
 }
 
 auto VulkanRenderer::set_clear_color(const Color &color) -> void
@@ -123,7 +125,7 @@ auto VulkanRenderer::prepare_frame_() -> void
         ::vk::ImageAspectFlagBits::eColor,
         transition_info::undef_to_color_optimal());
     transition_(
-        swapchain_.depth_image(),
+        depth_buffer_.image(),
         ::vk::ImageAspectFlagBits::eDepth | ::vk::ImageAspectFlagBits::eStencil,
         transition_info::undef_to_depth_optimal());
 }
@@ -148,7 +150,7 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
     auto depth_attachment_info = ::vk::RenderingAttachmentInfo{};
     depth_attachment_info.sType = ::vk::StructureType::eRenderingAttachmentInfo;
     depth_attachment_info.pNext = nullptr;
-    depth_attachment_info.imageView = swapchain_.depth_image_view();
+    depth_attachment_info.imageView = depth_buffer_.image_view();
     depth_attachment_info.imageLayout = transition_info::undef_to_depth_optimal().dst_layout;
     depth_attachment_info.loadOp = ::vk::AttachmentLoadOp::eClear;
     depth_attachment_info.storeOp = ::vk::AttachmentStoreOp::eDontCare;

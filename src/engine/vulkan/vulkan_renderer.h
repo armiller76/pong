@@ -7,6 +7,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "core/entity.h"
+#include "depth_buffer.h"
 #include "engine/resource_manager.h"
 #include "gpu_buffer.h"
 #include "graphics/camera.h"
@@ -18,6 +19,7 @@
 #include "vulkan_pipeline_factory.h"
 #include "vulkan_surface.h"
 #include "vulkan_swapchain.h"
+
 
 struct ImDrawData;
 
@@ -63,6 +65,7 @@ class VulkanRenderer
     VulkanSwapchain swapchain_;
     VulkanCommandContext command_context_;
     std::vector<GpuBuffer> uniform_buffers_;
+    DepthBuffer depth_buffer_;
     VulkanDescriptorPool descriptor_pool_;
     VulkanPipelineFactory pipeline_factory_;
     VulkanPipelineResources pipeline_resources_;
