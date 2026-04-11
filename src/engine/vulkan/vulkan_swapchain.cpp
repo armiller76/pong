@@ -53,21 +53,6 @@ auto VulkanSwapchain::image_count() const -> std::uint32_t
     return static_cast<std::uint32_t>(images_.size());
 }
 
-auto VulkanSwapchain::depth_image() const -> const ::vk::Image
-{
-    return *depth_image_;
-}
-
-auto VulkanSwapchain::depth_image_view() const -> const ::vk::ImageView
-{
-    return *depth_image_view_;
-}
-
-auto VulkanSwapchain::depth_format() const -> ::vk::Format
-{
-    return depth_format_;
-}
-
 auto VulkanSwapchain::create_() -> void
 {
     // TODO Bloated function
@@ -88,7 +73,6 @@ auto VulkanSwapchain::create_() -> void
     const auto chosen_surface_format = choose_surface_format_(surface_formats);
     surface_format_ = chosen_surface_format.format;
     color_space_ = chosen_surface_format.colorSpace;
-    depth_format_ = choose_depth_format_(device_.physical_device());
     present_mode_ = choose_present_mode_(modes);
     extent_ = choose_extent_(capabilities);
     const auto queue_indices =
@@ -154,69 +138,12 @@ auto VulkanSwapchain::create_() -> void
 
         image_views_.emplace_back(device_.native_handle(), image_view_create_info);
     }
-
-    // TODO consider making depth image creation its own function
-    // create depth image
-    auto depth_image_create_info = ::vk::ImageCreateInfo{};
-    depth_image_create_info.sType = ::vk::StructureType::eImageCreateInfo;
-    depth_image_create_info.pNext = nullptr;
-    depth_image_create_info.flags = {};
-    depth_image_create_info.imageType = ::vk::ImageType::e2D;
-    depth_image_create_info.format = depth_format_;
-    depth_image_create_info.extent = ::vk::Extent3D{extent_.width, extent_.height, 1u};
-    depth_image_create_info.mipLevels = 1u;
-    depth_image_create_info.arrayLayers = 1u;
-    depth_image_create_info.samples = ::vk::SampleCountFlagBits::e1;
-    depth_image_create_info.tiling = ::vk::ImageTiling::eOptimal;
-    depth_image_create_info.usage = ::vk::ImageUsageFlagBits::eDepthStencilAttachment;
-    depth_image_create_info.sharingMode = ::vk::SharingMode::eExclusive;
-    depth_image_create_info.queueFamilyIndexCount = 0u;
-    depth_image_create_info.pQueueFamilyIndices = nullptr;
-    depth_image_create_info.initialLayout = ::vk::ImageLayout::eUndefined;
-    depth_image_ = ::vk::raii::Image(device_.native_handle(), depth_image_create_info);
-
-    // create memory for depth image
-    auto depth_memory_index = device_.find_memory_type_index(
-        depth_image_.getMemoryRequirements(), ::vk::MemoryPropertyFlagBits::eDeviceLocal);
-    auto depth_memory_allocate_info = ::vk::MemoryAllocateInfo{};
-    depth_memory_allocate_info.sType = ::vk::StructureType::eMemoryAllocateInfo;
-    depth_memory_allocate_info.pNext = nullptr;
-    depth_memory_allocate_info.allocationSize = depth_image_.getMemoryRequirements().size;
-    depth_memory_allocate_info.memoryTypeIndex = depth_memory_index;
-    depth_image_memory_ = ::vk::raii::DeviceMemory(device_.native_handle(), depth_memory_allocate_info);
-
-    // bind image to memory
-    depth_image_.bindMemory(*depth_image_memory_, 0);
-
-    // create image view for depth image
-    auto depth_image_view_create_info = ::vk::ImageViewCreateInfo{};
-    depth_image_view_create_info.sType = ::vk::StructureType::eImageViewCreateInfo;
-    depth_image_view_create_info.pNext = nullptr;
-    depth_image_view_create_info.flags = {};
-    depth_image_view_create_info.image = *depth_image_;
-    depth_image_view_create_info.viewType = ::vk::ImageViewType::e2D;
-    depth_image_view_create_info.format = depth_format_;
-    depth_image_view_create_info.components = ::vk::ComponentMapping{
-        ::vk::ComponentSwizzle::eIdentity,
-        ::vk::ComponentSwizzle::eIdentity,
-        ::vk::ComponentSwizzle::eIdentity,
-        ::vk::ComponentSwizzle::eIdentity,
-    };
-    depth_image_view_create_info.subresourceRange.aspectMask = ::vk::ImageAspectFlagBits::eDepth;
-    depth_image_view_create_info.subresourceRange.baseMipLevel = 0u;
-    depth_image_view_create_info.subresourceRange.levelCount = 1u;
-    depth_image_view_create_info.subresourceRange.baseArrayLayer = 0u;
-    depth_image_view_create_info.subresourceRange.layerCount = 1u;
-    depth_image_view_ = ::vk::raii::ImageView(device_.native_handle(), depth_image_view_create_info);
 }
 
 auto VulkanSwapchain::destroy_() -> void
 {
     image_views_.clear();
     images_.clear();
-    depth_image_view_.clear();
-    depth_image_memory_.clear();
-    depth_image_.clear();
 }
 
 auto VulkanSwapchain::choose_surface_format_(std::span<const ::vk::SurfaceFormatKHR> formats) -> ::vk::SurfaceFormatKHR
@@ -267,27 +194,6 @@ auto VulkanSwapchain::choose_extent_(const ::vk::SurfaceCapabilitiesKHR &capabil
 
     arm::log::error("currentExtent was not defined, should not get here");
     return {800, 600};
-}
-
-auto VulkanSwapchain::choose_depth_format_(const ::vk::raii::PhysicalDevice &physical_device) -> ::vk::Format
-{
-    // TODO Consider parameterizing preferred depth formats
-    auto preferred = std::vector{
-        ::vk::Format::eD32SfloatS8Uint,
-        ::vk::Format::eD24UnormS8Uint,
-        ::vk::Format::eD32Sfloat,
-    };
-
-    for (const auto &entry : preferred)
-    {
-        auto format_properties = physical_device.getFormatProperties(entry);
-        if (format_properties.optimalTilingFeatures & ::vk::FormatFeatureFlagBits::eDepthStencilAttachment)
-        {
-            return entry;
-        }
-    }
-    arm::log::warn("Depth format undefined. This shouldn't happen.");
-    return ::vk::Format::eUndefined;
 }
 
 } // namespace pong
