@@ -22,7 +22,6 @@
 #include "vulkan_layout_transition.h"
 #include "vulkan_render_sort_key.h"
 
-
 namespace pong
 {
 
@@ -39,7 +38,7 @@ VulkanRenderer::VulkanRenderer(
     , camera_{camera}
     , resource_manager_{resource_manager}
     , swapchain_{device_, surface_}
-    , command_context_{device_, swapchain_.image_count(), max_frames_in_flight_}
+    , frame_command_context_{device_, swapchain_.image_count(), max_frames_in_flight_}
     , uniform_buffers_(
           [&device, max_frames_in_flight]() -> std::vector<GpuBuffer>
           {
@@ -79,7 +78,6 @@ auto VulkanRenderer::framebuffer_resized() -> void
 
 auto VulkanRenderer::set_clear_color(const Color &color) -> void
 {
-    // TODO: GIGO
     clear_color_ = {color.r, color.g, color.b, color.a};
 }
 
@@ -92,12 +90,12 @@ auto VulkanRenderer::render(const std::vector<Entity> &entities, ImDrawData *img
 
 auto VulkanRenderer::prepare_frame_() -> void
 {
-    command_context_.wait_current_frame();
+    frame_command_context_.wait_current_frame();
 
     for (;;)
     {
         auto [result, swap_chain_image_index] = swapchain_.native_handle().acquireNextImage(
-            UINT64_MAX, command_context_.current_image_available_semaphore(), VK_NULL_HANDLE);
+            UINT64_MAX, frame_command_context_.current_image_available_semaphore(), VK_NULL_HANDLE);
 
         using enum ::vk::Result;
         if (result == eSuccess || result == eSuboptimalKHR)
@@ -114,7 +112,7 @@ auto VulkanRenderer::prepare_frame_() -> void
         }
         throw arm::Exception("Unable to aquire swapchain image ({})", ::vk::to_string(result));
     }
-    auto &command_buffer = command_context_.current_command_buffer();
+    auto &command_buffer = frame_command_context_.current_command_buffer();
 
     const auto command_buffer_begin_info =
         ::vk::CommandBufferBeginInfo{::vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
@@ -133,8 +131,8 @@ auto VulkanRenderer::prepare_frame_() -> void
 
 auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data) -> void
 {
-    const auto frame_index = command_context_.current_frame_index();
-    auto &command_buffer = command_context_.current_command_buffer();
+    const auto frame_index = frame_command_context_.current_frame_index();
+    auto &command_buffer = frame_command_context_.current_command_buffer();
 
     auto color_attachment_info = ::vk::RenderingAttachmentInfo{};
     color_attachment_info.sType = ::vk::StructureType::eRenderingAttachmentInfo;
@@ -241,7 +239,7 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
 
 auto VulkanRenderer::end_frame_() -> void
 {
-    auto &command_buffer = command_context_.current_command_buffer();
+    auto &command_buffer = frame_command_context_.current_command_buffer();
     transition_(
         swapchain_.images().at(current_swap_chain_image_index_),
         ::vk::ImageAspectFlagBits::eColor,
@@ -251,18 +249,18 @@ auto VulkanRenderer::end_frame_() -> void
     auto wait_for = ::vk::PipelineStageFlags{::vk::PipelineStageFlagBits::eColorAttachmentOutput};
     auto submit_info = ::vk::SubmitInfo{};
     submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &*command_context_.current_image_available_semaphore();
+    submit_info.pWaitSemaphores = &*frame_command_context_.current_image_available_semaphore();
     submit_info.pWaitDstStageMask = &wait_for;
     submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &*command_context_.current_command_buffer();
+    submit_info.pCommandBuffers = &*frame_command_context_.current_command_buffer();
     submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &*command_context_.render_finished_semaphore(current_swap_chain_image_index_);
+    submit_info.pSignalSemaphores = &*frame_command_context_.render_finished_semaphore(current_swap_chain_image_index_);
 
-    device_.graphics_queue().submit(submit_info, *command_context_.current_fence());
+    device_.graphics_queue().submit(submit_info, *frame_command_context_.current_fence());
 
     auto present_info = ::vk::PresentInfoKHR{};
     present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &*command_context_.render_finished_semaphore(current_swap_chain_image_index_);
+    present_info.pWaitSemaphores = &*frame_command_context_.render_finished_semaphore(current_swap_chain_image_index_);
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &*swapchain_.native_handle();
     present_info.pImageIndices = &current_swap_chain_image_index_;
@@ -273,7 +271,7 @@ auto VulkanRenderer::end_frame_() -> void
         swapchain_.recreate();
     }
 
-    command_context_.advance_frame();
+    frame_command_context_.advance_frame();
 }
 
 auto VulkanRenderer::transition_(::vk::Image image, ::vk::ImageAspectFlags aspect_flags, transition_info info) -> void
@@ -303,7 +301,7 @@ auto VulkanRenderer::transition_(::vk::Image image, ::vk::ImageAspectFlags aspec
     dependency_info.imageMemoryBarrierCount = 1;
     dependency_info.pImageMemoryBarriers = &barrier;
 
-    command_context_.current_command_buffer().pipelineBarrier2(dependency_info);
+    frame_command_context_.current_command_buffer().pipelineBarrier2(dependency_info);
 }
 
 } // namespace pong

@@ -11,9 +11,9 @@
 #include "graphics/camera.h"
 #include "graphics/color.h"
 #include "graphics/mesh.h"
-#include "vulkan_command_context.h"
 #include "vulkan_depth_buffer.h"
 #include "vulkan_descriptor_pool.h"
+#include "vulkan_frame_command_context.h"
 #include "vulkan_gpu_buffer.h"
 #include "vulkan_layout_transition.h"
 #include "vulkan_pipeline_factory.h"
@@ -62,7 +62,7 @@ class VulkanRenderer
     const Camera &camera_;
     ResourceManager &resource_manager_;
     VulkanSwapchain swapchain_;
-    VulkanCommandContext command_context_;
+    VulkanFrameCommandContext frame_command_context_;
     std::vector<GpuBuffer> uniform_buffers_;
     DepthBuffer depth_buffer_;
     VulkanDescriptorPool descriptor_pool_;

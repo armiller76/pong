@@ -11,20 +11,20 @@ namespace pong
 {
 class VulkanDevice;
 
-class VulkanCommandContext
+class VulkanFrameCommandContext
 {
 
   public:
-    VulkanCommandContext(
+    VulkanFrameCommandContext(
         const VulkanDevice &device,
         std::uint32_t swap_chain_image_count,
         std::uint32_t frames_in_flight = 2u);
-    ~VulkanCommandContext() = default;
+    ~VulkanFrameCommandContext() = default;
 
-    VulkanCommandContext(const VulkanCommandContext &) = delete;
-    VulkanCommandContext &operator=(const VulkanCommandContext &) = delete;
-    VulkanCommandContext(VulkanCommandContext &&) = delete;
-    VulkanCommandContext &operator=(VulkanCommandContext &&) = delete;
+    VulkanFrameCommandContext(const VulkanFrameCommandContext &) = delete;
+    VulkanFrameCommandContext &operator=(const VulkanFrameCommandContext &) = delete;
+    VulkanFrameCommandContext(VulkanFrameCommandContext &&) = delete;
+    VulkanFrameCommandContext &operator=(VulkanFrameCommandContext &&) = delete;
 
     auto wait_current_frame() -> void;
     auto advance_frame() -> void;
@@ -43,29 +43,30 @@ class VulkanCommandContext
     std::uint32_t swap_chain_image_count_;
     std::uint32_t current_frame_;
 
-    ::vk::raii::CommandPool command_pool_{nullptr};
-    std::vector<::vk::raii::CommandBuffer> command_buffers_;
-    std::vector<::vk::raii::Fence> fences_;
+    ::vk::raii::CommandPool frame_command_pool_{nullptr};
+    std::vector<::vk::raii::CommandBuffer> frame_command_buffers_;
+    std::vector<::vk::raii::Fence> in_flight_fences_;
     std::vector<::vk::raii::Semaphore> image_available_semaphores_;
     std::vector<::vk::raii::Semaphore> render_finished_semaphores_;
 };
 
-auto VulkanCommandContext::current_command_buffer(this auto &&self) -> auto &&
+auto VulkanFrameCommandContext::current_command_buffer(this auto &&self) -> auto &&
 {
-    return self.command_buffers_[self.current_frame_];
+    return self.frame_command_buffers_[self.current_frame_];
 }
 
-auto VulkanCommandContext::current_fence(this auto &&self) -> auto &&
+auto VulkanFrameCommandContext::current_fence(this auto &&self) -> auto &&
 {
-    return self.fences_[self.current_frame_];
+    return self.in_flight_fences_[self.current_frame_];
 }
 
-auto VulkanCommandContext::current_image_available_semaphore(this auto &&self) -> auto &&
+auto VulkanFrameCommandContext::current_image_available_semaphore(this auto &&self) -> auto &&
 {
     return self.image_available_semaphores_[self.current_frame_];
 }
 
-auto VulkanCommandContext::render_finished_semaphore(this auto &&self, std::uint32_t swap_chain_image_index) -> auto &&
+auto VulkanFrameCommandContext::render_finished_semaphore(this auto &&self, std::uint32_t swap_chain_image_index)
+    -> auto &&
 {
     arm::ensure(
         swap_chain_image_index >= 0 && swap_chain_image_index < self.render_finished_semaphores_.size(),
