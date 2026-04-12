@@ -8,7 +8,7 @@
 namespace pong
 {
 
-GpuImage::GpuImage(const VulkanDevice &device, ::vk::Extent2D extent, ::vk::Format format)
+VulkanGpuImage::VulkanGpuImage(const VulkanDevice &device, ::vk::Extent2D extent, ::vk::Format format)
     : device_{&device}
     , image_{nullptr}
     , memory_{nullptr}
@@ -17,7 +17,7 @@ GpuImage::GpuImage(const VulkanDevice &device, ::vk::Extent2D extent, ::vk::Form
     , extent_{extent}
     , format_{format}
 {
-    arm::log::debug("GpuImage Constructor");
+    arm::log::debug("VulkanGpuImage Constructor");
 
     auto image_create_info = ::vk::ImageCreateInfo{};
     image_create_info.sType = ::vk::StructureType::eImageCreateInfo;
@@ -81,27 +81,27 @@ GpuImage::GpuImage(const VulkanDevice &device, ::vk::Extent2D extent, ::vk::Form
     sampler_ = ::vk::raii::Sampler(device_->native_handle(), sampler_create_info);
 }
 
-auto GpuImage::image() const -> ::vk::Image
+auto VulkanGpuImage::image() const -> ::vk::Image
 {
     return *image_;
 }
 
-auto GpuImage::image_view() const -> ::vk::ImageView
+auto VulkanGpuImage::image_view() const -> ::vk::ImageView
 {
     return *view_;
 }
 
-auto GpuImage::sampler() const -> ::vk::Sampler
+auto VulkanGpuImage::sampler() const -> ::vk::Sampler
 {
     return *sampler_;
 }
 
-auto GpuImage::extent() const -> ::vk::Extent2D
+auto VulkanGpuImage::extent() const -> ::vk::Extent2D
 {
     return extent_;
 }
 
-auto GpuImage::format() const -> ::vk::Format
+auto VulkanGpuImage::format() const -> ::vk::Format
 {
     return format_;
 }

@@ -9,17 +9,17 @@ namespace pong
 
 class VulkanDevice;
 
-class GpuImage
+class VulkanGpuImage
 {
   public:
-    GpuImage(const VulkanDevice &device, ::vk::Extent2D extent, ::vk::Format format);
-    ~GpuImage() = default;
+    VulkanGpuImage(const VulkanDevice &device, ::vk::Extent2D extent, ::vk::Format format);
+    ~VulkanGpuImage() = default;
 
     // movable but non-copyable or move assignable
-    GpuImage(const GpuImage &) = delete;
-    auto operator=(const GpuImage &) -> GpuImage & = delete;
-    GpuImage(GpuImage &&) noexcept = default;
-    auto operator=(GpuImage &&) noexcept -> GpuImage & = default;
+    VulkanGpuImage(const VulkanGpuImage &) = delete;
+    auto operator=(const VulkanGpuImage &) -> VulkanGpuImage & = delete;
+    VulkanGpuImage(VulkanGpuImage &&) noexcept = default;
+    auto operator=(VulkanGpuImage &&) noexcept -> VulkanGpuImage & = default;
 
     auto image() const -> ::vk::Image;
     auto image_view() const -> ::vk::ImageView;
@@ -36,6 +36,6 @@ class GpuImage
     ::vk::Extent2D extent_;
     ::vk::Format format_;
 
-}; // class GpuImage
+}; // class VulkanGpuImage
 
 } // namespace pong
