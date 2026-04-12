@@ -20,6 +20,7 @@ ResourceManager::ResourceManager(const VulkanDevice &device)
     , shaders_{}
     , meshes_{}
     , textures_{}
+    , command_context_{device_, "resource_manager"}
 {
     arm::log::debug("ResourceManager constructor");
 }

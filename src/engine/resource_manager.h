@@ -7,6 +7,7 @@
 #include <string_view>
 #include <unordered_map>
 
+#include "engine/vulkan/vulkan_immediate_command_context.h"
 #include "engine/vulkan/vulkan_utils.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
@@ -47,6 +48,7 @@ class ResourceManager
     std::unordered_map<std::uint64_t, Shader> shaders_;
     std::unordered_map<std::uint64_t, Mesh> meshes_;
     std::unordered_map<std::uint64_t, Texture2D> textures_;
+    VulkanImmediateCommandContext command_context_;
 
     template <typename T>
     auto get_map_(this auto &&self) -> auto &&;
