@@ -7,10 +7,10 @@
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_surface.h"
 #include "imgui.h"
+#include "math/rectangle.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
-#include "utils/util.h"
 
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -22,19 +22,18 @@ Win32Window::~Win32Window()
     ::UnregisterClassA(class_name_.c_str(), hinstance_);
 }
 
-Win32Window::Win32Window(std::string_view app_name, Offset window_offset, Size window_size)
-    : hinstance_(::GetModuleHandleA(0))
-    , should_close_(false)
-    , app_name_(app_name)
-    , class_name_(std::string(app_name_ + "WindowClass"))
-    , window_width_(window_size.width)
-    , window_height_(window_size.height)
+Win32Window::Win32Window(std::string_view app_name, Rectangle window_rect)
+    : hinstance_{::GetModuleHandleA(0)}
+    , should_close_{false}
+    , app_name_{app_name}
+    , class_name_{std::move(std::string(app_name_ + "WindowClass"))}
+    , window_rect_{window_rect}
 {
     arm::ensure(
-        (window_width_ != 0) && (window_height_ != 0),
+        (window_rect_.extent.width != 0) && (window_rect_.extent.height != 0),
         "Invalid window dimension: w={} h={}",
-        window_width_,
-        window_height_);
+        window_rect_.extent.width,
+        window_rect_.extent.height);
 
     // TODO: Consider some parameterization here?
     auto win32_window_class = WNDCLASS{};
@@ -53,10 +52,10 @@ Win32Window::Win32Window(std::string_view app_name, Offset window_offset, Size w
             class_name_.c_str(),
             app_name_.c_str(),
             WS_OVERLAPPEDWINDOW,
-            window_offset.x,
-            window_offset.y,
-            window_width_,
-            window_height_,
+            window_rect_.offset.x,
+            window_rect_.offset.y,
+            window_rect.extent.width,
+            window_rect.extent.height,
             0,
             0,
             hinstance_,
@@ -101,12 +100,12 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
         {
             if (wParam != SIZE_MINIMIZED)
             {
-                window_width_ = LOWORD(lParam);
-                window_height_ = HIWORD(lParam);
+                window_rect_.extent.width = LOWORD(lParam);
+                window_rect_.extent.height = HIWORD(lParam);
 
                 for (const auto &[id, callback] : resize_callbacks_)
                 {
-                    callback(window_width_, window_height_);
+                    callback(window_rect_.extent.width, window_rect_.extent.height);
                 }
             }
             return 0;
@@ -139,9 +138,9 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
     }
 }
 
-auto Win32Window::size_pixels() const -> Size
+auto Win32Window::extent() const -> Extent2D
 {
-    return Size{window_width_, window_height_};
+    return window_rect_.extent;
 }
 
 auto Win32Window::set_title(std::string_view title) -> void

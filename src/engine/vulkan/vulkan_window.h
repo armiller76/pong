@@ -4,7 +4,7 @@
 #include <functional>
 #include <string_view>
 
-#include "utils/util.h"
+#include "math/rectangle.h"
 
 namespace pong
 {
@@ -19,7 +19,7 @@ class VulkanWindow
     virtual auto process_events() -> void = 0;
     virtual auto should_close() const -> bool = 0;
 
-    virtual auto size_pixels() const -> Size = 0;
+    virtual auto extent() const -> Extent2D = 0;
     virtual auto set_title(std::string_view title) -> void = 0;
 
     virtual auto create_vulkan_surface(const VulkanInstance &instance) const -> VulkanSurface = 0;

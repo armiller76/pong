@@ -18,11 +18,11 @@
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
 #include "imgui/imgui_wrapper.h"
+#include "math/rectangle.h"
 #include "math/transform.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"
 #include "utils/log.h"
-#include "utils/util.h"
 
 int main()
 {
@@ -30,8 +30,7 @@ int main()
     std::string app_name{"Pong"};
     std::string engine_name{"NotAnEngine"};
 
-    auto window_offset = pong::Offset{100u, 100u};
-    auto window_size = pong::Size{800u, 600u};
+    auto window_rect = pong::Rectangle{.offset{100u, 100u}, .extent{800u, 600u}};
 
     try
     {
@@ -47,7 +46,7 @@ int main()
             static_cast<uint32_t>(APP_VERSION_PATCH)};
 
         // TODO: other platforms
-        auto window = pong::Win32Window(app_name, window_offset, window_size);
+        auto window = pong::Win32Window(app_name, window_rect);
 
         const auto vk_surface = window.create_vulkan_surface(vk_instance);
         const auto vk_device = pong::VulkanDevice(vk_instance, vk_surface);

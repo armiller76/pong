@@ -8,8 +8,8 @@
 #include <windows.h>
 
 #include "engine/vulkan/vulkan_window.h"
+#include "math/rectangle.h"
 #include "utils/auto_release.h"
-#include "utils/util.h"
 
 namespace pong
 {
@@ -28,12 +28,12 @@ class Win32Window : public VulkanWindow
   public:
     ~Win32Window() override;
 
-    Win32Window(std::string_view application_name, Offset window_offset, Size window_size);
+    Win32Window(std::string_view application_name, Rectangle window_rect);
 
     auto process_events() -> void override;
     auto handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
-    auto size_pixels() const -> Size override;
+    auto extent() const -> Extent2D override;
     auto set_title(std::string_view title) -> void override;
 
     auto should_close() const -> bool override;
@@ -52,10 +52,9 @@ class Win32Window : public VulkanWindow
     arm::AutoRelease<HWND, static_cast<HWND>(0)> hwnd_;
     HINSTANCE hinstance_;
     bool should_close_;
-    std::string app_name_{};
-    std::string class_name_{};
-    std::uint32_t window_width_{};
-    std::uint32_t window_height_{};
+    std::string app_name_;
+    std::string class_name_;
+    Rectangle window_rect_;
 
     std::map<std::uint64_t, std::function<void()>> close_callbacks_{};
     std::map<std::uint64_t, std::function<void(std::uint32_t, std::uint32_t)>> resize_callbacks_{};

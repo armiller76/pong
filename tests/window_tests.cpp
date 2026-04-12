@@ -8,7 +8,7 @@ namespace pong
 
 struct TestWindow
 {
-    Win32Window window{"PongTest", Offset{100, 100}, Size{64, 64}};
+    Win32Window window{"PongTest", Offset2D{100, 100}, Extent2D{64, 64}};
 };
 
 TEST(window, construct_and_run)
@@ -79,7 +79,7 @@ TEST(Win32Window, ResizeCallbacksFireOnWmSize)
 TEST(Win32Window, SizePixelsReflectsInternalState)
 {
     TestWindow test_window;
-    auto s = test_window.window.size_pixels();
+    auto s = test_window.window.extent();
     EXPECT_GT(s.width, 0u);
     EXPECT_GT(s.height, 0u);
 }

@@ -3,43 +3,44 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "graphics/shader.h"
+#include "math/rectangle.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 
 namespace pong
 {
 
-static inline auto check_vk_result(VkResult result) -> void
+static inline auto check_vk_result(VkResult r) -> void
 {
-    if (result == VK_SUCCESS)
+    if (r == VK_SUCCESS)
     {
         return;
     }
     else
     {
         auto trace = std::stacktrace::current(2zu);
-        if (result > 0)
+        if (r > 0)
         {
             arm::log::warn(
                 "Vulkan non-fatal error: {}\nStacktrace:\n{}\nContinuing",
-                ::vk::to_string(static_cast<::vk::Result>(result)),
+                ::vk::to_string(static_cast<::vk::Result>(r)),
                 trace);
         }
         else
         {
             arm::log::error(
                 "Vulkan fatal error: {}\nStacktrace:\n{}\nTerminating",
-                ::vk::to_string(static_cast<::vk::Result>(result)),
+                ::vk::to_string(static_cast<::vk::Result>(r)),
                 trace);
             std::terminate();
         }
     }
 }
 
-inline auto to_vk_stage(ShaderStage stage) -> ::vk::ShaderStageFlagBits
+inline auto to_vk(ShaderStage s) -> ::vk::ShaderStageFlagBits
 {
     using enum ShaderStage;
-    switch (stage)
+    switch (s)
     {
         case Vertex: return ::vk::ShaderStageFlagBits::eVertex;
         case Fragment: return ::vk::ShaderStageFlagBits::eFragment;
@@ -48,11 +49,14 @@ inline auto to_vk_stage(ShaderStage stage) -> ::vk::ShaderStageFlagBits
     }
 }
 
-//[[nodiscard]] inline auto create_vk_shader_module(const vk::raii::Device &device, const Shader &shader)
-//    -> ::vk::raii::ShaderModule
-//{
-//    return device.createShaderModule(
-//        {{}, shader.spirv.size(), reinterpret_cast<const uint32_t *>(shader.spirv.data())});
-//}
+inline auto to_vk(Extent2D e) -> ::vk::Extent2D
+{
+    return {e.width, e.height};
+}
+
+inline auto to_vk(Offset2D o) -> ::vk::Offset2D
+{
+    return {o.x, o.y};
+}
 
 }
