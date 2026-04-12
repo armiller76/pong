@@ -10,7 +10,9 @@
 #include "engine/vulkan/vulkan_utils.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
+#include "graphics/texture2d.h"
 #include "utils/error.h"
+
 
 namespace pong
 {
@@ -30,6 +32,7 @@ class ResourceManager
 
     auto load(std::string name, const std::filesystem::path &path, ShaderStage stage) -> std::uint64_t;
     auto load(Mesh &&mesh) -> std::uint64_t;
+    auto load(Texture2D &&texture) -> std::uint64_t;
 
     template <typename T>
     auto get(this auto &&self, std::uint64_t resource_id) -> auto &&;
@@ -41,9 +44,9 @@ class ResourceManager
 
   private:
     const VulkanDevice &device_;
-
     std::unordered_map<std::uint64_t, Shader> shaders_;
     std::unordered_map<std::uint64_t, Mesh> meshes_;
+    std::unordered_map<std::uint64_t, Texture2D> textures_;
 
     template <typename T>
     auto get_map_(this auto &&self) -> auto &&;
@@ -91,6 +94,10 @@ auto ResourceManager::get_map_(this auto &&self) -> auto &&
     else if constexpr (std::is_same_v<T, Mesh>)
     {
         return self.meshes_;
+    }
+    else if constexpr (std::is_same_v<T, Texture2D>)
+    {
+        return self.textures_;
     }
     else
     {

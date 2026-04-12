@@ -16,7 +16,10 @@ namespace pong
 {
 
 ResourceManager::ResourceManager(const VulkanDevice &device)
-    : device_(device)
+    : device_{device}
+    , shaders_{}
+    , meshes_{}
+    , textures_{}
 {
     arm::log::debug("ResourceManager constructor");
 }
