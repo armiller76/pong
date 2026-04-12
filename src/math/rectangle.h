@@ -9,8 +9,8 @@ namespace pong
 
 struct Offset2D
 {
-    std::uint32_t x;
-    std::uint32_t y;
+    std::int32_t x;
+    std::int32_t y;
 
     Offset2D()
         : x{0}
@@ -18,7 +18,7 @@ struct Offset2D
     {
     }
 
-    Offset2D(std::uint32_t x, std::uint32_t y)
+    Offset2D(std::int32_t x, std::int32_t y)
         : x{x}
         , y{y}
     {
