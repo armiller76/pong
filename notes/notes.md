@@ -1,93 +1,32 @@
-Copilot/Gemini:
-The title of this project is 'Pong,' but the name is simply a placeholder while I figure out what the game will actually be. Please do not assume there will ever be a ball or paddles in this project.
+What helper to add
+- Add an immediate submit function that:
+1. Allocates or reuses a dedicated command buffer from a transfer/immediate command pool.
+2. Begins it with one-time-submit flag.
+3. Runs a caller-provided recording callback.
+4. Ends and submits to graphics queue.
+5. Waits for completion via fence (or queue wait as a first version).
 
-1. The High-Level Analogy: The Puppet Show
+Suggested shape (conceptually)
+- Method on command context:
+  immediate_submit(record_fn)
+- record_fn takes a command buffer and records transfer/barrier commands.
 
-    Imagine you are running a digital puppet show.
-    
-    The Mesh is the carved wooden shape of the puppet (the geometry).
-    The Texture is the paint or fabric wrapped around the wood (the image).
-    The Shader is the spotlight operator and the special effects team. They decide how the puppet looks based on the lights, the paint, and the angle.
-    The Model is the specific puppet standing on stage right now. You might have one "Soldier Mesh" in the box, but ten "Soldier Models" on stage.
+Where to place it
+- Best first step: add this to vulkan_command_context.h and vulkan_command_context.cpp, since that class already owns pools/buffers/fences.
+- It will need access to queue and queue family already exposed by vulkan_device.h.
 
+How this enables textures
+- Texture upload flow becomes:
+1. Create staging buffer (host visible, transfer src) using vulkan_gpu_buffer.h.
+2. Copy pixel data with upload.
+3. Create target GpuImage.
+4. immediate_submit records:
+- barrier: Undefined -> TransferDstOptimal
+- copyBufferToImage
+- barrier: TransferDstOptimal -> ShaderReadOnlyOptimal
+5. Update descriptor image info using combined image sampler binding already defined in vulkan_pipeline_factory.cpp and vulkan_pipeline_factory.cpp.
 
-2. Deep Dive: The Data (What sits in RAM/VRAM)
+Important detail
+- Add texture-specific transition info entries (for transfer dst and shader read). Right now transition helpers are renderer-focused in vulkan_layout_transition.h, so extending that struct with texture transitions will keep barriers consistent.
 
-    Mesh (The Geometry)
-    A Mesh is purely a collection of 3D points called Vertices.
-    
-    It doesn't know where it is in the world.
-    It doesn't know what color it is (usually).
-    It just describes a shape relative to a center point (e.g., "I am a square, 1 meter wide").
-    In C++, a Mesh is usually just a wrapper around a GpuBuffer containing an array of Vertex structs.
-    
-    Vertex: A single point containing data like Position (x,y,z), UV (texture coordinates), and Normal (which way is up).
-    Index: To make a square, you need 2 triangles. Instead of defining 6 vertices (with duplicates), you define 4 unique vertices and a list of "Indices" (0,1,2 and 2,3,0) to tell the GPU how to connect the dots.
-    Texture (The Skin)
-    A Texture is a bitmap image (like a .png or .jpg) loaded into GPU memory.
-    
-    The GPU doesn't "know" it's an image; it's just a grid of colors.
-    To wrap this 2D image onto a 3D Mesh, we use UV Coordinates stored in the Vertex.
-    U, V are coordinates from 0.0 to 1.0.
-    (0,0) is the top-left of the image, (1,1) is the bottom-right.
-    If a vertex has UV (0.5, 0.5), it gets the color from the exact center of the texture image.
-    Material (The Configuration)
-    A Material isn't a strict hardware concept, but a software one. It bundles things together.
-    
-    "This specific rock" needs:
-    The Rock Texture.
-    The "Standard" Shader.
-    Settings: Shininess = 0.0, Tint = Grey.
-    Model (The Instance)
-    A Model (or Actor/Entity) represents an object in your game world.
-    
-    It holds a reference to a Mesh.
-    It holds a reference to a Material.
-    Crucially, it holds a Transform (Position, Rotation, Scale).
-    In Pong: You load the "Quad Mesh" once. You create two "Paddle Models". Both use the same mesh, but one has Position.x = -0.9 and the other Position.x = +0.9.
-    
-3. Deep Dive: The Process (The Shader)
-
-    A Shader is a small program that runs on the graphics card (GPU). It is not written in C++, but in a shading language (GLSL for Vulkan).
-    
-    The pipeline is split into two main programmable stages:
-    
-    Stage A: The Vertex Shader (The Architect)
-    Input: One single Vertex (from your Mesh).
-    Job: Figure out where this vertex actually appears on your 2D monitor.
-    Process:
-    Take the mesh's generic 3D position (e.g., 0.5, 0.5, 0).
-    Multiply it by the Model Matrix (move it to the paddle's position).
-    Multiply it by the Projection Matrix (apply perspective/camera lens).
-    Output: The final 2D screen coordinate of that dot.
-    Stage B: The Rasterizer (The Hardware - Not Programmable)
-    The GPU takes the three screen coordinates produced by the Vertex Shader (forming a triangle) and figures out exactly which pixels on your monitor fall inside that triangle.
-    
-    Stage C: The Fragment Shader (The Artist)
-    Input: One single Pixel (Fragment) that needs to be drawn.
-    Job: What color is this specific pixel?
-    Process:
-    "I am drawing a pixel in the middle of the paddle."
-    "Based on the UVs passed from the vertex shader, this pixel corresponds to the coordinate (0.5, 0.5) on the texture."
-    "Sample the texture at that spot." -> Gets Red.
-    "Are there lights?" -> Dim the Red because it's in shadow.
-    Output: The final RGBA color.
-
-4. How it fits in your C++ Code
-
-    Initialization:
-    
-    Load paddle.png -> Upload to GpuImage (Texture).
-    Define Vertex array for a square -> Upload to GpuBuffer (Mesh).
-    Compile shader.vert and shader.frag -> Create VkPipeline (Shader).
-    The Game Loop (Update):
-    
-    Update Paddle1.position.y based on input (Model state).
-    The Render Loop (Draw):
-    
-    Bind Pipeline: "GPU, use the 'Standard Shader' program."
-    Bind Mesh: "GPU, here is the list of vertices (the square)."
-    Bind Descriptors: "GPU, here is the texture image to use."
-    Push Constants: "GPU, for the next thing I draw, move it to Paddle1.position."
-    Draw: "Go!"
-    
+If you want, I can draft the exact header and cpp changes for the immediate_submit API in your current style (RAII Vulkan + arm::ensure checks), plus the first texture upload call site skeleton.
