@@ -19,8 +19,9 @@ class VulkanImmediateCommandContext
     VulkanImmediateCommandContext(VulkanImmediateCommandContext &&) noexcept = default;
     auto operator=(VulkanImmediateCommandContext &&) noexcept -> VulkanImmediateCommandContext & = delete;
 
-    auto command_buffer() const -> ::vk::CommandBuffer;
+    auto command_buffer() -> ::vk::raii::CommandBuffer &;
     auto fence() const -> ::vk::Fence;
+    auto wait_for_fence() const -> void;
 
   private:
     const VulkanDevice &device_;

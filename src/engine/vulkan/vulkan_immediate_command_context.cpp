@@ -16,26 +16,28 @@ VulkanImmediateCommandContext::VulkanImmediateCommandContext(const VulkanDevice 
     : device_{device}
     , pool_{create_command_pool(device_, command_context_type::Immediate, name)}
     , buffer_{std::move(create_command_buffers(device_, name, 1u, *pool_).at(0))}
-    , fence_{[&]()
-             {
-                 auto fence_info = ::vk::FenceCreateInfo{};
-                 fence_info.sType = ::vk::StructureType::eFenceCreateInfo;
-                 fence_info.flags = ::vk::FenceCreateFlagBits::eSignaled;
-                 return ::vk::raii::Fence(device_.native_handle(), fence_info);
-             }()}
+    , fence_{[&]() { return ::vk::raii::Fence(device_.native_handle(), ::vk::FenceCreateInfo{}); }()}
 
 {
     arm::log::debug("VulkanImmediateCommandContext constructor");
 }
 
-auto VulkanImmediateCommandContext::command_buffer() const -> ::vk::CommandBuffer
+auto VulkanImmediateCommandContext::command_buffer() -> ::vk::raii::CommandBuffer &
 {
-    return *buffer_;
+    return buffer_;
 }
 
 auto VulkanImmediateCommandContext::fence() const -> ::vk::Fence
 {
     return *fence_;
+}
+
+auto VulkanImmediateCommandContext::wait_for_fence() const -> void
+{
+    auto result = device_.native_handle().waitForFences(*fence_, VK_TRUE, UINT64_MAX);
+    arm::ensure(result == ::vk::Result::eSuccess, "Failed to wait for fence");
+
+    device_.native_handle().resetFences(*fence_);
 }
 
 } // namespace pong
