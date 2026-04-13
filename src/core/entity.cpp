@@ -98,7 +98,7 @@ auto Entity::translate_by(::glm::vec3 offset) -> void
 
     transform_.position += offset;
 }
-
+/*
 auto Entity::translate_local(::glm::vec3 offset_local) -> void
 // Adds an offset expressed in the entity's local axes (forward/right/up).
 {
@@ -110,13 +110,14 @@ auto Entity::translate_local(::glm::vec3 offset_local) -> void
 
     arm::not_implemented();
 }
-
+*/
 auto Entity::scale_by(::glm::vec3 factor) -> void
 // Multiplies current scale by a component-wise factor.
 {
     if (!is_scale_safe(factor))
     {
         arm::log::warn("entity: scale_by unsafe factor");
+        return;
     }
 
     transform_.scale *= factor;
@@ -133,7 +134,7 @@ auto Entity::rotate_by(::glm::vec3 radians) -> void
 
     transform_.rotation = normalize_safe(::glm::quat(radians) * transform_.rotation);
 }
-
+/*
 auto Entity::rotate_local_by(::glm::vec3 radians_local) -> void
 // Applies a local-space delta rotation in radians (Euler xyz), post-multiplied.
 {
@@ -145,5 +146,5 @@ auto Entity::rotate_local_by(::glm::vec3 radians_local) -> void
 
     arm::not_implemented();
 }
-
+*/
 } // namespace pong

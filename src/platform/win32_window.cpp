@@ -145,7 +145,7 @@ auto Win32Window::extent() const -> Extent2D
 
 auto Win32Window::set_title(std::string_view title) -> void
 {
-    ::SetWindowTextA(hwnd_, title.data());
+    ::SetWindowTextA(hwnd_, std::string(title).c_str());
 }
 
 auto Win32Window::should_close() const -> bool

@@ -119,9 +119,14 @@ TEST(Entity, SetPositionIgnoresNonFiniteInput)
     EXPECT_FLOAT_EQ(entity.transform().position.z, 3.0f);
 }
 
-TEST(Entity, LocalTranslationAndLocalRotationPendingImplementation)
+TEST(Entity, LocalTranslationPendingImplementation)
 {
-    GTEST_SKIP() << "translate_local() and rotate_local_by() are still pending implementation in Entity.";
+    GTEST_SKIP() << "translate_local() is still pending implementation in Entity.";
+}
+
+TEST(Entity, LocalRotationPendingImplementation)
+{
+    GTEST_SKIP() << "rotate_local_by() is still pending implementation in Entity.";
 }
 
 } // namespace pong
