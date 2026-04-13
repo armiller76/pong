@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -15,9 +16,9 @@ namespace pong
 {
 
 // vulkan specific constructor overload
-Texture2D::Texture2D(std::string_view name, Extent2D extent, ImageFormat format, const VulkanDevice &device)
+Texture2D::Texture2D(Image &image, const VulkanDevice &device)
 {
-    impl_ = std::make_unique<Texture2DImpl_Vulkan>(device, name, to_vk(extent), to_vk(format));
+    impl_ = std::make_unique<Texture2DImpl_Vulkan>(device, image.name(), to_vk(image.extent()), to_vk(image.format()));
 }
 
 // other specific constructor overload
@@ -39,6 +40,11 @@ auto Texture2D::width() const -> std::uint32_t
 auto Texture2D::height() const -> std::uint32_t
 {
     return impl_->height();
+}
+
+auto Texture2D::upload_pixels(VulkanImmediateCommandContext &command_context, const Image &image) -> void
+{
+    impl_->upload(command_context, image);
 }
 
 } // namespace pong
