@@ -1,14 +1,15 @@
 #include <gtest/gtest.h>
 
+#include "math/rectangle.h"
 #include "platform/win32_window.h"
-#include "utils/util.h"
+
 
 namespace pong
 {
 
 struct TestWindow
 {
-    Win32Window window{"PongTest", Offset2D{100, 100}, Extent2D{64, 64}};
+    Win32Window window{"PongTest", Rectangle{Offset2D{100, 100}, Extent2D{64, 64}}};
 };
 
 TEST(window, construct_and_run)

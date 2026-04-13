@@ -9,6 +9,7 @@ add_executable(
   exception_tests.cpp
   file_tests.cpp
   hash_tests.cpp
+  image_texture_resource_api_tests.cpp
   render_sort_key_tests.cpp
   transform_tests.cpp
   window_tests.cpp

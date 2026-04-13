@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdint>
+#include <limits>
 
 #include <gtest/gtest.h>
 
@@ -80,10 +81,47 @@ TEST(Entity, ActiveStateToggles)
     EXPECT_TRUE(entity.is_active());
 }
 
-TEST(Entity, TranslateIsCurrentlyNotImplemented)
+TEST(Entity, TranslateByAddsWorldOffset)
 {
-    GTEST_SKIP() << "translate() currently terminates via arm::not_implemented; re-enable as a death test when "
-                    "configured for stable death-test execution in this environment.";
+    auto entity = Entity{"entity", 1u, Transform{}};
+    entity.set_position({1.0f, 2.0f, 3.0f});
+
+    entity.translate_by({0.5f, -1.0f, 4.0f});
+
+    EXPECT_FLOAT_EQ(entity.transform().position.x, 1.5f);
+    EXPECT_FLOAT_EQ(entity.transform().position.y, 1.0f);
+    EXPECT_FLOAT_EQ(entity.transform().position.z, 7.0f);
+}
+
+TEST(Entity, TranslateByIgnoresNonFiniteOffset)
+{
+    auto entity = Entity{"entity", 1u, Transform{}};
+    entity.set_position({4.0f, 5.0f, 6.0f});
+
+    const auto inf = std::numeric_limits<float>::infinity();
+    entity.translate_by({inf, 1.0f, 1.0f});
+
+    EXPECT_FLOAT_EQ(entity.transform().position.x, 4.0f);
+    EXPECT_FLOAT_EQ(entity.transform().position.y, 5.0f);
+    EXPECT_FLOAT_EQ(entity.transform().position.z, 6.0f);
+}
+
+TEST(Entity, SetPositionIgnoresNonFiniteInput)
+{
+    auto entity = Entity{"entity", 1u, Transform{}};
+    entity.set_position({1.0f, 2.0f, 3.0f});
+
+    const auto nan = std::numeric_limits<float>::quiet_NaN();
+    entity.set_position({nan, 9.0f, 9.0f});
+
+    EXPECT_FLOAT_EQ(entity.transform().position.x, 1.0f);
+    EXPECT_FLOAT_EQ(entity.transform().position.y, 2.0f);
+    EXPECT_FLOAT_EQ(entity.transform().position.z, 3.0f);
+}
+
+TEST(Entity, LocalTranslationAndLocalRotationPendingImplementation)
+{
+    GTEST_SKIP() << "translate_local() and rotate_local_by() are still pending implementation in Entity.";
 }
 
 } // namespace pong
