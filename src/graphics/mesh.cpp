@@ -42,7 +42,7 @@ auto Mesh::vertex_count() const noexcept -> std::uint32_t
     return static_cast<uint32_t>(vertices_cpu_.size());
 }
 
-auto Mesh::vertex_buffer() const noexcept -> const GpuBuffer &
+auto Mesh::vertex_buffer() const noexcept -> const VulkanGpuBuffer &
 {
     return vertex_buffer_gpu_;
 }
@@ -57,7 +57,7 @@ auto Mesh::index_count() const noexcept -> std::uint32_t
     return static_cast<uint32_t>(indices_cpu_.size());
 }
 
-auto Mesh::index_buffer() const noexcept -> const GpuBuffer &
+auto Mesh::index_buffer() const noexcept -> const VulkanGpuBuffer &
 {
     return index_buffer_gpu_;
 }

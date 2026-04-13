@@ -9,20 +9,20 @@ namespace pong
 
 class VulkanDevice;
 
-class GpuBuffer
+class VulkanGpuBuffer
 {
   public:
-    GpuBuffer(
+    VulkanGpuBuffer(
         const VulkanDevice &device,
         ::vk::DeviceSize size,
         ::vk::BufferUsageFlags usage,
         ::vk::MemoryPropertyFlags memory_flags);
-    ~GpuBuffer() = default;
+    ~VulkanGpuBuffer() = default;
 
-    GpuBuffer(GpuBuffer &&) noexcept = default;
-    GpuBuffer &operator=(GpuBuffer &&) noexcept = default;
-    GpuBuffer(const GpuBuffer &) = delete;
-    GpuBuffer &operator=(const GpuBuffer &) = delete;
+    VulkanGpuBuffer(VulkanGpuBuffer &&) noexcept = default;
+    VulkanGpuBuffer &operator=(VulkanGpuBuffer &&) noexcept = default;
+    VulkanGpuBuffer(const VulkanGpuBuffer &) = delete;
+    VulkanGpuBuffer &operator=(const VulkanGpuBuffer &) = delete;
 
     auto map(this auto &&self) -> auto &&;
     auto unmap() -> void;

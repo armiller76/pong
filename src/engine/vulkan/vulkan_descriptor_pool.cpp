@@ -10,13 +10,12 @@
 #include "vulkan_device.h"
 #include "vulkan_gpu_buffer.h"
 
-
 namespace pong
 {
 
 VulkanDescriptorPool::VulkanDescriptorPool(
     const VulkanDevice &device,
-    const std::vector<GpuBuffer> &uniform_buffers,
+    const std::vector<VulkanGpuBuffer> &uniform_buffers,
     const std::uint32_t max_frames_in_flight)
     : device_{device}
     , uniform_buffers_{uniform_buffers}

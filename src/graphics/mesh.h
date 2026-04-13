@@ -30,11 +30,11 @@ class Mesh
     Mesh &operator=(const Mesh &) = delete;
 
     auto vertex_count() const noexcept -> std::uint32_t;
-    auto vertex_buffer() const noexcept -> const GpuBuffer &;
+    auto vertex_buffer() const noexcept -> const VulkanGpuBuffer &;
     auto vertices() const noexcept -> std::span<const Vertex>;
 
     auto index_count() const noexcept -> std::uint32_t;
-    auto index_buffer() const noexcept -> const GpuBuffer &;
+    auto index_buffer() const noexcept -> const VulkanGpuBuffer &;
     auto indices() const noexcept -> std::span<const std::uint32_t>;
 
     auto name() const noexcept -> std::string_view;
@@ -45,8 +45,8 @@ class Mesh
   private:
     std::vector<Vertex> vertices_cpu_{};
     std::vector<std::uint32_t> indices_cpu_{};
-    GpuBuffer vertex_buffer_gpu_;
-    GpuBuffer index_buffer_gpu_;
+    VulkanGpuBuffer vertex_buffer_gpu_;
+    VulkanGpuBuffer index_buffer_gpu_;
     std::string name_{};
 }; // class Mesh
 

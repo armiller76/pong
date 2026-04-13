@@ -11,7 +11,7 @@
 namespace pong
 {
 
-GpuBuffer::GpuBuffer(
+VulkanGpuBuffer::VulkanGpuBuffer(
     const VulkanDevice &device,
     ::vk::DeviceSize size,
     ::vk::BufferUsageFlags usage,
@@ -40,10 +40,10 @@ GpuBuffer::GpuBuffer(
           }())
     , memory_flags_{memory_flags}
 {
-    arm::log::debug("GpuBuffer Constructor: {} - {} bytes", ::vk::to_string(usage), size);
+    arm::log::debug("VulkanGpuBuffer Constructor: {} - {} bytes", ::vk::to_string(usage), size);
 }
 
-auto GpuBuffer::map(this auto &&self) -> auto &&
+auto VulkanGpuBuffer::map(this auto &&self) -> auto &&
 {
     arm::ensure(
         (self.memory_flags_ & ::vk::MemoryPropertyFlagBits::eHostVisible) == ::vk::MemoryPropertyFlagBits::eHostVisible,
@@ -51,12 +51,12 @@ auto GpuBuffer::map(this auto &&self) -> auto &&
     return self.memory_.mapMemory(0, size_);
 }
 
-auto GpuBuffer::unmap() -> void
+auto VulkanGpuBuffer::unmap() -> void
 {
     memory_.unmapMemory();
 }
 
-auto GpuBuffer::upload(const void *data, std::size_t bytes, std::size_t offset) -> void
+auto VulkanGpuBuffer::upload(const void *data, std::size_t bytes, std::size_t offset) -> void
 {
     arm::ensure(offset + bytes <= static_cast<std::size_t>(size_), "Gpu buffer upload out of bounds");
     arm::ensure(
@@ -77,12 +77,12 @@ auto GpuBuffer::upload(const void *data, std::size_t bytes, std::size_t offset) 
     }
 }
 
-auto GpuBuffer::native_handle() const -> ::vk::Buffer
+auto VulkanGpuBuffer::native_handle() const -> ::vk::Buffer
 {
     return *buffer_;
 }
 
-auto GpuBuffer::size() const -> ::vk::DeviceSize
+auto VulkanGpuBuffer::size() const -> ::vk::DeviceSize
 {
     return size_;
 }

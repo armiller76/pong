@@ -8,7 +8,6 @@
 #include "vulkan_device.h"
 #include "vulkan_gpu_buffer.h"
 
-
 namespace pong
 {
 
@@ -17,7 +16,7 @@ class VulkanDescriptorPool
   public:
     VulkanDescriptorPool(
         const VulkanDevice &device,
-        const std::vector<GpuBuffer> &uniform_buffers,
+        const std::vector<VulkanGpuBuffer> &uniform_buffers,
         const std::uint32_t max_frames_in_flight);
     ~VulkanDescriptorPool() = default;
 
@@ -35,7 +34,7 @@ class VulkanDescriptorPool
     auto create_pool_() -> ::vk::raii::DescriptorPool;
 
     const VulkanDevice &device_;
-    const std::vector<GpuBuffer> &uniform_buffers_;
+    const std::vector<VulkanGpuBuffer> &uniform_buffers_;
     std::uint32_t frames_in_flight_;
     ::vk::raii::DescriptorPool pool_;
 };
