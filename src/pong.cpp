@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <print>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -15,6 +16,7 @@
 #include "engine/vulkan/vulkan_renderer.h"
 #include "engine/vulkan/vulkan_surface.h"
 #include "graphics/camera.h"
+#include "graphics/image.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
 #include "imgui/imgui_wrapper.h"
@@ -26,6 +28,8 @@
 
 int main()
 {
+    using namespace std::literals;
+
     std::string project_root{"c:/dev/Pong"};
     std::string app_name{"Pong"};
     std::string engine_name{"NotAnEngine"};
@@ -72,6 +76,13 @@ int main()
             test_triangle,
             test_rectangle,
         };
+        auto image_1x1_white = pong::Image(
+            "1x1_white"sv,
+            pong::Extent2D{1u, 1u},
+            pong::ImageFormat::RGBA8,
+            std::vector<std::uint8_t>{255, 255, 255, 255});
+        [[maybe_unused]] auto texture_1x1_white = resource_manager.load("texture_1x1_white", image_1x1_white);
+        [[maybe_unused]] auto &the_actual_texture = resource_manager.get<pong::Texture2D>(texture_1x1_white);
 
         auto main_camera = pong::Camera();
         main_camera.set_position({5.0f, 0.0f, 5.0f});
