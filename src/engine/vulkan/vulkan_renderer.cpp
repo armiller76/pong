@@ -25,6 +25,7 @@
 namespace pong
 {
 
+// TODO update to use Sync2 objects
 VulkanRenderer::VulkanRenderer(
     const VulkanDevice &device,
     const VulkanSurface &surface,
@@ -40,9 +41,9 @@ VulkanRenderer::VulkanRenderer(
     , swapchain_{device_, surface_}
     , frame_command_context_{device_, swapchain_.image_count(), max_frames_in_flight_}
     , uniform_buffers_(
-          [&device, max_frames_in_flight]() -> std::vector<GpuBuffer>
+          [&device, max_frames_in_flight]() -> std::vector<VulkanGpuBuffer>
           {
-              auto buffers = std::vector<GpuBuffer>();
+              auto buffers = std::vector<VulkanGpuBuffer>();
               for (std::size_t i = 0; i < max_frames_in_flight; ++i)
               {
                   buffers.push_back(
@@ -119,11 +120,13 @@ auto VulkanRenderer::prepare_frame_() -> void
     command_buffer.reset();
     command_buffer.begin(command_buffer_begin_info);
 
-    transition_(
+    transition(
+        command_buffer,
         swapchain_.images().at(current_swap_chain_image_index_),
         ::vk::ImageAspectFlagBits::eColor,
         transition_info::undef_to_color_optimal());
-    transition_(
+    transition(
+        command_buffer,
         depth_buffer_.image(),
         ::vk::ImageAspectFlagBits::eDepth | ::vk::ImageAspectFlagBits::eStencil,
         transition_info::undef_to_depth_optimal());
@@ -240,7 +243,8 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
 auto VulkanRenderer::end_frame_() -> void
 {
     auto &command_buffer = frame_command_context_.current_command_buffer();
-    transition_(
+    transition(
+        command_buffer,
         swapchain_.images().at(current_swap_chain_image_index_),
         ::vk::ImageAspectFlagBits::eColor,
         transition_info::color_optimal_to_present());
@@ -272,36 +276,6 @@ auto VulkanRenderer::end_frame_() -> void
     }
 
     frame_command_context_.advance_frame();
-}
-
-auto VulkanRenderer::transition_(::vk::Image image, ::vk::ImageAspectFlags aspect_flags, transition_info info) -> void
-{
-    auto barrier = ::vk::ImageMemoryBarrier2{};
-    barrier.sType = ::vk::StructureType::eImageMemoryBarrier2;
-    barrier.srcStageMask = info.src_stage;
-    barrier.srcAccessMask = info.src_access;
-    barrier.dstStageMask = info.dst_stage;
-    barrier.dstAccessMask = info.dst_access;
-    barrier.oldLayout = info.src_layout;
-    barrier.newLayout = info.dst_layout;
-    // TODO when do we stop ignoring queue family index?
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    // TODO is this safe? i think so if the compiler accepts it, but is it copying the image or moving or...what?
-    barrier.image = image;
-
-    barrier.subresourceRange.aspectMask = aspect_flags;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-
-    auto dependency_info = ::vk::DependencyInfo{};
-    dependency_info.dependencyFlags = {};
-    dependency_info.imageMemoryBarrierCount = 1;
-    dependency_info.pImageMemoryBarriers = &barrier;
-
-    frame_command_context_.current_command_buffer().pipelineBarrier2(dependency_info);
 }
 
 } // namespace pong

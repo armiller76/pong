@@ -53,7 +53,6 @@ class VulkanRenderer
     auto prepare_frame_() -> void;
     auto record_(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data = nullptr) -> void;
     auto end_frame_() -> void;
-    auto transition_(::vk::Image image, ::vk::ImageAspectFlags aspect_flags, transition_info info) -> void;
 
     std::uint32_t max_frames_in_flight_;
 
@@ -63,7 +62,7 @@ class VulkanRenderer
     ResourceManager &resource_manager_;
     VulkanSwapchain swapchain_;
     VulkanFrameCommandContext frame_command_context_;
-    std::vector<GpuBuffer> uniform_buffers_;
+    std::vector<VulkanGpuBuffer> uniform_buffers_;
     DepthBuffer depth_buffer_;
     VulkanDescriptorPool descriptor_pool_;
     VulkanPipelineFactory pipeline_factory_;
