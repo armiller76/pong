@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <string>
+#include <string_view>
 
 #include "engine/file.h"
 #include "engine/vulkan/vulkan_device.h"
@@ -25,7 +26,7 @@ ResourceManager::ResourceManager(const VulkanDevice &device)
     arm::log::debug("ResourceManager constructor");
 }
 
-auto ResourceManager::load(std::string name, const std::filesystem::path &path, ShaderStage stage) -> std::uint64_t
+auto ResourceManager::load(std::string_view name, const std::filesystem::path &path, ShaderStage stage) -> std::uint64_t
 {
     const auto key = get_resource_id(name);
 
@@ -38,7 +39,7 @@ auto ResourceManager::load(std::string name, const std::filesystem::path &path, 
     auto [entry, inserted] = shaders_.try_emplace(key);
     arm::ensure(inserted, "failed to load shader: {}", name);
 
-    entry->second.name = std::move(name);
+    entry->second.name = name;
     entry->second.stage = stage;
     entry->second.spirv.assign_range(File(path).as_spirv());
 
@@ -54,6 +55,34 @@ auto ResourceManager::load(Mesh &&mesh) -> std::uint64_t
     {
         arm::log::warn("mesh already loaded: {} (skipping)", it->second.name());
     }
+    return key;
+}
+
+auto ResourceManager::load(Texture2D &&texture) -> std::uint64_t
+{
+    const auto key = get_resource_id(texture.name());
+
+    auto [it, inserted] = textures_.try_emplace(key, std::move(texture));
+    if (!inserted)
+    {
+        arm::log::warn("texture already loaded: {} (skipping)", it->second.name());
+    }
+    return key;
+}
+
+auto ResourceManager::load(std::string_view name, Image &image) -> std::uint64_t
+{
+    const auto key = get_resource_id(name);
+
+    auto [it, inserted] = textures_.try_emplace(key, std::move(Texture2D{image, device_}));
+    if (!inserted)
+    {
+        arm::log::warn("texture already loaded: {} (skipping)", it->second.name());
+    }
+
+    auto &texture = it->second;
+
+    texture.upload_pixels(command_context_, image);
     return key;
 }
 

@@ -9,6 +9,7 @@
 
 #include "engine/vulkan/vulkan_immediate_command_context.h"
 #include "engine/vulkan/vulkan_utils.h"
+#include "graphics/image.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
 #include "graphics/texture2d.h"
@@ -31,9 +32,10 @@ class ResourceManager
     ResourceManager(ResourceManager &&) = delete;
     ResourceManager &operator=(ResourceManager &&) = delete;
 
-    auto load(std::string name, const std::filesystem::path &path, ShaderStage stage) -> std::uint64_t;
+    auto load(std::string_view name, const std::filesystem::path &path, ShaderStage stage) -> std::uint64_t;
     auto load(Mesh &&mesh) -> std::uint64_t;
     auto load(Texture2D &&texture) -> std::uint64_t;
+    auto load(std::string_view name, Image &image) -> std::uint64_t;
 
     template <typename T>
     auto get(this auto &&self, std::uint64_t resource_id) -> auto &&;
