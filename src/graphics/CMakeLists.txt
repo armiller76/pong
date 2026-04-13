@@ -8,7 +8,6 @@ target_sources(
   PRIVATE camera.cpp
           mesh.cpp
           texture2d.cpp
-          texture2d_impl_vulkan.cpp
 )
 
 target_link_libraries(graphics PUBLIC glm::glm)
