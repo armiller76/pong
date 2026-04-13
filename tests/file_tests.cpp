@@ -63,14 +63,14 @@ TEST(File, EmptyFileLoadsAndReportsEmpty)
     auto tmp = TempFile{"pong_empty_file_test.bin"};
     write_bytes(tmp.path(), {});
 
-    auto file = File::read_binary(tmp.path());
+    auto file = File(tmp.path());
     EXPECT_TRUE(file.empty());
     EXPECT_EQ(file.size(), 0u);
 }
 
-TEST(File, ReadBinaryRoundTripsBytes)
+TEST(File, LoadsAndRoundTripsBytes)
 {
-    auto tmp = TempFile{"pong_read_binary_test.bin"};
+    auto tmp = TempFile{"pong_roundtrip_test.bin"};
     const auto bytes = std::array{
         std::byte{0x10},
         std::byte{0x20},
@@ -79,7 +79,7 @@ TEST(File, ReadBinaryRoundTripsBytes)
     };
     write_bytes(tmp.path(), bytes);
 
-    auto file = File::read_binary(tmp.path());
+    auto file = File(tmp.path());
     EXPECT_EQ(file.size(), bytes.size());
     EXPECT_EQ(file.data().size(), bytes.size());
     for (std::size_t i = 0; i < bytes.size(); ++i)
@@ -88,54 +88,73 @@ TEST(File, ReadBinaryRoundTripsBytes)
     }
 }
 
-TEST(File, ValidateSpirvRejectsInvalidMagic)
+TEST(File, PathAccessor)
 {
-    auto tmp = TempFile{"pong_invalid_spirv_magic.spv"};
-    const auto words = std::array<std::uint32_t, 2>{0xDEADBEEFu, 1u};
-    write_bytes(tmp.path(), std::as_bytes(std::span<const std::uint32_t>{words}));
+    auto tmp = TempFile{"pong_path_test.bin"};
+    write_bytes(tmp.path(), std::array{std::byte{0xFF}});
 
-    auto file = File::read_binary(tmp.path());
-    EXPECT_FALSE(file.validate_spirv());
-    EXPECT_THROW((File::read_shader(tmp.path())), arm::Exception);
+    auto file = File(tmp.path());
+    EXPECT_EQ(file.path(), tmp.path());
 }
 
-TEST(File, ValidateSpirvRejectsMisalignedData)
+TEST(File, DataReturnsConstSpan)
 {
-    auto tmp = TempFile{"pong_invalid_spirv_alignment.spv"};
+    auto tmp = TempFile{"pong_span_test.bin"};
     const auto bytes = std::array{
-        std::byte{0x03},
-        std::byte{0x02},
-        std::byte{0x23},
-        std::byte{0x07},
-        std::byte{0x01},
+        std::byte{0xAA},
+        std::byte{0xBB},
     };
     write_bytes(tmp.path(), bytes);
 
-    auto file = File::read_binary(tmp.path());
-    EXPECT_FALSE(file.validate_spirv());
-    EXPECT_THROW((file.as_spirv()), arm::Exception);
+    auto file = File(tmp.path());
+    auto span = file.data();
+
+    // Verify span properties
+    ASSERT_EQ(span.size(), bytes.size());
+    EXPECT_EQ(span[0], bytes[0]);
+    EXPECT_EQ(span[1], bytes[1]);
+
+    // Span is const, so this shouldn't compile (static assertion in code):
+    // span[0] = std::byte{0x00};  // COMPILE ERROR
 }
 
-TEST(File, AsSpirvReturnsWordViewForValidShaderBlob)
+TEST(File, MoveSemantics)
 {
-    auto tmp = TempFile{"pong_valid_spirv_blob.spv"};
-    const auto words = std::array<std::uint32_t, 4>{
-        0x07230203u,
-        0x00010000u,
-        0u,
-        0u,
-    };
-    write_bytes(tmp.path(), std::as_bytes(std::span<const std::uint32_t>{words}));
+    auto tmp = TempFile{"pong_move_test.bin"};
+    const auto bytes = std::array{std::byte{0x42}};
+    write_bytes(tmp.path(), bytes);
 
-    auto file = File::read_shader(tmp.path());
-    ASSERT_TRUE(file.validate_spirv());
+    auto file1 = File(tmp.path());
+    EXPECT_EQ(file1.size(), 1u);
 
-    auto view = file.as_spirv();
-    ASSERT_EQ(view.size(), words.size());
-    for (std::size_t i = 0; i < words.size(); ++i)
-    {
-        EXPECT_EQ(view[i], words[i]);
-    }
+    auto file2 = std::move(file1);
+    EXPECT_EQ(file2.size(), 1u);
+    EXPECT_EQ(file2.data()[0], std::byte{0x42});
+}
+
+TEST(File, ExistsStatic)
+{
+    auto tmp = TempFile{"pong_exists_test.bin"};
+    write_bytes(tmp.path(), std::array{std::byte{0x00}});
+
+    EXPECT_TRUE(File::exists(tmp.path()));
+
+    const auto nonexistent = std::filesystem::temp_directory_path() / "pong_does_not_exist_xyz.bin";
+    std::filesystem::remove(nonexistent);
+    EXPECT_FALSE(File::exists(nonexistent));
+}
+
+TEST(File, LargeFile)
+{
+    auto tmp = TempFile{"pong_large_file_test.bin"};
+    const auto size = 1024u * 1024u; // 1 MB
+    auto large_data = std::vector<std::byte>(size, std::byte{0x55});
+    write_bytes(tmp.path(), large_data);
+
+    auto file = File(tmp.path());
+    EXPECT_EQ(file.size(), size);
+    EXPECT_EQ(file.data()[0], std::byte{0x55});
+    EXPECT_EQ(file.data()[size - 1], std::byte{0x55});
 }
 
 } // namespace pong
