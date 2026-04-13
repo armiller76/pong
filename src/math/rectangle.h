@@ -12,13 +12,13 @@ struct Offset2D
     std::int32_t x;
     std::int32_t y;
 
-    Offset2D()
+    constexpr Offset2D()
         : x{0}
         , y{0}
     {
     }
 
-    Offset2D(std::int32_t x, std::int32_t y)
+    constexpr Offset2D(std::int32_t x, std::int32_t y)
         : x{x}
         , y{y}
     {
@@ -30,7 +30,7 @@ struct Extent2D
     std::uint32_t width;
     std::uint32_t height;
 
-    Extent2D(std::uint32_t w, std::uint32_t h)
+    constexpr Extent2D(std::uint32_t w, std::uint32_t h)
         : width{w}
         , height{h}
     {
