@@ -12,6 +12,12 @@ option(
   ON
 )
 
+option(
+  ENABLE_SPIRV_VALIDATION
+  "Enable SPIR-V validation via SPIRV-Tools"
+  ON
+)
+
 if(MSVC)
   add_compile_options(
     /WX
@@ -25,6 +31,59 @@ find_package(
   Vulkan
   REQUIRED
 )
+
+if(ENABLE_SPIRV_VALIDATION)
+  # Prefer local SPIRV-Tools from the installed Vulkan SDK.
+  find_path(
+    PONG_SPIRV_TOOLS_INCLUDE_DIR
+    NAMES spirv-tools/libspirv.h
+    HINTS "$ENV{VULKAN_SDK}/Include"
+  )
+
+  find_library(
+    PONG_SPIRV_TOOLS_LIBRARY_RELEASE
+    NAMES SPIRV-Tools
+    HINTS "$ENV{VULKAN_SDK}/Lib"
+  )
+
+  find_library(
+    PONG_SPIRV_TOOLS_LIBRARY_DEBUG
+    NAMES SPIRV-Toolsd
+    HINTS "$ENV{VULKAN_SDK}/Lib"
+  )
+
+  add_library(
+    spv_tools
+    UNKNOWN
+    IMPORTED
+    GLOBAL
+  )
+  set_target_properties(
+    spv_tools
+    PROPERTIES INTERFACE_INCLUDE_DIRECTORIES
+               "${PONG_SPIRV_TOOLS_INCLUDE_DIR}"
+               IMPORTED_LOCATION_RELEASE
+               "${PONG_SPIRV_TOOLS_LIBRARY_RELEASE}"
+               IMPORTED_LOCATION_RELWITHDEBINFO
+               "${PONG_SPIRV_TOOLS_LIBRARY_RELEASE}"
+               IMPORTED_LOCATION_MINSIZEREL
+               "${PONG_SPIRV_TOOLS_LIBRARY_RELEASE}"
+  )
+
+  if(PONG_SPIRV_TOOLS_LIBRARY_DEBUG)
+    set_property(
+      TARGET spv_tools
+      PROPERTY IMPORTED_LOCATION_DEBUG
+               "${PONG_SPIRV_TOOLS_LIBRARY_DEBUG}"
+    )
+  else()
+    set_property(
+      TARGET spv_tools
+      PROPERTY IMPORTED_LOCATION_DEBUG
+               "${PONG_SPIRV_TOOLS_LIBRARY_RELEASE}"
+    )
+  endif()
+endif()
 
 FetchContent_Declare(
   imgui

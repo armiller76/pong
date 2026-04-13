@@ -23,3 +23,8 @@ target_link_libraries(
   PUBLIC glm::glm
          imgui
 )
+
+if(ENABLE_SPIRV_VALIDATION)
+  target_link_libraries(engine PUBLIC spv_tools)
+  target_compile_definitions(engine PUBLIC PONG_ENABLE_SPIRV_VALIDATION=1)
+endif()
