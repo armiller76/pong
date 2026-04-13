@@ -2,6 +2,7 @@ target_sources(
   engine
   PRIVATE vulkan_depth_buffer.cpp
           vulkan_gpu_buffer.cpp
+          vulkan_gpu_image.cpp
           vulkan_frame_command_context.cpp
           vulkan_immediate_command_context.cpp
           vulkan_descriptor_pool.cpp

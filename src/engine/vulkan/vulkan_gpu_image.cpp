@@ -1,9 +1,16 @@
 #include "vulkan_gpu_image.h"
 
+#include <cstddef>
+
 #include <vulkan/vulkan_raii.hpp>
 
+#include "graphics/image.h"
 #include "utils/log.h"
 #include "vulkan_device.h"
+#include "vulkan_gpu_buffer.h"
+#include "vulkan_immediate_command_context.h"
+#include "vulkan_layout_transition.h"
+#include "vulkan_utils.h"
 
 namespace pong
 {
@@ -104,6 +111,83 @@ auto VulkanGpuImage::extent() const -> ::vk::Extent2D
 auto VulkanGpuImage::format() const -> ::vk::Format
 {
     return format_;
+}
+
+auto VulkanGpuImage::upload(VulkanImmediateCommandContext &command_context, const Image &image) -> void
+{
+    // TODO robustify this thing. sooooo much GIGO i can't even
+    auto image_size_bytes = std::size_t(image.extent().width * image.extent().height * bytes_per_pixel(image.format()));
+    auto &cb = command_context.command_buffer();
+    auto staging_buffer = VulkanGpuBuffer(
+        *device_,
+        ::vk::DeviceSize(image_size_bytes),
+        ::vk::BufferUsageFlagBits::eTransferSrc,
+        ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible);
+    staging_buffer.upload(image.pixels().data(), image.pixels().size());
+
+    auto begin_info = ::vk::CommandBufferBeginInfo{};
+    begin_info.sType = ::vk::StructureType::eCommandBufferBeginInfo;
+    begin_info.flags = ::vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+
+    cb.begin(begin_info);
+    transition(cb, image_, ::vk::ImageAspectFlagBits::eColor, transition_info::undef_to_transfer_dst_optimal());
+
+    auto image_info = ::vk::BufferImageCopy2{};
+    image_info.sType = ::vk::StructureType::eBufferImageCopy2;
+    image_info.pNext = nullptr;
+    image_info.bufferOffset = 0;
+    image_info.bufferRowLength = image.extent().width;
+    image_info.bufferImageHeight = image.extent().height;
+    image_info.imageSubresource.aspectMask = ::vk::ImageAspectFlagBits::eColor;
+    image_info.imageSubresource.mipLevel = 0u;
+    image_info.imageSubresource.layerCount = 1u;
+    image_info.imageSubresource.baseArrayLayer = 0u;
+    image_info.imageOffset = ::vk::Offset3D{0, 0, 0};
+    image_info.imageExtent = ::vk::Extent3D{image.extent().width, image.extent().height, 1};
+    auto image_info_array = std::array{
+        image_info,
+    };
+
+    auto copy_info = ::vk::CopyBufferToImageInfo2{};
+    copy_info.sType = ::vk::StructureType::eCopyBufferToImageInfo2;
+    copy_info.pNext = nullptr;
+    copy_info.srcBuffer = staging_buffer.native_handle();
+    copy_info.dstImage = *image_;
+    copy_info.dstImageLayout = ::vk::ImageLayout::eTransferDstOptimal;
+    copy_info.regionCount = static_cast<std::uint32_t>(image_info_array.size());
+    copy_info.pRegions = image_info_array.data();
+
+    cb.copyBufferToImage2(copy_info);
+    transition(
+        cb,
+        image_,
+        ::vk::ImageAspectFlagBits::eColor,
+        transition_info::transfer_dst_optimal_to_shader_rd_only_optimal());
+    cb.end();
+
+    auto cb_submit_info = ::vk::CommandBufferSubmitInfo{};
+    cb_submit_info.sType = ::vk::StructureType::eCommandBufferSubmitInfo;
+    cb_submit_info.pNext = nullptr;
+    cb_submit_info.commandBuffer = *cb;
+    cb_submit_info.deviceMask = 0;
+    auto cb_submit_array = std::array{
+        cb_submit_info,
+    };
+
+    auto submit_info = ::vk::SubmitInfo2{};
+    submit_info.sType = ::vk::StructureType::eSubmitInfo2;
+    submit_info.pNext = nullptr;
+    submit_info.flags = {};
+    submit_info.waitSemaphoreInfoCount = 0u;
+    submit_info.pWaitSemaphoreInfos = nullptr;
+    submit_info.commandBufferInfoCount = static_cast<std::uint32_t>(cb_submit_array.size());
+    submit_info.pCommandBufferInfos = cb_submit_array.data();
+    submit_info.signalSemaphoreInfoCount = 0u;
+    submit_info.pSignalSemaphoreInfos = nullptr;
+
+    auto result = device_->graphics_queue().submit2(1u, &submit_info, command_context.fence());
+    check_vk_result(static_cast<VkResult>(result));
+    command_context.wait_for_fence();
 }
 
 }

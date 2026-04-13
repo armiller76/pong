@@ -7,7 +7,9 @@
 namespace pong
 {
 
+class Image;
 class VulkanDevice;
+class VulkanImmediateCommandContext;
 
 class VulkanGpuImage
 {
@@ -26,6 +28,8 @@ class VulkanGpuImage
     auto sampler() const -> ::vk::Sampler;
     auto extent() const -> ::vk::Extent2D;
     auto format() const -> ::vk::Format;
+
+    auto upload(VulkanImmediateCommandContext &command_context, const Image &image) -> void;
 
   private:
     const VulkanDevice *device_;
