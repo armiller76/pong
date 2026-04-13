@@ -11,12 +11,10 @@
 namespace pong
 {
 
-inline auto spirv_validate(std::span<const std::byte> bytes) -> bool
+inline auto spirv_validate(std::span<const std::uint32_t> words) -> bool
 {
-    if (bytes.size_bytes() % sizeof(std::uint32_t) != 0 || bytes.size_bytes() < 20)
+    if (words.size() < 5)
         return false; // automatically not valid;
-    auto words = std::span<const std::uint32_t>(
-        reinterpret_cast<const std::uint32_t *>(bytes.data()), bytes.size_bytes() / sizeof(std::uint32_t));
 
     const auto context = spvContextCreate(spv_target_env::SPV_ENV_VULKAN_1_3);
     auto diagnostic = spv_diagnostic{};

@@ -1,13 +1,16 @@
 #include "resource_manager.h"
 
+#include <cstring>
 #include <filesystem>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "engine/file.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
+#include "graphics/utils.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/hash.h"
@@ -28,20 +31,31 @@ ResourceManager::ResourceManager(const VulkanDevice &device)
 
 auto ResourceManager::load(std::string_view name, const std::filesystem::path &path, ShaderStage stage) -> std::uint64_t
 {
+    auto file = File(path);
+    auto bytes = file.data().size_bytes();
+    arm::ensure(bytes % sizeof(std::uint32_t) == 0, "shader data is not 4-byte aligned");
+
+    auto words = std::vector<std::uint32_t>();
+    words.resize(bytes / sizeof(std::uint32_t));
+    std::memcpy(words.data(), file.data().data(), bytes);
+
+    if (!spirv_validate(words))
+    {
+        throw arm::Exception("invalid shader {}", name);
+    }
+
     const auto key = get_resource_id(name);
 
-    if (auto entry = shaders_.find(key); entry != shaders_.end())
+    auto [entry, inserted] = shaders_.try_emplace(key);
+    if (!inserted)
     {
         arm::log::warn("shader already loaded: {} (skipping)", name);
         return key;
     }
 
-    auto [entry, inserted] = shaders_.try_emplace(key);
-    arm::ensure(inserted, "failed to load shader: {}", name);
-
     entry->second.name = name;
     entry->second.stage = stage;
-    entry->second.spirv.assign_range(File(path).as_spirv());
+    entry->second.spirv.assign_range(words);
 
     return key;
 }
@@ -50,10 +64,10 @@ auto ResourceManager::load(Mesh &&mesh) -> std::uint64_t
 {
     const auto key = get_resource_id(mesh.name());
 
-    auto [it, inserted] = meshes_.try_emplace(key, std::move(mesh));
+    auto [entry, inserted] = meshes_.try_emplace(key, std::move(mesh));
     if (!inserted)
     {
-        arm::log::warn("mesh already loaded: {} (skipping)", it->second.name());
+        arm::log::warn("mesh already loaded: {} (skipping)", entry->second.name());
     }
     return key;
 }
@@ -62,10 +76,10 @@ auto ResourceManager::load(Texture2D &&texture) -> std::uint64_t
 {
     const auto key = get_resource_id(texture.name());
 
-    auto [it, inserted] = textures_.try_emplace(key, std::move(texture));
+    auto [entry, inserted] = textures_.try_emplace(key, std::move(texture));
     if (!inserted)
     {
-        arm::log::warn("texture already loaded: {} (skipping)", it->second.name());
+        arm::log::warn("texture already loaded: {} (skipping)", entry->second.name());
     }
     return key;
 }
@@ -74,13 +88,13 @@ auto ResourceManager::load(std::string_view name, Image &image) -> std::uint64_t
 {
     const auto key = get_resource_id(name);
 
-    auto [it, inserted] = textures_.try_emplace(key, std::move(Texture2D{image, device_}));
+    auto [entry, inserted] = textures_.try_emplace(key, std::move(Texture2D{image, device_}));
     if (!inserted)
     {
-        arm::log::warn("texture already loaded: {} (skipping)", it->second.name());
+        arm::log::warn("texture already loaded: {} (skipping)", entry->second.name());
     }
 
-    auto &texture = it->second;
+    auto &texture = entry->second;
 
     texture.upload_pixels(command_context_, image);
     return key;
