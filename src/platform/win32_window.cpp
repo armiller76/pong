@@ -19,7 +19,8 @@ namespace pong
 
 Win32Window::~Win32Window()
 {
-    hwnd_.reset(0);
+    hwnd_.reset(0); // MUST be called here to ensure window is destroyed before instance handle is unregistered
+
     ::UnregisterClassA(class_name_.c_str(), hinstance_);
 }
 

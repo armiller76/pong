@@ -49,12 +49,12 @@ class Win32Window : public VulkanWindow
     auto remove_resize_callback(std::uint64_t callback_id) -> void override;
 
   private:
-    arm::AutoRelease<HWND, static_cast<HWND>(0)> hwnd_;
     HINSTANCE hinstance_;
     bool should_close_;
     std::string app_name_;
     std::string class_name_;
     Rectangle window_rect_;
+    arm::AutoRelease<HWND, static_cast<HWND>(0)> hwnd_;
 
     std::map<std::uint64_t, std::function<void()>> close_callbacks_{};
     std::map<std::uint64_t, std::function<void(std::uint32_t, std::uint32_t)>> resize_callbacks_{};
