@@ -19,6 +19,7 @@ namespace pong
 
 Win32Window::~Win32Window()
 {
+    hwnd_.reset(0);
     ::UnregisterClassA(class_name_.c_str(), hinstance_);
 }
 
