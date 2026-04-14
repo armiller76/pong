@@ -15,7 +15,7 @@ namespace pong
 class Image
 {
   public:
-    Image(std::string_view name, Extent2D extent, ImageFormat(format), std::span<const std::uint8_t> pixels)
+    Image(std::string_view name, Extent2D extent, ImageFormat format, std::span<const std::uint8_t> pixels)
         : name_{name}
         , extent_{extent}
         , format_{format}
