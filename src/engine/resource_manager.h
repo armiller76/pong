@@ -15,7 +15,6 @@
 #include "graphics/texture2d.h"
 #include "utils/error.h"
 
-
 namespace pong
 {
 
@@ -38,6 +37,9 @@ class ResourceManager
     auto load(std::string_view name, Image &image) -> std::uint64_t;
 
     template <typename T>
+    auto unload(std::uint64_t resource_id);
+
+    template <typename T>
     auto get(this auto &&self, std::uint64_t resource_id) -> auto &&;
 
     template <typename T, typename Q>
@@ -55,6 +57,18 @@ class ResourceManager
     template <typename T>
     auto get_map_(this auto &&self) -> auto &&;
 };
+
+template <typename T>
+auto ResourceManager::unload(std::uint64_t resource_id)
+{
+    // TODO potential future bug: are you checking whether a resource is in-flight before removing from map?
+    auto &map = get_map_<T>();
+    arm::ensure(map.contains(resource_id), "ResourceManager does not contain resource id {}", resource_id);
+
+    // check if any entities are using the resource_id being deleted? or maybe add ref counting to resources
+    // managed by resourcemanager?
+    map.erase(resource_id);
+}
 
 template <typename T>
 auto ResourceManager::get(this auto &&self, std::uint64_t resource_id) -> auto &&
