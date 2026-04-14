@@ -1,6 +1,7 @@
 #include "vulkan_swapchain.h"
 
 #include <cstdint>
+#include <format>
 #include <ranges>
 #include <vector>
 
@@ -17,14 +18,17 @@ namespace pong
 VulkanSwapchain::VulkanSwapchain(const VulkanDevice &device, const VulkanSurface &surface)
     : device_{device}
     , surface_{surface}
+    , swapchain_{nullptr}
 {
     arm::log::debug("VulkanSwapchain constructor");
+    init_();
     create_();
 }
 
 auto VulkanSwapchain::recreate() -> void
 {
     destroy_();
+    init_();
     create_();
 }
 
@@ -53,42 +57,46 @@ auto VulkanSwapchain::image_count() const -> std::uint32_t
     return static_cast<std::uint32_t>(images_.size());
 }
 
-auto VulkanSwapchain::create_() -> void
+auto VulkanSwapchain::semaphores() const -> const std::vector<::vk::raii::Semaphore> &
 {
-    // TODO Bloated function
+    return render_finished_semaphores_;
+}
 
-    // grab all the data we need from the device up front
-    const auto capabilities = device_.physical_device().getSurfaceCapabilitiesKHR(surface_.get());
-    const auto surface_formats = device_.physical_device().getSurfaceFormatsKHR(surface_.get());
-    const auto modes = device_.physical_device().getSurfacePresentModesKHR(surface_.get());
-
-    // if the device doesn't give us any surface formats or present modes, crash
-    if (surface_formats.empty() || modes.empty())
+auto VulkanSwapchain::init_() -> void
+{
+    capabilities_ = device_.physical_device().getSurfaceCapabilitiesKHR(surface_.get());
+    formats_ = device_.physical_device().getSurfaceFormatsKHR(surface_.get());
+    modes_ = device_.physical_device().getSurfacePresentModesKHR(surface_.get());
+    // if the device didn't give us any surface formats or present modes, crash
+    if (formats_.empty() || modes_.empty())
     {
         throw arm::Exception("No surface formats or present modes or both");
     }
-
     // TODO consider parameterizing preferred surface formats. currently they're hardcoded in the helper
     // query the surface/device and set formats, extent, present mode, based on device/surface capabilities
-    const auto chosen_surface_format = choose_surface_format_(surface_formats);
+    const auto chosen_surface_format = choose_surface_format_(formats_);
     surface_format_ = chosen_surface_format.format;
     color_space_ = chosen_surface_format.colorSpace;
-    present_mode_ = choose_present_mode_(modes);
-    extent_ = choose_extent_(capabilities);
+    present_mode_ = choose_present_mode_(modes_);
+    extent_ = choose_extent_(capabilities_);
+}
+
+auto VulkanSwapchain::create_() -> void
+{
     const auto queue_indices =
         std::vector<std::uint32_t>{device_.graphics_queue_family_index(), device_.present_queue_family_index()};
 
     // determine how many swapchain images we are allowed
-    std::uint32_t image_count = capabilities.minImageCount + 1u;
-    std::uint32_t max_image_count = capabilities.maxImageCount;
+    std::uint32_t image_count = capabilities_.minImageCount + 1u;
+    std::uint32_t max_image_count = capabilities_.maxImageCount;
     if (max_image_count > 0)
     {
         image_count = image_count < max_image_count ? image_count : max_image_count;
     }
 
-    // TODO consider making swapchain creation a separate function
     // begin creating swapchain
     auto swapchain_create_info = ::vk::SwapchainCreateInfoKHR{};
+    swapchain_create_info.sType = ::vk::StructureType::eSwapchainCreateInfoKHR;
     swapchain_create_info.surface = *surface_.get();
     swapchain_create_info.minImageCount = image_count;
     swapchain_create_info.imageFormat = surface_format_;
@@ -104,10 +112,10 @@ auto VulkanSwapchain::create_() -> void
     else
     {
         swapchain_create_info.imageSharingMode = ::vk::SharingMode::eConcurrent;
-        swapchain_create_info.queueFamilyIndexCount = 2u;
+        swapchain_create_info.queueFamilyIndexCount = static_cast<std::uint32_t>(queue_indices.size());
         swapchain_create_info.pQueueFamilyIndices = queue_indices.data();
     }
-    swapchain_create_info.preTransform = capabilities.currentTransform;
+    swapchain_create_info.preTransform = capabilities_.currentTransform;
     swapchain_create_info.compositeAlpha = ::vk::CompositeAlphaFlagBitsKHR::eOpaque;
     swapchain_create_info.presentMode = present_mode_;
     swapchain_create_info.clipped = VK_TRUE;
@@ -138,10 +146,29 @@ auto VulkanSwapchain::create_() -> void
 
         image_views_.emplace_back(device_.native_handle(), image_view_create_info);
     }
+
+#ifndef NDEBUG
+    auto debug_name_info = ::vk::DebugUtilsObjectNameInfoEXT{};
+    debug_name_info.sType = ::vk::StructureType::eDebugUtilsObjectNameInfoEXT;
+    auto debug_name_str = std::string{};
+#endif
+    for (std::size_t i = 0; i < images_.size(); ++i)
+    {
+        render_finished_semaphores_.emplace_back(device_.native_handle(), ::vk::SemaphoreCreateInfo{});
+#ifndef NDEBUG
+        debug_name_str = std::format("Render Finished Semaphore {}", i);
+        debug_name_info.pObjectName = debug_name_str.c_str();
+        debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
+        debug_name_info.objectHandle =
+            reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*render_finished_semaphores_[i]));
+        device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
+#endif
+    }
 }
 
 auto VulkanSwapchain::destroy_() -> void
 {
+    render_finished_semaphores_.clear();
     image_views_.clear();
     images_.clear();
 }

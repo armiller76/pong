@@ -25,21 +25,29 @@ class VulkanSwapchain
     auto images() const -> const std::vector<::vk::Image> &;
     auto image_views() const -> const std::vector<::vk::raii::ImageView> &;
     auto image_count() const -> std::uint32_t;
+    auto semaphores() const -> const std::vector<::vk::raii::Semaphore> &;
 
   private:
     const VulkanDevice &device_;
     const VulkanSurface &surface_;
+    ::vk::SurfaceCapabilitiesKHR capabilities_;
+    std::vector<::vk::SurfaceFormatKHR> formats_;
+    std::vector<::vk::PresentModeKHR> modes_;
 
-    ::vk::Format surface_format_{::vk::Format::eUndefined};
-    ::vk::Extent2D extent_{};
-    ::vk::ColorSpaceKHR color_space_{::vk::ColorSpaceKHR::eSrgbNonlinear};
-    ::vk::PresentModeKHR present_mode_{::vk::PresentModeKHR::eFifo};
+    ::vk::Format surface_format_;
+    ::vk::ColorSpaceKHR color_space_;
+    ::vk::PresentModeKHR present_mode_;
+    ::vk::Extent2D extent_;
 
-    ::vk::raii::SwapchainKHR swapchain_{nullptr};
+    ::vk::raii::SwapchainKHR swapchain_;
     std::vector<::vk::Image> images_;
     std::vector<::vk::raii::ImageView> image_views_;
+    std::vector<::vk::raii::Semaphore> render_finished_semaphores_;
+
+    bool is_initialized_ = false;
 
   private:
+    auto init_() -> void;
     auto create_() -> void;
     auto destroy_() -> void;
 

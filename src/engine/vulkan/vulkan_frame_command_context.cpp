@@ -43,7 +43,6 @@ VulkanFrameCommandContext::VulkanFrameCommandContext(
 
     in_flight_fences_.reserve(frames_in_flight_);
     image_available_semaphores_.reserve(frames_in_flight_);
-    render_finished_semaphores_.reserve(swap_chain_image_count_);
 
     auto semaphore_info = ::vk::SemaphoreCreateInfo{};
     semaphore_info.sType = ::vk::StructureType::eSemaphoreCreateInfo;
@@ -66,19 +65,6 @@ VulkanFrameCommandContext::VulkanFrameCommandContext(
         debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
         debug_name_info.objectHandle =
             reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*image_available_semaphores_[i]));
-        device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
-#endif
-    }
-
-    for (std::uint32_t i = 0; i < swap_chain_image_count_; ++i)
-    {
-        render_finished_semaphores_.emplace_back(device_.native_handle(), semaphore_info);
-#ifndef NDEBUG
-        debug_name_str = std::format("Render Finished Semaphore {}", i);
-        debug_name_info.pObjectName = debug_name_str.c_str();
-        debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
-        debug_name_info.objectHandle =
-            reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*render_finished_semaphores_[i]));
         device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
 #endif
     }
