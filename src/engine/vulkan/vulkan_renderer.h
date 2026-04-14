@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -45,7 +46,7 @@ class VulkanRenderer
     VulkanRenderer(VulkanRenderer &&) = delete;
     VulkanRenderer &operator=(VulkanRenderer &&) = delete;
 
-    auto framebuffer_resized() -> void;
+    auto recreate_resources() -> void;
     auto set_clear_color(const Color &color) -> void;
     auto render(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data) -> void;
 
@@ -75,6 +76,11 @@ class VulkanRenderer
     bool framebuffer_resized_ = false;
 
     friend class ImguiWrapper;
+    std::function<void()> imgui_resize_callback;
+    inline auto set_imgui_resize_callback_(std::function<void()> fn) -> void
+    {
+        imgui_resize_callback = fn;
+    }
 };
 
 }

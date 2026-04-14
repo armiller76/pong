@@ -1,5 +1,6 @@
 #include "imgui_wrapper.h"
 
+#include <functional>
 #include <string_view>
 #include <vulkan/vulkan_raii.hpp>
 #include <windows.h>
@@ -34,7 +35,11 @@ ImguiWrapper::ImguiWrapper(
     , vk_instance_{instance}
     , ini_file_{std::move(std::string(std::string(project_root) + "/third-party/imgui/imgui.ini"))}
 {
-    initialize();
+    vk_renderer_.set_imgui_resize_callback_([this]() { this->framebuffer_resize_callback(); });
+    io->IniFilename = ini_file_.c_str();
+    io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    startup();
 }
 
 ImguiWrapper::~ImguiWrapper()
@@ -42,14 +47,19 @@ ImguiWrapper::~ImguiWrapper()
     shutdown();
 }
 
-auto ImguiWrapper::initialize() -> void
+auto ImguiWrapper::startup() -> void
 {
-    io->IniFilename = ini_file_.c_str();
-    io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    init_windows();
+    init_vulkan();
+}
 
+auto ImguiWrapper::init_windows() -> void
+{
     ::ImGui_ImplWin32_Init(windows_handle_);
+}
 
+auto ImguiWrapper::init_vulkan() -> void
+{
     auto init_info = ImGui_ImplVulkan_InitInfo{};
     init_info.ApiVersion = VK_API_VERSION_1_3;
     init_info.Instance = *vk_instance_.get();
@@ -59,7 +69,7 @@ auto ImguiWrapper::initialize() -> void
     init_info.Queue = vk_renderer_.device_.graphics_queue();
     // init_info.DescriptorPool = vk_renderer_.descriptor_pool_.native_handle();
     init_info.DescriptorPoolSize = 32; // == 0 -> use DescriptorPool; != 0 -> imgui creates its own
-    init_info.MinImageCount = 2u;
+    init_info.MinImageCount = vk_renderer_.swapchain_.image_count();
     init_info.ImageCount = vk_renderer_.swapchain_.image_count();
 
     // TODO if you implement a pipeline cache, set this
@@ -79,16 +89,22 @@ auto ImguiWrapper::initialize() -> void
     init_info.CheckVkResultFn = check_vk_result;
 
     ::ImGui_ImplVulkan_Init(&init_info);
-
     ::ImGui::StyleColorsDark();
 }
 
 auto ImguiWrapper::shutdown() -> void
 {
     vk_renderer_.device_.native_handle().waitIdle();
+    vk_renderer_.set_imgui_resize_callback_(nullptr);
     ::ImGui_ImplVulkan_Shutdown();
     ::ImGui_ImplWin32_Shutdown();
     ::ImGui::DestroyContext();
+}
+
+void ImguiWrapper::framebuffer_resize_callback()
+{
+    ::ImGui_ImplVulkan_Shutdown();
+    init_vulkan();
 }
 
 auto ImguiWrapper::begin_frame() -> void

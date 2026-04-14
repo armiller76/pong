@@ -71,10 +71,17 @@ VulkanRenderer::VulkanRenderer(
     arm::log::debug("VulkanRenderer constructor");
 }
 
-auto VulkanRenderer::framebuffer_resized() -> void
+auto VulkanRenderer::recreate_resources() -> void
 {
+    // TODO eventually, let's not waitidle unless absolutely needed (ie don't call this every frame of a resize)
+    device_.native_handle().waitIdle();
     swapchain_.recreate();
     depth_buffer_ = {device_, swapchain_.extent()};
+    if (imgui_resize_callback)
+    {
+        imgui_resize_callback();
+    }
+    framebuffer_resized_ = false;
 }
 
 auto VulkanRenderer::set_clear_color(const Color &color) -> void
@@ -87,6 +94,11 @@ auto VulkanRenderer::render(const std::vector<Entity> &entities, ImDrawData *img
     prepare_frame_();
     record_(entities, imgui_draw_data);
     end_frame_();
+
+    if (framebuffer_resized_)
+    {
+        recreate_resources();
+    }
 }
 
 auto VulkanRenderer::prepare_frame_() -> void
@@ -107,8 +119,7 @@ auto VulkanRenderer::prepare_frame_() -> void
         }
         if (result == eErrorOutOfDateKHR)
         {
-            swapchain_.recreate();
-            framebuffer_resized_ = false;
+            recreate_resources();
             continue;
         }
         throw arm::Exception("Unable to aquire swapchain image ({})", ::vk::to_string(result));
@@ -258,21 +269,21 @@ auto VulkanRenderer::end_frame_() -> void
     submit_info.commandBufferCount = 1;
     submit_info.pCommandBuffers = &*frame_command_context_.current_command_buffer();
     submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &*frame_command_context_.render_finished_semaphore(current_swap_chain_image_index_);
+    submit_info.pSignalSemaphores = &*swapchain_.semaphores().at(current_swap_chain_image_index_);
 
     device_.graphics_queue().submit(submit_info, *frame_command_context_.current_fence());
 
     auto present_info = ::vk::PresentInfoKHR{};
     present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &*frame_command_context_.render_finished_semaphore(current_swap_chain_image_index_);
+    present_info.pWaitSemaphores = &*swapchain_.semaphores().at(current_swap_chain_image_index_);
     present_info.swapchainCount = 1;
     present_info.pSwapchains = &*swapchain_.native_handle();
     present_info.pImageIndices = &current_swap_chain_image_index_;
 
     const auto present_result = device_.present_queue().presentKHR(present_info);
-    if (present_result == ::vk::Result::eErrorOutOfDateKHR)
+    if (present_result == ::vk::Result::eErrorOutOfDateKHR || present_result == ::vk::Result::eSuboptimalKHR)
     {
-        swapchain_.recreate();
+        framebuffer_resized_ = true;
     }
 
     frame_command_context_.advance_frame();
