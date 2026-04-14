@@ -93,7 +93,7 @@ inline auto to_vk(ImageFormat f) -> ::vk::Format
         case RGBA32F: return eR32G32B32A32Sfloat;
         case RGBA8_sRGB: return eR8G8B8A8Srgb;
         case D16: return eD16Unorm;
-        case D24: return eD24UnormS8Uint;
+        case D24: return eX8D24UnormPack32;
         case D32F: return eD32Sfloat;
         case D24S8: return eD24UnormS8Uint;
         case D32FS8: return eD32SfloatS8Uint;
@@ -117,6 +117,7 @@ inline auto to_pong(::vk::Format f) -> ImageFormat
         case eR8G8B8A8Srgb: return RGBA8_sRGB;
         case eD16Unorm: return D16;
         case eD32Sfloat: return D32F;
+        case eX8D24UnormPack32: return D24;
         case eD24UnormS8Uint: return D24S8;
         case eD32SfloatS8Uint: return D32FS8;
         default: return UNDEFINED;
