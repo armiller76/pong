@@ -115,8 +115,7 @@ auto VulkanGpuImage::format() const -> ::vk::Format
 
 auto VulkanGpuImage::upload(VulkanImmediateCommandContext &command_context, const Image &image) -> void
 {
-    // TODO robustify this thing. sooooo much GIGO i can't even
-    auto image_size_bytes = std::size_t(image.extent().width * image.extent().height * bytes_per_pixel(image.format()));
+    auto image_size_bytes = std::size_t(image.extent().width) * image.extent().height * bytes_per_pixel(image.format());
     auto &cb = command_context.command_buffer();
     auto staging_buffer = VulkanGpuBuffer(
         *device_,
