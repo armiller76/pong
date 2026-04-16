@@ -1,5 +1,6 @@
 build/
 build-no-tests/
 assets/shaders/bin/
+assets/gltf/
 third-party/imgui/imgui.ini
 .github/
