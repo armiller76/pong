@@ -32,7 +32,7 @@ ResourceManager::ResourceManager(const VulkanDevice &device)
     arm::log::debug("ResourceManager constructor");
 }
 
-auto ResourceManager::load(std::string_view name, const std::filesystem::path &path, ShaderStage stage) -> std::uint64_t
+auto ResourceManager::load(std::string_view name, const std::filesystem::path &path, ShaderStage stage) -> ShaderHandle
 {
     auto file = File(path);
     auto bytes = file.data().size_bytes();
@@ -47,7 +47,7 @@ auto ResourceManager::load(std::string_view name, const std::filesystem::path &p
         throw arm::Exception("invalid shader {}", name);
     }
 
-    const auto key = get_resource_id(name);
+    const auto key = ShaderHandle{get_resource_id_(name)};
 
     auto [entry, inserted] = shaders_.try_emplace(key);
     if (!inserted)
@@ -63,9 +63,9 @@ auto ResourceManager::load(std::string_view name, const std::filesystem::path &p
     return key;
 }
 
-auto ResourceManager::load(Mesh &&mesh) -> std::uint64_t
+auto ResourceManager::load(Mesh &&mesh) -> MeshHandle
 {
-    auto key = get_resource_id(mesh.name());
+    auto key = MeshHandle{get_resource_id_(mesh.name())};
 
     auto [entry, inserted] = meshes_.try_emplace(key, std::move(mesh));
     if (!inserted)
@@ -76,9 +76,9 @@ auto ResourceManager::load(Mesh &&mesh) -> std::uint64_t
     return key;
 }
 
-auto ResourceManager::load(std::string_view name, const std::filesystem::path &path) -> std::uint64_t
+auto ResourceManager::load(std::string_view name, const std::filesystem::path &path) -> MeshHandle
 {
-    const auto key = get_resource_id(name);
+    const auto key = MeshHandle{get_resource_id_(name)};
 
     if (get_map_<Mesh>().contains(key))
     {
@@ -104,9 +104,9 @@ auto ResourceManager::load(std::string_view name, const std::filesystem::path &p
     return key;
 }
 
-auto ResourceManager::load(Texture2D &&texture) -> std::uint64_t
+auto ResourceManager::load(Texture2D &&texture) -> Texture2DHandle
 {
-    const auto key = get_resource_id(texture.name());
+    const auto key = Texture2DHandle{get_resource_id_(texture.name())};
 
     auto [entry, inserted] = textures_.try_emplace(key, std::move(texture));
     if (!inserted)
@@ -116,9 +116,9 @@ auto ResourceManager::load(Texture2D &&texture) -> std::uint64_t
     return key;
 }
 
-auto ResourceManager::load(std::string_view name, Image &image) -> std::uint64_t
+auto ResourceManager::load(std::string_view name, Image &image) -> Texture2DHandle
 {
-    const auto key = get_resource_id(name);
+    const auto key = Texture2DHandle{get_resource_id_(name)};
 
     auto [entry, inserted] = textures_.try_emplace(key, std::move(Texture2D{image, device_}));
     if (!inserted)

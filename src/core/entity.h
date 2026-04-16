@@ -4,6 +4,7 @@
 #include <string>
 #include <string_view>
 
+#include "core/resource_handles.h"
 #include "graphics/glm_wrapper.h"
 #include "graphics/mesh.h"
 #include "math/transform.h"
@@ -14,14 +15,14 @@ namespace pong
 class Entity
 {
   public:
-    Entity(std::string_view name, std::uint64_t mesh_handle, Transform transform);
+    Entity(std::string_view name, MeshHandle mesh_handle, Transform transform);
 
     auto set_active(bool active) -> void;
     auto is_active() const -> bool;
 
     auto name() const -> std::string_view;
 
-    auto mesh_handle() const -> std::uint64_t;
+    auto mesh_handle() const -> MeshHandle;
 
     auto transform() -> Transform &;
     auto transform() const -> const Transform &;
@@ -58,7 +59,7 @@ class Entity
   private:
     bool active_ = true;
     std::string name_;
-    std::uint64_t mesh_handle_;
+    MeshHandle mesh_handle_;
     Transform transform_;
 }; // class Entity
 

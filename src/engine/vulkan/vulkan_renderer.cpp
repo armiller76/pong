@@ -57,11 +57,7 @@ VulkanRenderer::VulkanRenderer(
     , depth_buffer_{device_, swapchain_.extent()}
     , descriptor_pool_{device_, uniform_buffers_, max_frames_in_flight_}
     , pipeline_factory_{device_, descriptor_pool_, resource_manager_}
-    , pipeline_resources_{pipeline_factory_.create_graphics_pipeline(
-          resource_manager_.get_resource_id("simple.vert"),
-          resource_manager_.get_resource_id("simple.frag"),
-          swapchain_.format(),
-          depth_buffer_.format())}
+    , pipeline_resources_{pipeline_factory_.create_graphics_pipeline(swapchain_.format(), depth_buffer_.format())}
     , descriptor_sets_{descriptor_pool_.allocate_descriptor_sets(
           pipeline_resources_.descriptor_set_layouts.at(0),
           max_frames_in_flight_)}
@@ -219,7 +215,7 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
         {
             constexpr auto pipeline_id = std::uint64_t{0}; // for future use
             constexpr auto material_id = std::uint64_t{0}; // for future use
-            return make_draw_sort_key(pipeline_id, material_id, entities[i].mesh_handle());
+            return make_draw_sort_key(pipeline_id, material_id, entities[i].mesh_handle().value);
         });
 
     auto last_mesh = static_cast<const Mesh *>(nullptr);
