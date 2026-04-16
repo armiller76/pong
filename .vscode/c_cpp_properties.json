@@ -8,7 +8,8 @@
 				"${workspaceFolder}/build/_deps/google_test-src/googletest/include",
 				"${workspaceFolder}/third-party/**",
 				"${workspaceFolder}/build/_deps/imgui-src",
-				"${workspaceFolder}/build/_deps/imgui-src/backends"
+				"${workspaceFolder}/build/_deps/imgui-src/backends",
+				"${workspaceFolder}/build/_deps/fastgltf-src/include"
 			],
 			"defines": [
 				"_DEBUG",

@@ -125,5 +125,23 @@ if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()
 
+FetchContent_Declare(
+  fastgltf
+  GIT_REPOSITORY https://github.com/spnda/fastgltf.git
+  GIT_TAG v0.9.0
+)
+FetchContent_MakeAvailable(fastgltf)
+if(MSVC)
+  # fastgltf bundles simdjson which triggers C4100 (unreferenced formal
+  # parameter). Suppress our project-wide /WX and /W4 for this third-party
+  # target.
+  target_compile_options(
+    fastgltf
+    PRIVATE /W0
+            /WX-
+  )
+endif()
+add_subdirectory(third-party/fastgltf)
+
 add_subdirectory(assets/shaders)
 add_subdirectory(src)

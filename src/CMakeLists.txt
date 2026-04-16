@@ -38,6 +38,7 @@ target_link_libraries(
   Pong
   PRIVATE Vulkan::Vulkan
           ponglib
+          fastgltf
 )
 target_include_directories(
   Pong
