@@ -27,12 +27,13 @@ class ResourceManager
     ~ResourceManager() = default;
 
     ResourceManager(const ResourceManager &) = delete;
-    ResourceManager &operator=(const ResourceManager &) = delete;
-    ResourceManager(ResourceManager &&) = delete;
-    ResourceManager &operator=(ResourceManager &&) = delete;
+    auto operator=(const ResourceManager &) -> ResourceManager & = delete;
+    ResourceManager(ResourceManager &&) noexcept = delete;
+    auto operator=(ResourceManager &&) noexcept -> ResourceManager & = delete;
 
     auto load(std::string_view name, const std::filesystem::path &path, ShaderStage stage) -> std::uint64_t;
     auto load(Mesh &&mesh) -> std::uint64_t;
+    auto load(std::string_view name, const std::filesystem::path &path) -> std::uint64_t;
     auto load(Texture2D &&texture) -> std::uint64_t;
     auto load(std::string_view name, Image &image) -> std::uint64_t;
 
