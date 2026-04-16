@@ -25,6 +25,18 @@ struct Texture2DHandle
     auto operator==(const Texture2DHandle &other) const -> bool = default;
 };
 
+struct MaterialHandle
+{
+    std::uint64_t value;
+    auto operator==(const MaterialHandle &other) const -> bool = default;
+};
+
+struct ModelHandle
+{
+    std::uint64_t value;
+    auto operator==(const ModelHandle &other) const -> bool = default;
+};
+
 // struct ImageHandle
 //{
 //     std::uint64_t value;
@@ -55,6 +67,24 @@ template <>
 struct std::hash<pong::Texture2DHandle>
 {
     auto operator()(const pong::Texture2DHandle &obj) const noexcept -> std::size_t
+    {
+        return std::hash<std::uint64_t>{}(obj.value);
+    }
+};
+
+template <>
+struct std::hash<pong::MaterialHandle>
+{
+    auto operator()(const pong::MaterialHandle &obj) const noexcept -> std::size_t
+    {
+        return std::hash<std::uint64_t>{}(obj.value);
+    }
+};
+
+template <>
+struct std::hash<pong::ModelHandle>
+{
+    auto operator()(const pong::ModelHandle &obj) const noexcept -> std::size_t
     {
         return std::hash<std::uint64_t>{}(obj.value);
     }
