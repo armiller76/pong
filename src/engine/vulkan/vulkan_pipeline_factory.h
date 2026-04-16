@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -10,7 +11,6 @@
 #include "vulkan_descriptor_pool.h"
 #include "vulkan_device.h"
 #include "vulkan_gpu_buffer.h"
-
 
 namespace pong
 {
@@ -28,7 +28,7 @@ class VulkanPipelineFactory
     explicit VulkanPipelineFactory(
         const VulkanDevice &device,
         const VulkanDescriptorPool &descriptor_pool,
-        const ResourceManager &resource_manager);
+        ResourceManager &resource_manager);
     ~VulkanPipelineFactory() = default;
 
     VulkanPipelineFactory(const VulkanPipelineFactory &) = delete;
@@ -36,16 +36,13 @@ class VulkanPipelineFactory
     VulkanPipelineFactory(VulkanPipelineFactory &&) = delete;
     VulkanPipelineFactory &operator=(VulkanPipelineFactory &&) = delete;
 
-    auto create_graphics_pipeline(
-        std::uint64_t vertex_shader_id,
-        std::uint64_t fragment_shader_id,
-        ::vk::Format swapchain_format,
-        ::vk::Format depth_format) -> VulkanPipelineResources;
+    auto create_graphics_pipeline(::vk::Format swapchain_format, ::vk::Format depth_format) -> VulkanPipelineResources;
 
   private:
     const VulkanDevice &device_;
     const VulkanDescriptorPool &descriptor_pool_;
-    const ResourceManager &resource_manager_;
+    ResourceManager
+        &resource_manager_; // make this const again when you aren't temp loading shaders in the pipeline factory!!!
 }; // class VulkanPipelineFactory
 
 } // namespace pong

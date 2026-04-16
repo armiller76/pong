@@ -1,6 +1,7 @@
 #include "vulkan_pipeline_factory.h"
 
 #include <cstdint>
+#include <filesystem> // get rid of this once temp shader loading is gone
 #include <ranges>
 #include <vector>
 
@@ -23,7 +24,7 @@ static auto vertex_input_attribute_descriptions_factory() -> std::vector<::vk::V
 VulkanPipelineFactory::VulkanPipelineFactory(
     const VulkanDevice &device,
     const VulkanDescriptorPool &descriptor_pool,
-    const ResourceManager &resource_manager)
+    ResourceManager &resource_manager)
     : device_{device}
     , descriptor_pool_{descriptor_pool}
     , resource_manager_{resource_manager}
@@ -31,13 +32,16 @@ VulkanPipelineFactory::VulkanPipelineFactory(
     arm::log::debug("VulkanPipelineFactory constructor");
 }
 
-auto VulkanPipelineFactory::create_graphics_pipeline(
-    std::uint64_t vertex_shader_id,
-    std::uint64_t fragment_shader_id,
-    ::vk::Format swapchain_format,
-    ::vk::Format depth_format) -> VulkanPipelineResources
-
+auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_format, ::vk::Format depth_format)
+    -> VulkanPipelineResources
 {
+    auto vertex_shader_id = resource_manager_.load(
+        "simple.vert"sv, std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_vert.spv"), ShaderStage::Vertex);
+    auto fragment_shader_id = resource_manager_.load(
+        "simple.frag"sv,
+        std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"),
+        ShaderStage::Fragment);
+
     auto &vertex_shader = resource_manager_.get<Shader>(vertex_shader_id);
     auto &fragment_shader = resource_manager_.get<Shader>(fragment_shader_id);
 

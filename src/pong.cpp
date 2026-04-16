@@ -57,14 +57,6 @@ int main()
 
         auto resource_manager = pong::ResourceManager(vk_device);
 
-        resource_manager.load(
-            "simple.vert",
-            std::filesystem::path(project_root + "/assets/shaders/bin/simple_vert.spv"),
-            pong::ShaderStage::Vertex);
-        resource_manager.load(
-            "simple.frag",
-            std::filesystem::path(project_root + "/assets/shaders/bin/simple_frag.spv"),
-            pong::ShaderStage::Fragment);
         auto transform = pong::Transform{};
 
         auto test_triangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_triangle(vk_device)));
