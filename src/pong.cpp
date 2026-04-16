@@ -65,24 +65,33 @@ int main()
             "simple.frag",
             std::filesystem::path(project_root + "/assets/shaders/bin/simple_frag.spv"),
             pong::ShaderStage::Fragment);
-        auto test_triangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_triangle(vk_device)));
-        auto test_rectangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_rectangle(vk_device)));
         auto transform = pong::Transform{};
+
+        auto test_triangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_triangle(vk_device)));
         transform.position = {0.5f, 0.0f, -5.0f};
         auto test_triangle = pong::Entity{"test_triangle", test_triangle_mesh, transform};
+
+        auto test_rectangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_rectangle(vk_device)));
         transform.position = {-0.5f, 0.0f, -4.0f};
         auto test_rectangle = pong::Entity{"test_rectangle", test_rectangle_mesh, transform};
+
+        auto test_gltf_mesh = resource_manager.load("gltf_mesh"sv, std::filesystem::path("assets/gltf/box/Box.glb"));
+        transform.position = {0.0f, 0.5f, -3.0f};
+        auto test_gltf_box = pong::Entity{"test_gltf_box", test_gltf_mesh, transform};
+
         auto entities = std::vector{
-            test_triangle,
-            test_rectangle,
+            //    test_triangle,
+            //    test_rectangle,
+            test_gltf_box,
         };
-        auto image_1x1_white = pong::Image(
-            "1x1_white"sv,
-            pong::Extent2D{1u, 1u},
-            pong::ImageFormat::RGBA8,
-            std::vector<std::uint8_t>{255, 255, 255, 255});
-        [[maybe_unused]] auto texture_1x1_white = resource_manager.load("texture_1x1_white", image_1x1_white);
-        [[maybe_unused]] auto &the_actual_texture = resource_manager.get<pong::Texture2D>(texture_1x1_white);
+
+        //        auto image_1x1_white = pong::Image(
+        //            "1x1_white"sv,
+        //            pong::Extent2D{1u, 1u},
+        //            pong::ImageFormat::RGBA8,
+        //            std::vector<std::uint8_t>{255, 255, 255, 255});
+        //        auto texture_1x1_white = resource_manager.load("texture_1x1_white", image_1x1_white);
+        //        auto &the_actual_texture = resource_manager.get<pong::Texture2D>(texture_1x1_white);
 
         auto main_camera = pong::Camera();
         main_camera.set_position({5.0f, 0.0f, 5.0f});
@@ -90,13 +99,12 @@ int main()
         auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, main_camera, resource_manager, 2u);
         auto imgui = pong::ImguiWrapper{window.win32_handles().window, vk_renderer, vk_instance, project_root};
 
-        auto increasing = true;
-        auto x_target = 0.0f;
         auto prev_time = std::chrono::high_resolution_clock::now();
+        auto accum_time = 0.0f;
         while (!window.should_close())
         {
             auto start_time = std::chrono::high_resolution_clock::now();
-            auto delta = start_time - prev_time;
+            auto delta = std::chrono::duration<float>(start_time - prev_time);
             prev_time = start_time;
 
             window.process_events();
@@ -104,12 +112,17 @@ int main()
             imgui.begin_frame();
             imgui.render(); // calls ImGui::EndFrame()
 
-            x_target = increasing ? x_target + 0.01f : x_target - 0.01f;
-            if (::glm::abs(x_target) >= 5)
-            {
-                increasing = !increasing;
-            }
-            main_camera.set_view_target({x_target, 0.0f, 0.0f});
+            accum_time += delta.count();
+            auto angle_x = accum_time * 0.25f;
+            auto angle_y = accum_time * 0.33f;
+            auto angle_z = accum_time * 0.5f;
+            auto rotation = ::glm::quat(1, 0, 0, 0);
+            rotation = ::glm::rotate(rotation, angle_x, {1, 0, 0});
+            rotation = ::glm::rotate(rotation, angle_y, {0, 1, 0});
+            rotation = ::glm::rotate(rotation, angle_z, {0, 0, 1});
+
+            entities[0].set_rotation(rotation);
+
             vk_renderer.render(entities, imgui.get_draw_data());
         }
 
