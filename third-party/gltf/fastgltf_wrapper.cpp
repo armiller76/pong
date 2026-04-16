@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <ranges>
 #include <string_view>
 #include <vector>
@@ -60,12 +61,14 @@ namespace pong
 {
 
 FastGLTFWrapper::FastGLTFWrapper()
-    : parser_{
+    : parser_{std::make_unique<::fastgltf::Parser>(
           ::fastgltf::Extensions::KHR_mesh_quantization | ::fastgltf::Extensions::KHR_texture_transform
-          | ::fastgltf::Extensions::KHR_materials_unlit}
+          | ::fastgltf::Extensions::KHR_materials_unlit)}
 {
     arm::log::debug("FastGLTFWrapper constructor");
 }
+
+FastGLTFWrapper::~FastGLTFWrapper() = default;
 
 auto FastGLTFWrapper::load(std::filesystem::path path) -> LoadedAsset
 {
@@ -76,7 +79,7 @@ auto FastGLTFWrapper::load(std::filesystem::path path) -> LoadedAsset
         path.filename().string(),
         ::fastgltf::getErrorMessage(data.error()));
 
-    auto asset = parser_.loadGltf(
+    auto asset = parser_->loadGltf(
         data.get(),
         path.parent_path(),
         ::fastgltf::Options::LoadGLBBuffers | ::fastgltf::Options::LoadExternalBuffers

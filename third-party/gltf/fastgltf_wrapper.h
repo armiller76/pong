@@ -2,13 +2,16 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <memory>
 #include <vector>
 
-#include <fastgltf/core.hpp>
-#include <fastgltf/tools.hpp>
-#include <fastgltf/types.hpp>
-
 #include "fastgltf_primitives.h"
+
+namespace fastgltf
+{
+class Parser;
+class Asset;
+}
 
 namespace pong
 {
@@ -17,19 +20,18 @@ class FastGLTFWrapper
 {
   public:
     FastGLTFWrapper();
-    ~FastGLTFWrapper() = default;
+    ~FastGLTFWrapper();
 
     FastGLTFWrapper(const FastGLTFWrapper &) = delete;
     auto operator=(const FastGLTFWrapper &) -> FastGLTFWrapper & = delete;
 
-    FastGLTFWrapper(FastGLTFWrapper &&) noexcept = default;
-    auto operator=(FastGLTFWrapper &&) noexcept -> FastGLTFWrapper & = default;
+    FastGLTFWrapper(FastGLTFWrapper &&) noexcept = delete;
+    auto operator=(FastGLTFWrapper &&) noexcept -> FastGLTFWrapper & = delete;
 
     auto load(std::filesystem::path path) -> LoadedAsset;
 
   private:
-    // NOT thread-safe
-    ::fastgltf::Parser parser_;
+    std::unique_ptr<::fastgltf::Parser> parser_;
 
     auto extract_images_(::fastgltf::Asset &data, LoadedAsset &loaded_asset) -> void;
     auto extract_samplers_(::fastgltf::Asset &data, LoadedAsset &loaded_asset) -> void;
