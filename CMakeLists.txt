@@ -141,7 +141,7 @@ if(MSVC)
             /WX-
   )
 endif()
-add_subdirectory(third-party/fastgltf)
+add_subdirectory(third-party/gltf)
 
 add_subdirectory(assets/shaders)
 add_subdirectory(src)

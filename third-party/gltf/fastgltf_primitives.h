@@ -12,7 +12,6 @@
 #include "graphics/vertex.h"
 #include "math/transform.h"
 
-
 namespace pong
 {
 
