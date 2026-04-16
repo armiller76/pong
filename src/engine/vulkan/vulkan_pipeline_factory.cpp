@@ -14,9 +14,11 @@
 #include "vulkan_device.h"
 #include "vulkan_gpu_buffer.h"
 
-
 namespace pong
 {
+
+static auto vertex_input_binding_description_factory() -> ::vk::VertexInputBindingDescription;
+static auto vertex_input_attribute_descriptions_factory() -> std::vector<::vk::VertexInputAttributeDescription>;
 
 VulkanPipelineFactory::VulkanPipelineFactory(
     const VulkanDevice &device,
@@ -124,8 +126,8 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
     shader_stages.push_back(fragment_stage_create_info);
 
     // TODO check configuration
-    auto vertex_input_binding_description = Vertex::get_binding_description();
-    auto vertex_input_attribute_descriptions = Vertex::get_attribute_descriptions();
+    auto vertex_input_binding_description = vertex_input_binding_description_factory();
+    auto vertex_input_attribute_descriptions = vertex_input_attribute_descriptions_factory();
     auto vertex_input_state_create_info = ::vk::PipelineVertexInputStateCreateInfo{};
     vertex_input_state_create_info.sType = ::vk::StructureType::ePipelineVertexInputStateCreateInfo;
     vertex_input_state_create_info.pNext = nullptr; // or ptr to VkPipelineVertexInputDivisorStateCreateInfo
@@ -271,6 +273,46 @@ auto VulkanPipelineFactory::create_graphics_pipeline(
         .layout = std::move(pipeline_layout),
         .pipeline = std::move(pipeline),
         .descriptor_set_layouts = std::move(descriptor_set_layouts),
+    };
+}
+
+inline auto vertex_input_binding_description_factory() -> ::vk::VertexInputBindingDescription
+{
+    auto result = ::vk::VertexInputBindingDescription{};
+    result.binding = 0;
+    result.stride = sizeof(Vertex);
+    result.inputRate = ::vk::VertexInputRate::eVertex;
+    return result;
+}
+
+inline auto vertex_input_attribute_descriptions_factory() -> std::vector<::vk::VertexInputAttributeDescription>
+{
+    auto position_entry = ::vk::VertexInputAttributeDescription{};
+    position_entry.location = 0;
+    position_entry.binding = 0;
+    position_entry.format = ::vk::Format::eR32G32B32Sfloat;
+    position_entry.offset = offsetof(Vertex, position);
+    auto color_entry = ::vk::VertexInputAttributeDescription{};
+    color_entry.location = 1;
+    color_entry.binding = 0;
+    color_entry.format = ::vk::Format::eR32G32B32Sfloat;
+    color_entry.offset = offsetof(Vertex, color);
+    auto normal_entry = ::vk::VertexInputAttributeDescription{};
+    normal_entry.location = 2;
+    normal_entry.binding = 0;
+    normal_entry.format = ::vk::Format::eR32G32B32Sfloat;
+    normal_entry.offset = offsetof(Vertex, normal);
+    auto texture_coordinate_entry = ::vk::VertexInputAttributeDescription{};
+    texture_coordinate_entry.location = 3;
+    texture_coordinate_entry.binding = 0;
+    texture_coordinate_entry.format = ::vk::Format::eR32G32Sfloat;
+    texture_coordinate_entry.offset = offsetof(Vertex, uv);
+
+    return std::vector{
+        position_entry,
+        color_entry,
+        normal_entry,
+        texture_coordinate_entry,
     };
 }
 
