@@ -32,9 +32,14 @@ class ResourceManager
     ResourceManager(ResourceManager &&) noexcept = delete;
     auto operator=(ResourceManager &&) noexcept -> ResourceManager & = delete;
 
+    // Shader loading
     auto load(std::string_view name, const std::filesystem::path &path, ShaderStage stage) -> ShaderHandle;
+
+    // Mesh loading
     auto load(Mesh &&mesh) -> MeshHandle;
     auto load(std::string_view name, const std::filesystem::path &path) -> MeshHandle;
+
+    // Texture loading
     auto load(Texture2D &&texture) -> Texture2DHandle;
     auto load(std::string_view name, Image &image) -> Texture2DHandle;
 

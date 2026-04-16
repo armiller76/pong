@@ -1,11 +1,9 @@
 #include "entity.h"
 
-#include <string>
 #include <string_view>
 
 #include "core/resource_handles.h"
 #include "graphics/glm_wrapper.h"
-#include "graphics/mesh.h"
 #include "math/transform.h"
 #include "math/utils.h"
 #include "utils/error.h"
@@ -13,9 +11,9 @@
 namespace pong
 {
 
-Entity::Entity(std::string_view name, MeshHandle mesh_handle, Transform transform)
+Entity::Entity(std::string_view name, ModelHandle model_handle, Transform transform)
     : name_{name}
-    , mesh_handle_{mesh_handle}
+    , model_handle_{model_handle}
     , transform_{std::move(transform)}
 {
 }
@@ -40,9 +38,9 @@ auto Entity::name() const -> std::string_view
     return name_;
 }
 
-auto Entity::mesh_handle() const -> MeshHandle
+auto Entity::model_handle() const -> ModelHandle
 {
-    return mesh_handle_;
+    return model_handle_;
 }
 
 auto Entity::transform() -> Transform &
