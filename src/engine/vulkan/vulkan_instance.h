@@ -27,10 +27,10 @@ class VulkanInstance
     ::vk::raii::Instance instance_;
     ::vk::raii::DebugUtilsMessengerEXT debug_messenger_;
 
-    static auto VKAPI_PTR vk_debug_callback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-        VkDebugUtilsMessageTypeFlagsEXT message_types,
-        const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+    static VKAPI_ATTR auto VKAPI_CALL vk_debug_callback(
+        ::vk::DebugUtilsMessageSeverityFlagBitsEXT message_severity,
+        ::vk::DebugUtilsMessageTypeFlagsEXT message_types,
+        const ::vk::DebugUtilsMessengerCallbackDataEXT *callback_data,
         void *user_data) -> VkBool32;
 };
 

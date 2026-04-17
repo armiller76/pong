@@ -37,9 +37,8 @@ VulkanInstance::VulkanInstance(
             {
                 return std::ranges::find_if(
                            available_extensions,
-                           [&](const auto &available) {
-                               return std::string_view(available.extensionName) == required;
-                           }) != available_extensions.end();
+                           [&](const auto &available) { return std::string_view(available.extensionName) == required; })
+                       != available_extensions.end();
             }),
         "Required instance extension(s) not available");
 
@@ -48,8 +47,8 @@ VulkanInstance::VulkanInstance(
     arm::ensure(
         std::ranges::find_if(
             available_layers,
-            [&validation](const auto &available)
-            { return std::string_view(available.layerName) == validation[0]; }) != available_layers.end(),
+            [&validation](const auto &available) { return std::string_view(available.layerName) == validation[0]; })
+            != available_layers.end(),
         "Validation layers not available");
 
     auto vk_application_info = VkApplicationInfo{};
@@ -70,14 +69,13 @@ VulkanInstance::VulkanInstance(
     instance_ = ::vk::raii::Instance(context, vk_instance_create_info);
 
     auto debug_messenger_create_info = ::vk::DebugUtilsMessengerCreateInfoEXT{};
-    debug_messenger_create_info.messageSeverity = ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eError |
-                                                  ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-                                                  ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
-    debug_messenger_create_info.messageType = ::vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-                                              ::vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance |
-                                              ::vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation;
-    debug_messenger_create_info.pfnUserCallback =
-        reinterpret_cast<::vk::PFN_DebugUtilsMessengerCallbackEXT>(&pong::VulkanInstance::vk_debug_callback);
+    debug_messenger_create_info.messageSeverity = ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
+                                                  | ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
+                                                  | ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
+    debug_messenger_create_info.messageType = ::vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
+                                              | ::vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance
+                                              | ::vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation;
+    debug_messenger_create_info.pfnUserCallback = &pong::VulkanInstance::vk_debug_callback;
     debug_messenger_ = ::vk::raii::DebugUtilsMessengerEXT(instance_, debug_messenger_create_info, nullptr);
 }
 
@@ -86,25 +84,28 @@ auto VulkanInstance::get() const -> const ::vk::raii::Instance &
     return instance_;
 }
 
-auto VKAPI_PTR VulkanInstance::vk_debug_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-    VkDebugUtilsMessageTypeFlagsEXT message_types,
-    const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+VKAPI_ATTR auto VKAPI_CALL VulkanInstance::vk_debug_callback(
+    ::vk::DebugUtilsMessageSeverityFlagBitsEXT message_severity,
+    ::vk::DebugUtilsMessageTypeFlagsEXT message_types,
+    const ::vk::DebugUtilsMessengerCallbackDataEXT *callback_data,
     [[maybe_unused]] void *user_data) -> VkBool32
 {
-    auto severity = message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT     ? "ERROR"
-                    : message_severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT ? "WARNING"
-                                                                                         : "INFO";
+    using Severity = ::vk::DebugUtilsMessageSeverityFlagBitsEXT;
+    using Type = ::vk::DebugUtilsMessageTypeFlagBitsEXT;
+
+    auto severity = message_severity == Severity::eError     ? "ERROR"
+                    : message_severity == Severity::eWarning ? "WARNING"
+                                                             : "INFO";
     auto types = std::string{};
-    if (message_types & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+    if (message_types & Type::eGeneral)
     {
         types += "GENERAL|";
     }
-    if (message_types & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+    if (message_types & Type::eValidation)
     {
         types += "VALIDATION|";
     }
-    if (message_types & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+    if (message_types & Type::ePerformance)
     {
         types += "PERFORMANCE|";
     }
@@ -123,18 +124,18 @@ auto VKAPI_PTR VulkanInstance::vk_debug_callback(
 
     switch (message_severity)
     {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        case Severity::eError:
         {
             arm::log::error("{}", message);
         }
         break;
 
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        case Severity::eWarning:
         {
             arm::log::warn("{}", message);
         }
         break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        case Severity::eInfo:
         {
             arm::log::info("{}", message);
         }
