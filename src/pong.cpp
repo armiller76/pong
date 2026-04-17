@@ -57,7 +57,7 @@ int main()
         const auto vk_surface = window.create_vulkan_surface(vk_instance);
         const auto vk_device = pong::VulkanDevice(vk_instance, vk_surface);
 
-        auto resource_manager = pong::ResourceManager(vk_device);
+        auto resource_manager = pong::ResourceManager();
         auto resource_loader =
             pong::ResourceLoader(vk_device, resource_manager, "c:/dev/Pong/assets"sv); // TODO hardcoded path
 
@@ -76,7 +76,7 @@ int main()
             resource_loader.load("test_gltf_mesh"sv, std::filesystem::path("assets/gltf/box/Box.glb"));
 
         transform.position = {0.0f, 0.5f, -3.0f};
-        auto test_gltf_box_model = pong::Model{.name = "test_gltf_box_model"};
+        auto test_gltf_box_model = pong::Model{.name = "test_gltf_box_model", .renderables = {}};
         auto test_gltf_box_renderable =
             pong::Renderable{.mesh_handle = test_gltf_mesh_handle, .material_handle = std::nullopt};
         auto test_gltf_box_entity = pong::Entity{"test_gltf_box_entity", test_gltf_box_model, transform};
