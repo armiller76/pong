@@ -22,8 +22,7 @@ class VulkanDevice;
 class ResourceManager
 {
   public:
-    explicit ResourceManager(const VulkanDevice &device)
-        : device_{device}
+    explicit ResourceManager()
     {
         arm::log::debug("ResourceManager constructor");
     }
@@ -66,7 +65,7 @@ class ResourceManager
     template <typename T>
     auto get(this auto &&self, typename ResourceTraits<T>::handle_type resource_handle) -> auto &&
     {
-        auto &map = self.get_map_<T>();
+        auto &map = self.template get_map_<T>();
         if (auto entry = map.find(resource_handle); entry != map.end())
         {
             return entry->second;
@@ -96,8 +95,6 @@ class ResourceManager
     }
 
   private:
-    const VulkanDevice &device_;
-
     std::unordered_map<ShaderHandle, Shader> shaders_;
     std::unordered_map<MeshHandle, Mesh> meshes_;
     std::unordered_map<Texture2DHandle, Texture2D> textures_;
