@@ -9,10 +9,12 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "core/entity.h"
+#include "core/resource_handles.h"
 #include "engine/resource_manager.h"
 #include "engine/ubo.h"
 #include "graphics/camera.h"
 #include "graphics/color.h"
+#include "graphics/model.h"
 #include "imgui/imgui_wrapper.h"
 #include "utils/error.h"
 #include "utils/exception.h"
@@ -214,15 +216,18 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
         [&](std::size_t i)
         {
             constexpr auto pipeline_id = std::uint64_t{0}; // for future use
-            constexpr auto material_id = std::uint64_t{0}; // for future use
-            return make_draw_sort_key(pipeline_id, material_id, entities[i].mesh_handle().value);
+            const auto material_id = entities[i].model().renderables[0].material_handle.has_value()
+                                         ? entities[i].model().renderables[0].material_handle.value().value
+                                         : 0zu;
+            const auto mesh_id = entities[i].model().renderables[0].mesh_handle.value;
+            return make_draw_sort_key(pipeline_id, material_id, mesh_id);
         });
 
     auto last_mesh = static_cast<const Mesh *>(nullptr);
     for (auto &i : render_order_)
     {
         // get mesh and update vertex/index buffers if it changed since last draw
-        auto &mesh = resource_manager_.get<Mesh>(entities[i].mesh_handle());
+        auto &mesh = resource_manager_.get<Mesh>(entities[i].model().renderables[0].mesh_handle);
         if (&mesh != last_mesh)
         {
             last_mesh = &mesh;
