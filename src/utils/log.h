@@ -3,10 +3,8 @@
 
 #pragma once
 
-#include <filesystem>
 #include <format>
 #include <print>
-#include <source_location>
 #include <string_view>
 
 #include "utils/formatter.h"
@@ -14,57 +12,51 @@
 namespace arm::log
 {
 
-enum class Level
+namespace detail
 {
-    DEBUG,
-    INFO,
-    WARN,
-    ERR
-};
 
-template <Level L, class... Args>
-struct Print
+template <char C, class... Args>
+auto print(std::string_view fmt, Args &&...args) -> void
 {
-    Print(std::format_string<Args...> msg, Args &&...args, std::source_location loc = std::source_location::current())
+    std::println("[{}] {}", C, std::vformat(fmt, std::make_format_args(args...)));
+}
+
+} // namespace detail
+
+struct debug
+{
+    template <class... Args>
+    debug(std::string_view fmt, Args &&...args)
     {
-        auto c = '?';
-        if constexpr (L == Level::DEBUG)
-        {
-            c = 'D';
-        }
-        else if constexpr (L == Level::INFO)
-        {
-            c = 'I';
-        }
-        else if constexpr (L == Level::WARN)
-        {
-            c = 'W';
-        }
-        else if constexpr (L == Level::ERR)
-        {
-            c = 'E';
-        }
-
-        const auto path = std::filesystem::path{loc.file_name()};
-
-        std::println(
-            "[{}] {}:{} {}", c, path.filename().string(), loc.line(), std::format(msg, std::forward<Args>(args)...));
+        detail::print<'D'>(fmt, std::forward<Args>(args)...);
     }
 };
 
-template <Level L, class... Args>
-Print(std::format_string<Args...>, Args &&...) -> Print<L, Args...>;
+struct info
+{
+    template <class... Args>
+    info(std::string_view fmt, Args &&...args)
+    {
+        detail::print<'I'>(fmt, std::forward<Args>(args)...);
+    }
+};
 
-template <class... Args>
-using debug = Print<Level::DEBUG, Args...>;
+struct warn
+{
+    template <class... Args>
+    warn(std::string_view fmt, Args &&...args)
+    {
+        detail::print<'W'>(fmt, std::forward<Args>(args)...);
+    }
+};
 
-template <class... Args>
-using info = Print<Level::INFO, Args...>;
+struct error
+{
+    template <class... Args>
+    error(std::string_view fmt, Args &&...args)
+    {
+        detail::print<'E'>(fmt, std::forward<Args>(args)...);
+    }
+};
 
-template <class... Args>
-using warn = Print<Level::WARN, Args...>;
-
-template <class... Args>
-using error = Print<Level::ERR, Args...>;
-
-}
+} // namespace arm::log
