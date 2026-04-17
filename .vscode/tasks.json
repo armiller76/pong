@@ -43,7 +43,7 @@
         {
             "label": "CMake: Build and Test (Debug)",
             "type": "shell",
-            "command": "cmake --build build --config Debug ; ctest --test-dir build -C Debug --output-on-failure",
+            "command": "cmake --build ${cmake:buildDirectory} --config Debug ; ctest --test-dir ${cmake:buildDirectory} -C Debug --output-on-failure",
             "group": "build",
             "dependsOn": [
                 "CMake: Configure (Debug)"
