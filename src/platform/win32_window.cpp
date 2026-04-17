@@ -28,7 +28,7 @@ Win32Window::Win32Window(std::string_view app_name, Rectangle window_rect)
     : hinstance_{::GetModuleHandleA(0)}
     , should_close_{false}
     , app_name_{app_name}
-    , class_name_{std::move(std::string(app_name_ + "WindowClass"))}
+    , class_name_{std::string(app_name_ + "WindowClass")}
     , window_rect_{window_rect}
 {
     arm::ensure(
