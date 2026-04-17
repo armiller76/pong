@@ -2,23 +2,27 @@
     "version": 3,
     "configurePresets": [
         {
-            "name": "debug",
-            "displayName": "Debug (with tests)",
+            "name": "debug-with-tests",
+            "displayName": "MSVC Debug (with tests)",
             "generator": "Ninja Multi-Config",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
                 "BUILD_TESTING": "ON",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_C_COMPILER": "cl",
+                "CMAKE_CXX_COMPILER": "cl"
             }
         },
         {
             "name": "debug-no-tests",
-            "displayName": "Debug (no tests)",
+            "displayName": "MSVC Debug (no tests)",
             "generator": "Ninja Multi-Config",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
                 "BUILD_TESTING": "OFF",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_C_COMPILER": "cl",
+                "CMAKE_CXX_COMPILER": "cl"
             }
         },
         {
@@ -30,16 +34,40 @@
                 "BUILD_TESTING": "OFF",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
+        },
+        {
+            "name": "clang-debug-with-tests",
+            "displayName": "Clang Debug (with tests)",
+            "generator": "Ninja Multi-Config",
+            "binaryDir": "${sourceDir}/build-clang",
+            "cacheVariables": {
+                "BUILD_TESTING": "ON",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_C_COMPILER": "clang-cl",
+                "CMAKE_CXX_COMPILER": "clang-cl"
+            }
+        },
+        {
+            "name": "clang-debug-no-tests",
+            "displayName": "Clang Debug (no tests)",
+            "generator": "Ninja Multi-Config",
+            "binaryDir": "${sourceDir}/build-clang",
+            "cacheVariables": {
+                "BUILD_TESTING": "OFF",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_C_COMPILER": "clang-cl",
+                "CMAKE_CXX_COMPILER": "clang-cl"
+            }
         }
     ],
     "buildPresets": [
         {
-            "name": "debug",
-            "configurePreset": "debug",
+            "name": "msvc-debug-with-tests",
+            "configurePreset": "debug-with-tests",
             "configuration": "Debug"
         },
         {
-            "name": "debug-no-tests",
+            "name": "msvc-debug-no-tests",
             "configurePreset": "debug-no-tests",
             "configuration": "Debug"
         },
@@ -47,6 +75,16 @@
             "name": "release",
             "configurePreset": "release",
             "configuration": "Release"
+        },
+        {
+            "name": "clang-debug-with-tests",
+            "configurePreset": "clang-debug-with-tests",
+            "configuration": "Debug"
+        },
+        {
+            "name": "clang-debug-no-tests",
+            "configurePreset": "clang-debug-no-tests",
+            "configuration": "Debug"
         }
     ]
 }

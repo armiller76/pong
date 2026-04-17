@@ -2,17 +2,17 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "CMake: Configure (Debug)",
+            "label": "CMake: Configure (MSVC Debug with tests)",
             "type": "shell",
             "command": "cmake",
             "args": [
                 "--preset",
-                "debug"
+                "debug-with-tests"
             ],
             "group": "build"
         },
         {
-            "label": "CMake: Configure (No Tests)",
+            "label": "CMake: Configure (MSVC Debug no tests)",
             "type": "shell",
             "command": "cmake",
             "args": [
@@ -22,32 +22,54 @@
             "group": "build"
         },
         {
-            "label": "CMake: Build (No Tests)",
+            "label": "CMake: Configure (Clang Debug with tests)",
             "type": "shell",
             "command": "cmake",
             "args": [
-                "--build",
-                "build",
-                "--config",
-                "Debug"
+                "--preset",
+                "clang-debug-with-tests"
             ],
+            "group": "build"
+        },
+        {
+            "label": "CMake: Configure (Clang Debug no tests)",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--preset",
+                "clang-debug-no-tests"
+            ],
+            "group": "build"
+        },
+        {
+            "label": "CMake: Build and Test Active Preset",
+            "type": "shell",
+            "command": "cmake --build ${command:cmake.buildDirectory} --config Debug ; ctest --test-dir ${command:cmake.buildDirectory} -C Debug --output-on-failure",
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "dependsOn": [
-                "CMake: Configure (No Tests)"
-            ],
             "problemMatcher": []
         },
         {
-            "label": "CMake: Build and Test (Debug)",
+            "label": "CMake: Build Clang (No Tests)",
             "type": "shell",
-            "command": "cmake --build ${cmake:buildDirectory} --config Debug ; ctest --test-dir ${cmake:buildDirectory} -C Debug --output-on-failure",
+            "command": "cmake --build build-clang --config Debug",
             "group": "build",
-            "dependsOn": [
-                "CMake: Configure (Debug)"
-            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Build and Test MSVC (Debug)",
+            "type": "shell",
+            "command": "cmake --build build --config Debug ; ctest --test-dir build -C Debug --output-on-failure",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Build and Test Clang (Debug)",
+            "type": "shell",
+            "command": "cmake --build build-clang --config Debug ; ctest --test-dir build-clang -C Debug --output-on-failure",
+            "group": "build",
             "problemMatcher": []
         }
     ]
