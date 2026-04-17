@@ -3,8 +3,8 @@
 #include <string>
 #include <string_view>
 
-#include "core/resource_handles.h"
 #include "graphics/glm_wrapper.h"
+#include "graphics/model.h"
 #include "math/transform.h"
 
 namespace pong
@@ -13,16 +13,16 @@ namespace pong
 class Entity
 {
   public:
-    Entity(std::string_view name, ModelHandle model_handle, Transform transform);
+    Entity(std::string_view name, Model model, Transform transform);
 
     auto set_active(bool active) -> void;
     auto is_active() const -> bool;
 
     auto name() const -> std::string_view;
 
-    auto model_handle() const -> ModelHandle;
+    auto model() -> Model &;
+    auto model() const -> const Model &;
 
-    auto transform() -> Transform &;
     auto transform() const -> const Transform &;
 
     // Position and translation are in world space unless the method name says local.
@@ -57,7 +57,7 @@ class Entity
   private:
     bool active_ = true;
     std::string name_;
-    ModelHandle model_handle_;
+    Model model_;
     Transform transform_;
 }; // class Entity
 

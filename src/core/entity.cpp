@@ -4,6 +4,7 @@
 
 #include "core/resource_handles.h"
 #include "graphics/glm_wrapper.h"
+#include "graphics/model.h"
 #include "math/transform.h"
 #include "math/utils.h"
 #include "utils/error.h"
@@ -11,9 +12,9 @@
 namespace pong
 {
 
-Entity::Entity(std::string_view name, ModelHandle model_handle, Transform transform)
+Entity::Entity(std::string_view name, Model model, Transform transform)
     : name_{name}
-    , model_handle_{model_handle}
+    , model_{std::move(model)}
     , transform_{std::move(transform)}
 {
 }
@@ -38,14 +39,15 @@ auto Entity::name() const -> std::string_view
     return name_;
 }
 
-auto Entity::model_handle() const -> ModelHandle
+// TODO do we want non-const access to this?
+auto Entity::model() -> Model &
 {
-    return model_handle_;
+    return model_;
 }
 
-auto Entity::transform() -> Transform &
+auto Entity::model() const -> const Model &
 {
-    return transform_;
+    return model_;
 }
 
 auto Entity::transform() const -> const Transform &
