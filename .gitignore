@@ -1,5 +1,5 @@
 build/
-build-no-tests/
+build-clang/
 assets/shaders/bin/
 assets/gltf/
 third-party/imgui/imgui.ini
