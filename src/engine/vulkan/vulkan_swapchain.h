@@ -44,8 +44,6 @@ class VulkanSwapchain
     std::vector<::vk::raii::ImageView> image_views_;
     std::vector<::vk::raii::Semaphore> render_finished_semaphores_;
 
-    bool is_initialized_ = false;
-
   private:
     auto init_() -> void;
     auto create_() -> void;
