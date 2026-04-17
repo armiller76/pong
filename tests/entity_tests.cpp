@@ -1,26 +1,35 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <optional>
+#include <string_view>
 
 #include <gtest/gtest.h>
 
 #include "core/entity.h"
+#include "core/resource_handles.h"
 #include "graphics/glm_wrapper.h"
+#include "graphics/model.h"
+#include "graphics/renderable.h"
 
 namespace pong
 {
+using namespace std::literals;
 
 TEST(Entity, ConstructsWithExpectedState)
 {
     auto initial = Transform{};
     initial.position = {1.0f, 2.0f, 3.0f};
 
-    const auto handle = std::uint64_t{42};
-    auto entity = Entity{"player", handle, initial};
+    const auto handle = MeshHandle{42};
+    const auto renderable = Renderable{handle, std::nullopt};
+    const auto model = Model{"player_model", {renderable}};
+    auto entity = Entity{"player", model, initial};
 
     EXPECT_TRUE(entity.is_active());
     EXPECT_EQ(entity.name(), "player");
-    EXPECT_EQ(entity.mesh_handle(), handle);
+    EXPECT_EQ(entity.model().name, "player_model");
+    EXPECT_EQ(entity.model().renderables[0].mesh_handle, handle);
     EXPECT_FLOAT_EQ(entity.transform().position.x, 1.0f);
     EXPECT_FLOAT_EQ(entity.transform().position.y, 2.0f);
     EXPECT_FLOAT_EQ(entity.transform().position.z, 3.0f);
@@ -28,7 +37,10 @@ TEST(Entity, ConstructsWithExpectedState)
 
 TEST(Entity, SettersUpdateTransform)
 {
-    auto entity = Entity{"ball", 7u, Transform{}};
+    const auto handle = MeshHandle{42};
+    const auto renderable = Renderable{handle, std::nullopt};
+    const auto model = Model{"model", {renderable}};
+    auto entity = Entity{"ball", model, Transform{}};
 
     entity.set_position({-0.5f, 0.25f, 0.75f});
     entity.set_scale({2.0f, 3.0f, 4.0f});
@@ -50,7 +62,10 @@ TEST(Entity, SettersUpdateTransform)
 
 TEST(Entity, ScaleAndRotateByAreComposed)
 {
-    auto entity = Entity{"paddle", 9u, Transform{}};
+    const auto handle = MeshHandle{42};
+    const auto renderable = Renderable{handle, std::nullopt};
+    const auto model = Model{"model", {renderable}};
+    auto entity = Entity{"paddle", model, Transform{}};
     entity.set_scale({2.0f, 3.0f, 4.0f});
 
     entity.scale_by({0.5f, 2.0f, 1.5f});
@@ -71,7 +86,10 @@ TEST(Entity, ScaleAndRotateByAreComposed)
 
 TEST(Entity, ActiveStateToggles)
 {
-    auto entity = Entity{"entity", 1u, Transform{}};
+    const auto handle = MeshHandle{42};
+    const auto renderable = Renderable{handle, std::nullopt};
+    const auto model = Model{"model", {renderable}};
+    auto entity = Entity{"entity", model, Transform{}};
     EXPECT_TRUE(entity.is_active());
 
     entity.set_active(false);
@@ -83,7 +101,10 @@ TEST(Entity, ActiveStateToggles)
 
 TEST(Entity, TranslateByAddsWorldOffset)
 {
-    auto entity = Entity{"entity", 1u, Transform{}};
+    const auto handle = MeshHandle{42};
+    const auto renderable = Renderable{handle, std::nullopt};
+    const auto model = Model{"model", {renderable}};
+    auto entity = Entity{"entity", model, Transform{}};
     entity.set_position({1.0f, 2.0f, 3.0f});
 
     entity.translate_by({0.5f, -1.0f, 4.0f});
@@ -95,7 +116,10 @@ TEST(Entity, TranslateByAddsWorldOffset)
 
 TEST(Entity, TranslateByIgnoresNonFiniteOffset)
 {
-    auto entity = Entity{"entity", 1u, Transform{}};
+    const auto handle = MeshHandle{42};
+    const auto renderable = Renderable{handle, std::nullopt};
+    const auto model = Model{"model", {renderable}};
+    auto entity = Entity{"entity", model, Transform{}};
     entity.set_position({4.0f, 5.0f, 6.0f});
 
     const auto inf = std::numeric_limits<float>::infinity();
@@ -108,7 +132,10 @@ TEST(Entity, TranslateByIgnoresNonFiniteOffset)
 
 TEST(Entity, SetPositionIgnoresNonFiniteInput)
 {
-    auto entity = Entity{"entity", 1u, Transform{}};
+    const auto handle = MeshHandle{42};
+    const auto renderable = Renderable{handle, std::nullopt};
+    const auto model = Model{"model", {renderable}};
+    auto entity = Entity{"entity", model, Transform{}};
     entity.set_position({1.0f, 2.0f, 3.0f});
 
     const auto nan = std::numeric_limits<float>::quiet_NaN();

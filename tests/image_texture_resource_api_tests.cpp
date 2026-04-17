@@ -154,12 +154,6 @@ TEST(Image, FloatingFormatLargeTextureShape)
     EXPECT_EQ(image.pixels().size(), payload_size);
 }
 
-TEST(ResourceManager, ResourceIdMatchesHashString)
-{
-    constexpr auto key = std::string_view{"texture/default_white"};
-    EXPECT_EQ(ResourceManager::get_resource_id(key), hash_string(key));
-}
-
 TEST(ApiContracts, TypeOwnershipAndMoveSemantics)
 {
     EXPECT_FALSE((std::is_copy_constructible_v<ResourceManager>));

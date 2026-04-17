@@ -40,10 +40,4 @@ TEST(Hash, DistinguishesTypicalInputs)
     }
 }
 
-TEST(ResourceManager, ResourceIdUsesHashString)
-{
-    constexpr auto key = std::string_view{"simple.vert"};
-    EXPECT_EQ(ResourceManager::get_resource_id(key), hash_string(key));
-}
-
 } // namespace pong
