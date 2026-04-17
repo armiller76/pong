@@ -26,7 +26,7 @@ class VulkanFrameCommandContext
     VulkanFrameCommandContext(VulkanFrameCommandContext &&) = delete;
     VulkanFrameCommandContext &operator=(VulkanFrameCommandContext &&) = delete;
 
-    auto wait_current_frame() -> void;
+    auto wait_for_fence() -> void;
     auto advance_frame() -> void;
 
     auto current_command_buffer(this auto &&self) -> auto &&;

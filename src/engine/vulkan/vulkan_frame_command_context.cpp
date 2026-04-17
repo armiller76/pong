@@ -70,7 +70,7 @@ VulkanFrameCommandContext::VulkanFrameCommandContext(
     }
 }
 
-auto VulkanFrameCommandContext::wait_current_frame() -> void
+auto VulkanFrameCommandContext::wait_for_fence() -> void
 {
     auto result = device_.native_handle().waitForFences(*current_fence(), VK_TRUE, UINT64_MAX);
     arm::ensure(result == ::vk::Result::eSuccess, "Failed to wait for fence");
