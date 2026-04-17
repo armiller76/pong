@@ -16,8 +16,8 @@ namespace pong
 {
 
 Mesh::Mesh(
-    std::string_view name,
     const VulkanDevice &device,
+    std::string_view name,
     std::span<const Vertex> vertices,
     std::span<const std::uint32_t> indices)
     : vertices_cpu_{vertices.begin(), vertices.end()}
@@ -86,7 +86,7 @@ auto Mesh::create_test_triangle(const VulkanDevice &device) -> Mesh
         1,
     };
 
-    return Mesh("test_triangle", device, vertices, indices);
+    return Mesh(device, "test_triangle", vertices, indices);
 }
 
 auto Mesh::create_test_rectangle(const VulkanDevice &device) -> Mesh
@@ -107,7 +107,7 @@ auto Mesh::create_test_rectangle(const VulkanDevice &device) -> Mesh
         2, // second triangle
     };
 
-    return Mesh("test_rectangle", device, vertices, indices);
+    return Mesh(device, "test_rectangle", vertices, indices);
 }
 
 } // namespace pong

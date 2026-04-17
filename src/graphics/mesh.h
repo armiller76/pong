@@ -18,8 +18,8 @@ class Mesh
 {
   public:
     Mesh(
-        std::string_view name,
         const VulkanDevice &device,
+        std::string_view name,
         std::span<const Vertex> vertices,
         std::span<const std::uint32_t> indices);
     ~Mesh() = default;
