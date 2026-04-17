@@ -3,13 +3,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <tuple>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
 #include "core/entity.h"
-#include "engine/resource_manager.h"
-#include "graphics/camera.h"
+#include "core/resource_handles.h"
 #include "graphics/color.h"
 #include "graphics/mesh.h"
 #include "vulkan_depth_buffer.h"
@@ -17,7 +17,6 @@
 #include "vulkan_frame_command_context.h"
 #include "vulkan_gpu_buffer.h"
 #include "vulkan_pipeline_factory.h"
-#include "vulkan_surface.h"
 #include "vulkan_render_utils.h"
 #include "vulkan_swapchain.h"
 
@@ -26,10 +25,21 @@ struct ImDrawData;
 namespace pong
 {
 
+class ResourceManager;
 class VulkanDevice;
+class VulkanSurface;
+class Camera;
+struct Renderable;
 
 class VulkanRenderer
 {
+    using DrawSortKey = std::tuple<std::uint64_t, MaterialHandle, MeshHandle, std::int32_t>;
+    struct DrawItem
+    {
+        std::size_t entity_index;
+        std::size_t renderable_index;
+        DrawSortKey sort_key;
+    };
 
   public:
     VulkanRenderer(
@@ -51,7 +61,7 @@ class VulkanRenderer
     auto render(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data) -> void;
 
   private:
-    auto prepare_frame_() -> void;
+    auto prepare_frame_(const std::vector<Entity> &entities) -> void;
     auto record_(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data = nullptr) -> void;
     auto end_frame_() -> void;
 
@@ -70,10 +80,17 @@ class VulkanRenderer
     VulkanPipelineResources pipeline_resources_;
     std::vector<::vk::raii::DescriptorSet> descriptor_sets_;
     std::vector<std::size_t> render_order_;
+    std::vector<DrawItem> draw_items_;
     ::vk::ClearColorValue clear_color_;
 
     std::uint32_t current_swap_chain_image_index_{0};
     bool framebuffer_resized_ = false;
+
+    static constexpr auto make_draw_sort_key_(
+        std::uint64_t pipeline_id,
+        MaterialHandle material_handle,
+        MeshHandle mesh_handle,
+        std::int32_t depth_bucket = 0) -> DrawSortKey;
 
     friend class ImguiWrapper;
     std::function<void()> imgui_resize_callback;

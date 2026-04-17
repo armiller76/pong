@@ -1,5 +1,6 @@
 #include "vulkan_renderer.h"
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <ranges>
@@ -15,6 +16,7 @@
 #include "graphics/camera.h"
 #include "graphics/color.h"
 #include "graphics/model.h"
+#include "graphics/renderable.h"
 #include "imgui/imgui_wrapper.h"
 #include "utils/error.h"
 #include "utils/exception.h"
@@ -62,7 +64,6 @@ VulkanRenderer::VulkanRenderer(
     , descriptor_sets_{descriptor_pool_.allocate_descriptor_sets(
           pipeline_resources_.descriptor_set_layouts.at(0),
           max_frames_in_flight_)}
-    , render_order_{}
     , clear_color_{clear_color.r, clear_color.g, clear_color.b, clear_color.a}
 {
     arm::log::debug("VulkanRenderer constructor");
@@ -88,7 +89,7 @@ auto VulkanRenderer::set_clear_color(const Color &color) -> void
 
 auto VulkanRenderer::render(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data) -> void
 {
-    prepare_frame_();
+    prepare_frame_(entities);
     record_(entities, imgui_draw_data);
     end_frame_();
 
@@ -98,10 +99,10 @@ auto VulkanRenderer::render(const std::vector<Entity> &entities, ImDrawData *img
     }
 }
 
-auto VulkanRenderer::prepare_frame_() -> void
+auto VulkanRenderer::prepare_frame_(const std::vector<Entity> &entities) -> void
 {
-    frame_command_context_.wait_current_frame();
-
+    // recreates the swapchain if out of date, otherwise gets an image from the swapchain
+    frame_command_context_.wait_for_fence();
     for (;;)
     {
         auto [result, swap_chain_image_index] = swapchain_.native_handle().acquireNextImage(
@@ -121,54 +122,46 @@ auto VulkanRenderer::prepare_frame_() -> void
         }
         throw arm::Exception("Unable to aquire swapchain image ({})", ::vk::to_string(result));
     }
-    auto &command_buffer = frame_command_context_.current_command_buffer();
 
-    const auto command_buffer_begin_info =
-        ::vk::CommandBufferBeginInfo{::vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
-    command_buffer.reset();
-    command_buffer.begin(command_buffer_begin_info);
+    // we have a swapchain image at this point, though swapchain could be suboptimal. render anyway. this may change
 
-    transition(
-        command_buffer,
-        swapchain_.images().at(current_swap_chain_image_index_),
-        ::vk::ImageAspectFlagBits::eColor,
-        transition_info::undef_to_color_optimal());
-    transition(
-        command_buffer,
-        depth_buffer_.image(),
-        ::vk::ImageAspectFlagBits::eDepth | ::vk::ImageAspectFlagBits::eStencil,
-        transition_info::undef_to_depth_optimal());
+    // flatten entities -> draw_items, then sort by sort_key (tuple of pipeline_id, material_handle, mesh_handle,
+    // depth_bucket)
+    draw_items_.clear();
+    draw_items_ =
+        std::views::enumerate(entities)
+        | std::views::transform(
+            [](std::tuple<std::size_t, const Entity &> entity_pair)
+            {
+                auto [entity_index, entity] = entity_pair;
+                return std::views::enumerate(entity.model().renderables)
+                       | std::views::transform(
+                           [entity_index](std::tuple<std::size_t, const Renderable &> renderable_pair)
+                           {
+                               auto [renderable_index, renderable] = renderable_pair;
+                               return DrawItem{
+                                   entity_index,
+                                   renderable_index,
+                                   make_draw_sort_key_(
+                                       0zu, /*pipeline_id unused for now*/
+                                       renderable.material_handle.has_value() ? renderable.material_handle.value()
+                                                                              : MaterialHandle{0},
+                                       renderable.mesh_handle,
+                                       0 /* depth_bucket unused for now*/)};
+                           });
+            })
+        | std::views::join | std::ranges::to<std::vector>();
+    std::ranges::sort(draw_items_, {}, &DrawItem::sort_key);
 }
 
 auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data) -> void
 {
     const auto frame_index = frame_command_context_.current_frame_index();
-    auto &command_buffer = frame_command_context_.current_command_buffer();
 
-    auto color_attachment_info = ::vk::RenderingAttachmentInfo{};
-    color_attachment_info.sType = ::vk::StructureType::eRenderingAttachmentInfo;
-    color_attachment_info.pNext = nullptr;
-    color_attachment_info.imageView = swapchain_.image_views().at(current_swap_chain_image_index_);
-    color_attachment_info.imageLayout = transition_info::undef_to_color_optimal().dst_layout;
-    color_attachment_info.loadOp = ::vk::AttachmentLoadOp::eClear;
-    color_attachment_info.storeOp = ::vk::AttachmentStoreOp::eStore;
-    color_attachment_info.clearValue = ::vk::ClearColorValue(clear_color_);
-    color_attachment_info.resolveMode = ::vk::ResolveModeFlagBits::eNone;
-    color_attachment_info.resolveImageView = nullptr;
-    color_attachment_info.resolveImageLayout = ::vk::ImageLayout::eUndefined;
-
-    auto depth_attachment_info = ::vk::RenderingAttachmentInfo{};
-    depth_attachment_info.sType = ::vk::StructureType::eRenderingAttachmentInfo;
-    depth_attachment_info.pNext = nullptr;
-    depth_attachment_info.imageView = depth_buffer_.image_view();
-    depth_attachment_info.imageLayout = transition_info::undef_to_depth_optimal().dst_layout;
-    depth_attachment_info.loadOp = ::vk::AttachmentLoadOp::eClear;
-    depth_attachment_info.storeOp = ::vk::AttachmentStoreOp::eDontCare;
-    depth_attachment_info.clearValue = ::vk::ClearDepthStencilValue{1.0f, 0};
-    depth_attachment_info.resolveMode = ::vk::ResolveModeFlagBits::eNone;
-    depth_attachment_info.resolveImageView = nullptr;
-    depth_attachment_info.resolveImageLayout = ::vk::ImageLayout::eUndefined;
-
+    // prepare infos
+    auto color_attachment_info =
+        make_color_attachment(*swapchain_.image_views()[current_swap_chain_image_index_], clear_color_);
+    auto depth_attachment_info = make_depth_attachment(depth_buffer_.image_view());
     auto rendering_info = ::vk::RenderingInfo{};
     rendering_info.sType = ::vk::StructureType::eRenderingInfo;
     rendering_info.pNext = nullptr;
@@ -182,9 +175,38 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
     rendering_info.pDepthAttachment = &depth_attachment_info;
     rendering_info.pStencilAttachment = nullptr;
 
+    // update view/projection matrix data into UBO
+    auto temp_view_proj = ubo_vp{
+        .view = camera_.get_view_matrix(),
+        .proj = ::glm::perspective(
+            ::glm::radians(45.0f),
+            static_cast<float>(swapchain_.extent().width) / swapchain_.extent().height,
+            0.1f,
+            100.0f)};
+    uniform_buffers_[frame_index].upload(&temp_view_proj, sizeof(temp_view_proj));
+
+    // start command buffer
+    auto &command_buffer = frame_command_context_.current_command_buffer();
+    const auto command_buffer_begin_info =
+        ::vk::CommandBufferBeginInfo{::vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
+    command_buffer.reset();
+    command_buffer.begin(command_buffer_begin_info);
+
+    // transition images for recording
+    transition(
+        command_buffer,
+        swapchain_.images().at(current_swap_chain_image_index_),
+        ::vk::ImageAspectFlagBits::eColor,
+        transition_info::undef_to_color_optimal());
+    transition(
+        command_buffer,
+        depth_buffer_.image(),
+        ::vk::ImageAspectFlagBits::eDepth | ::vk::ImageAspectFlagBits::eStencil,
+        transition_info::undef_to_depth_optimal());
+
+    // render
     command_buffer.beginRendering(rendering_info);
     command_buffer.bindPipeline(::vk::PipelineBindPoint::eGraphics, pipeline_resources_.pipeline);
-
     command_buffer.setViewport(
         0,
         ::vk::Viewport{
@@ -198,35 +220,13 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
     command_buffer.bindDescriptorSets(
         ::vk::PipelineBindPoint::eGraphics, pipeline_resources_.layout, 0, *descriptor_sets_.at(frame_index), nullptr);
 
-    // update view/projection matrix data into UBO
-    auto temp_view_proj = ubo_vp{
-        .view = camera_.get_view_matrix(),
-        .proj = ::glm::perspective(
-            ::glm::radians(45.0f),
-            static_cast<float>(swapchain_.extent().width) / swapchain_.extent().height,
-            0.1f,
-            100.0f)};
-    uniform_buffers_[frame_index].upload(&temp_view_proj, sizeof(temp_view_proj));
-
-    render_order_ = std::views::iota(std::size_t{0}, entities.size()) | std::ranges::to<std::vector<std::size_t>>();
-    std::ranges::sort(
-        render_order_,
-        {},
-        [&](std::size_t i)
-        {
-            constexpr auto pipeline_id = std::uint64_t{0}; // for future use
-            const auto material_id = entities[i].model().renderables[0].material_handle.has_value()
-                                         ? entities[i].model().renderables[0].material_handle.value().value
-                                         : 0zu;
-            const auto mesh_id = entities[i].model().renderables[0].mesh_handle.value;
-            return make_draw_sort_key(pipeline_id, material_id, mesh_id);
-        });
-
+    // iterate draw items
     auto last_mesh = static_cast<const Mesh *>(nullptr);
-    for (auto &i : render_order_)
+    for (const auto &draw_item : draw_items_)
     {
-        // get mesh and update vertex/index buffers if it changed since last draw
-        auto &mesh = resource_manager_.get<Mesh>(entities[i].model().renderables[0].mesh_handle);
+        // get mesh and update vertex/index buffers if the mesh has changed since the last draw
+        auto &mesh = resource_manager_.get<Mesh>(
+            entities[draw_item.entity_index].model().renderables[draw_item.renderable_index].mesh_handle);
         if (&mesh != last_mesh)
         {
             last_mesh = &mesh;
@@ -235,7 +235,7 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
         }
 
         // update model matrix. note that pong::Transform is overloaded to implicitly convert to a mat4
-        const auto model = ::glm::mat4(entities[i].transform());
+        const auto model = ::glm::mat4(entities[draw_item.entity_index].transform());
         command_buffer.pushConstants<::glm::mat4>(
             *pipeline_resources_.layout, ::vk::ShaderStageFlagBits::eVertex, 0u, model);
 
@@ -243,6 +243,8 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
         command_buffer.drawIndexed(mesh.index_count(), 1, 0, 0, 0);
     }
 
+    // TODO debug guards?
+    // draw imgui if it has things for us to draw
     if (imgui_draw_data != nullptr)
     {
         ImGui_ImplVulkan_RenderDrawData(imgui_draw_data, *command_buffer);
@@ -287,6 +289,15 @@ auto VulkanRenderer::end_frame_() -> void
     }
 
     frame_command_context_.advance_frame();
+}
+
+constexpr auto VulkanRenderer::make_draw_sort_key_(
+    std::uint64_t pipeline_id,
+    MaterialHandle material_handle,
+    MeshHandle mesh_handle,
+    std::int32_t depth_bucket) -> DrawSortKey
+{
+    return {pipeline_id, material_handle, mesh_handle, depth_bucket};
 }
 
 } // namespace pong
