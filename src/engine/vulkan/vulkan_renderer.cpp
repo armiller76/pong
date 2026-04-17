@@ -21,8 +21,7 @@
 #include "utils/log.h"
 #include "vulkan_depth_buffer.h"
 #include "vulkan_device.h"
-#include "vulkan_layout_transition.h"
-#include "vulkan_render_sort_key.h"
+#include "vulkan_render_utils.h"
 
 namespace pong
 {

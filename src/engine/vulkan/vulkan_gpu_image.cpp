@@ -9,7 +9,7 @@
 #include "vulkan_device.h"
 #include "vulkan_gpu_buffer.h"
 #include "vulkan_immediate_command_context.h"
-#include "vulkan_layout_transition.h"
+#include "vulkan_render_utils.h"
 #include "vulkan_utils.h"
 
 namespace pong

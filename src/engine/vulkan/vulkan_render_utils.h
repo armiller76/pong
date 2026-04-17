@@ -113,4 +113,37 @@ inline auto transition(
     command_buffer.pipelineBarrier2(dependency_info);
 }
 
+inline auto make_color_attachment(::vk::ImageView image_view, ::vk::ClearColorValue clear_color)
+    -> ::vk::RenderingAttachmentInfo
+{
+    auto result = ::vk::RenderingAttachmentInfo{};
+    result.sType = ::vk::StructureType::eRenderingAttachmentInfo;
+    result.pNext = nullptr;
+    result.imageView = image_view;
+    result.imageLayout = ::vk::ImageLayout::eColorAttachmentOptimal;
+    result.loadOp = ::vk::AttachmentLoadOp::eClear;
+    result.storeOp = ::vk::AttachmentStoreOp::eStore;
+    result.clearValue = clear_color;
+    result.resolveMode = ::vk::ResolveModeFlagBits::eNone;
+    result.resolveImageView = nullptr;
+    result.resolveImageLayout = ::vk::ImageLayout::eUndefined;
+    return result;
 }
+
+inline auto make_depth_attachment(::vk::ImageView image_view) -> ::vk::RenderingAttachmentInfo
+{
+    auto result = ::vk::RenderingAttachmentInfo{};
+    result.sType = ::vk::StructureType::eRenderingAttachmentInfo;
+    result.pNext = nullptr;
+    result.imageView = image_view;
+    result.imageLayout = ::vk::ImageLayout::eDepthStencilAttachmentOptimal;
+    result.loadOp = ::vk::AttachmentLoadOp::eClear;
+    result.storeOp = ::vk::AttachmentStoreOp::eDontCare;
+    result.clearValue = ::vk::ClearDepthStencilValue{1.0f, 0};
+    result.resolveMode = ::vk::ResolveModeFlagBits::eNone;
+    result.resolveImageView = nullptr;
+    result.resolveImageLayout = ::vk::ImageLayout::eUndefined;
+    return result;
+}
+
+} // namespace pong
