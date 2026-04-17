@@ -23,8 +23,8 @@ ResourceLoader::ResourceLoader(
     std::filesystem::path absolute_path_to_assets)
     : device_{device}
     , command_context_{device_, "resource_loader_command_context"sv}
-    , resource_manager_{resource_manager}
     , absolute_path_to_assets_{absolute_path_to_assets}
+    , resource_manager_{resource_manager}
 {
     arm::log::debug("ResourceLoader constructor");
 }
@@ -63,18 +63,15 @@ auto ResourceLoader::load(std::string_view name, std::filesystem::path path) -> 
 
     return resource_manager_.insert<Mesh>(
         name,
-        std::move(
-            Mesh{
-                device_,
-                loaded_asset.meshes[0].name,
-                loaded_asset.meshes[0].primitives[0].vertices,
-                loaded_asset.meshes[0].primitives[0].indices}));
+        Mesh{
+            device_,
+            loaded_asset.meshes[0].name,
+            loaded_asset.meshes[0].primitives[0].vertices,
+            loaded_asset.meshes[0].primitives[0].indices});
 }
 
 auto ResourceLoader::load(std::string_view name, Image &image) -> Texture2DHandle
 {
-    const auto key = Texture2DHandle{get_resource_id_(name)};
-
     auto texture = Texture2D{image, device_};
     texture.upload_pixels(command_context_, image);
 
