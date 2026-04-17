@@ -8,7 +8,7 @@ add_subdirectory(vulkan)
 target_sources(
   engine
   PRIVATE file.cpp
-          resource_manager.cpp
+          resource_loader.cpp
 )
 
 target_include_directories(
