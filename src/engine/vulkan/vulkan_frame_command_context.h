@@ -15,10 +15,7 @@ class VulkanFrameCommandContext
 {
 
   public:
-    VulkanFrameCommandContext(
-        const VulkanDevice &device,
-        std::uint32_t swap_chain_image_count,
-        std::uint32_t frames_in_flight = 2u);
+    VulkanFrameCommandContext(const VulkanDevice &device, std::uint32_t frames_in_flight = 2u);
     ~VulkanFrameCommandContext() = default;
 
     VulkanFrameCommandContext(const VulkanFrameCommandContext &) = delete;
@@ -39,7 +36,6 @@ class VulkanFrameCommandContext
   private:
     const VulkanDevice &device_;
     std::uint32_t frames_in_flight_;
-    std::uint32_t swap_chain_image_count_;
     std::uint32_t current_frame_;
 
     ::vk::raii::CommandPool frame_command_pool_{nullptr};

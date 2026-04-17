@@ -14,13 +14,9 @@
 namespace pong
 {
 
-VulkanFrameCommandContext::VulkanFrameCommandContext(
-    const VulkanDevice &device,
-    std::uint32_t swap_chain_image_count,
-    std::uint32_t frames_in_flight)
+VulkanFrameCommandContext::VulkanFrameCommandContext(const VulkanDevice &device, std::uint32_t frames_in_flight)
     : device_{device}
     , frames_in_flight_{frames_in_flight}
-    , swap_chain_image_count_{swap_chain_image_count}
     , current_frame_{0}
 {
     arm::log::debug("VulkanFrameCommandContext constructor");

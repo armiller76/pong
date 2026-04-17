@@ -42,7 +42,7 @@ VulkanRenderer::VulkanRenderer(
     , camera_{camera}
     , resource_manager_{resource_manager}
     , swapchain_{device_, surface_}
-    , frame_command_context_{device_, swapchain_.image_count(), max_frames_in_flight_}
+    , frame_command_context_{device_, max_frames_in_flight_}
     , uniform_buffers_(
           [&device, max_frames_in_flight]() -> std::vector<VulkanGpuBuffer>
           {
