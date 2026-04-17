@@ -1,5 +1,27 @@
 FetchContent_MakeAvailable(google_test)
 
+# gtest triggers -Wcharacter-conversion under clang-cl; suppress on third-party
+# targets. Note: clang-cl sets MSVC=true, so check compiler ID explicitly.
+if(CMAKE_CXX_COMPILER_ID
+   STREQUAL
+   "Clang"
+)
+  foreach(
+    _t
+    gtest
+    gtest_main
+    gmock
+    gmock_main
+  )
+    target_compile_options(
+      ${_t}
+      PRIVATE /WX-
+              -Wno-error
+              -Wno-character-conversion
+    )
+  endforeach()
+endif()
+
 add_executable(
   unit_tests
   auto_release_tests.cpp
