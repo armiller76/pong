@@ -10,6 +10,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "core/entity.h"
+#include "engine/resource_loader.h"
 #include "engine/resource_manager.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_instance.h"
@@ -18,6 +19,7 @@
 #include "graphics/camera.h"
 #include "graphics/image.h"
 #include "graphics/mesh.h"
+#include "graphics/model.h"
 #include "graphics/shader.h"
 #include "imgui/imgui_wrapper.h"
 #include "math/rectangle.h"
@@ -56,34 +58,43 @@ int main()
         const auto vk_device = pong::VulkanDevice(vk_instance, vk_surface);
 
         auto resource_manager = pong::ResourceManager(vk_device);
+        auto resource_loader =
+            pong::ResourceLoader(vk_device, resource_manager, "c:/dev/Pong/assets"sv); // TODO hardcoded path
+
+        resource_loader.load(
+            "simple.vert"sv,
+            std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_vert.spv"),
+            pong::ShaderStage::Vertex);
+        resource_loader.load(
+            "simple.frag"sv,
+            std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"),
+            pong::ShaderStage::Fragment);
 
         auto transform = pong::Transform{};
 
-        auto test_triangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_triangle(vk_device)));
-        transform.position = {0.5f, 0.0f, -5.0f};
-        auto test_triangle = pong::Entity{"test_triangle", test_triangle_mesh, transform};
+        auto test_gltf_mesh_handle =
+            resource_loader.load("test_gltf_mesh"sv, std::filesystem::path("assets/gltf/box/Box.glb"));
 
-        auto test_rectangle_mesh = resource_manager.load(std::move(pong::Mesh::create_test_rectangle(vk_device)));
-        transform.position = {-0.5f, 0.0f, -4.0f};
-        auto test_rectangle = pong::Entity{"test_rectangle", test_rectangle_mesh, transform};
-
-        auto test_gltf_mesh = resource_manager.load("gltf_mesh"sv, std::filesystem::path("assets/gltf/box/Box.glb"));
         transform.position = {0.0f, 0.5f, -3.0f};
-        auto test_gltf_box = pong::Entity{"test_gltf_box", test_gltf_mesh, transform};
+        auto test_gltf_box_model = pong::Model{.name = "test_gltf_box_model"};
+        auto test_gltf_box_renderable =
+            pong::Renderable{.mesh_handle = test_gltf_mesh_handle, .material_handle = std::nullopt};
+        auto test_gltf_box_entity = pong::Entity{"test_gltf_box_entity", test_gltf_box_model, transform};
+        test_gltf_box_entity.model().renderables.push_back(test_gltf_box_renderable);
 
-        auto entities = std::vector{
-            //    test_triangle,
-            //    test_rectangle,
-            test_gltf_box,
+        auto entities = std::vector<pong::Entity>{
+            //     test_triangle,
+            //     test_rectangle,
+            test_gltf_box_entity,
         };
 
-        //        auto image_1x1_white = pong::Image(
-        //            "1x1_white"sv,
-        //            pong::Extent2D{1u, 1u},
-        //            pong::ImageFormat::RGBA8,
-        //            std::vector<std::uint8_t>{255, 255, 255, 255});
-        //        auto texture_1x1_white = resource_manager.load("texture_1x1_white", image_1x1_white);
-        //        auto &the_actual_texture = resource_manager.get<pong::Texture2D>(texture_1x1_white);
+        // auto image_1x1_white = pong::Image(
+        //     "1x1_white"sv,
+        //     pong::Extent2D{1u, 1u},
+        //     pong::ImageFormat::RGBA8,
+        //     std::vector<std::uint8_t>{255, 255, 255, 255});
+        // auto texture_1x1_white = resource_manager.load("texture_1x1_white", image_1x1_white);
+        // auto &the_actual_texture = resource_manager.get<pong::Texture2D>(texture_1x1_white);
 
         auto main_camera = pong::Camera();
         main_camera.set_position({5.0f, 0.0f, 5.0f});
