@@ -59,7 +59,7 @@ VulkanRenderer::VulkanRenderer(
           }())
     , depth_buffer_{device_, swapchain_.extent()}
     , descriptor_pool_{device_, uniform_buffers_, max_frames_in_flight_}
-    , pipeline_factory_{device_, descriptor_pool_, resource_manager_}
+    , pipeline_factory_{device_, resource_manager_}
     , pipeline_resources_{pipeline_factory_.create_graphics_pipeline(swapchain_.format(), depth_buffer_.format())}
     , descriptor_sets_{descriptor_pool_.allocate_descriptor_sets(
           pipeline_resources_.descriptor_set_layouts.at(0),

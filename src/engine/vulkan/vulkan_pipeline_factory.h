@@ -27,10 +27,7 @@ struct VulkanPipelineResources
 class VulkanPipelineFactory
 {
   public:
-    explicit VulkanPipelineFactory(
-        const VulkanDevice &device,
-        const VulkanDescriptorPool &descriptor_pool,
-        ResourceManager &resource_manager);
+    explicit VulkanPipelineFactory(const VulkanDevice &device, ResourceManager &resource_manager);
     ~VulkanPipelineFactory() = default;
 
     VulkanPipelineFactory(const VulkanPipelineFactory &) = delete;
@@ -42,7 +39,6 @@ class VulkanPipelineFactory
 
   private:
     const VulkanDevice &device_;
-    const VulkanDescriptorPool &descriptor_pool_;
     ResourceManager
         &resource_manager_; // make this const again when you aren't temp loading shaders in the pipeline factory!!!
 }; // class VulkanPipelineFactory

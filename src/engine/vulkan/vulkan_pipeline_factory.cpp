@@ -23,12 +23,8 @@ namespace pong
 static auto vertex_input_binding_description_factory() -> ::vk::VertexInputBindingDescription;
 static auto vertex_input_attribute_descriptions_factory() -> std::vector<::vk::VertexInputAttributeDescription>;
 
-VulkanPipelineFactory::VulkanPipelineFactory(
-    const VulkanDevice &device,
-    const VulkanDescriptorPool &descriptor_pool,
-    ResourceManager &resource_manager)
+VulkanPipelineFactory::VulkanPipelineFactory(const VulkanDevice &device, ResourceManager &resource_manager)
     : device_{device}
-    , descriptor_pool_{descriptor_pool}
     , resource_manager_{resource_manager}
 {
     arm::log::debug("VulkanPipelineFactory constructor");
