@@ -10,31 +10,31 @@ namespace pong
 struct ShaderHandle
 {
     std::uint64_t value;
-    auto operator==(const ShaderHandle &other) const -> bool = default;
+    auto operator<=>(const ShaderHandle &other) const -> auto = default;
 };
 
 struct MeshHandle
 {
     std::uint64_t value;
-    auto operator==(const MeshHandle &other) const -> bool = default;
+    auto operator<=>(const MeshHandle &other) const -> auto = default;
 };
 
 struct Texture2DHandle
 {
     std::uint64_t value;
-    auto operator==(const Texture2DHandle &other) const -> bool = default;
+    auto operator<=>(const Texture2DHandle &other) const -> auto = default;
 };
 
 struct MaterialHandle
 {
     std::uint64_t value;
-    auto operator==(const MaterialHandle &other) const -> bool = default;
+    auto operator<=>(const MaterialHandle &other) const -> auto = default;
 };
 
 struct ModelHandle
 {
     std::uint64_t value;
-    auto operator==(const ModelHandle &other) const -> bool = default;
+    auto operator<=>(const ModelHandle &other) const -> auto = default;
 };
 
 // struct ImageHandle
