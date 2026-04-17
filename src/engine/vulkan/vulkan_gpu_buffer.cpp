@@ -48,7 +48,7 @@ auto VulkanGpuBuffer::map(this auto &&self) -> auto &&
     arm::ensure(
         (self.memory_flags_ & ::vk::MemoryPropertyFlagBits::eHostVisible) == ::vk::MemoryPropertyFlagBits::eHostVisible,
         "mapping requires HOST_VISIBLE memory");
-    return self.memory_.mapMemory(0, size_);
+    return self.memory_.mapMemory(0, self.size_);
 }
 
 auto VulkanGpuBuffer::unmap() -> void
