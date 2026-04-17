@@ -6,14 +6,16 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/resource_manager.h"
 #include "graphics/shader.h"
-#include "vulkan_descriptor_pool.h"
-#include "vulkan_device.h"
-#include "vulkan_gpu_buffer.h"
 
 namespace pong
 {
+
+class ResourceLoader;
+class ResourceManager;
+class VulkanDevice;
+class VulkanDescriptorPool;
+class VulkanGpuBuffer;
 
 struct VulkanPipelineResources
 {

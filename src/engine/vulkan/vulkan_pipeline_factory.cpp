@@ -7,9 +7,11 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "core/resource_handles.h"
 #include "engine/resource_manager.h"
 #include "graphics/shader.h"
 #include "graphics/vertex.h"
+#include "utils/hash.h"
 #include "utils/log.h"
 #include "vulkan_descriptor_pool.h"
 #include "vulkan_device.h"
@@ -35,15 +37,9 @@ VulkanPipelineFactory::VulkanPipelineFactory(
 auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_format, ::vk::Format depth_format)
     -> VulkanPipelineResources
 {
-    auto vertex_shader_id = resource_manager_.load(
-        "simple.vert"sv, std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_vert.spv"), ShaderStage::Vertex);
-    auto fragment_shader_id = resource_manager_.load(
-        "simple.frag"sv,
-        std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"),
-        ShaderStage::Fragment);
-
-    auto &vertex_shader = resource_manager_.get<Shader>(vertex_shader_id);
-    auto &fragment_shader = resource_manager_.get<Shader>(fragment_shader_id);
+    // TODO get rid of this garbage once you get into pipelines
+    auto &vertex_shader = resource_manager_.get<Shader>(ShaderHandle{hash_string("simple.vert")});
+    auto &fragment_shader = resource_manager_.get<Shader>(ShaderHandle{hash_string("simple.frag")});
 
     auto vertex_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
     vertex_ubo_layout_binding.binding = 0u;
