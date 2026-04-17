@@ -33,7 +33,7 @@ ImguiWrapper::ImguiWrapper(
     , windows_handle_{hwnd}
     , vk_renderer_{renderer}
     , vk_instance_{instance}
-    , ini_file_{std::move(std::string(std::string(project_root) + "/third-party/imgui/imgui.ini"))}
+    , ini_file_{std::string(std::string(project_root) + "/third-party/imgui/imgui.ini")}
 {
     vk_renderer_.set_imgui_resize_callback_([this]() { this->framebuffer_resize_callback(); });
     io->IniFilename = ini_file_.c_str();
