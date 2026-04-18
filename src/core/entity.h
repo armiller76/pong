@@ -13,7 +13,14 @@ namespace pong
 class Entity
 {
   public:
+    Entity() = default;
     Entity(std::string_view name, Model model, Transform transform);
+    ~Entity() = default;
+
+    Entity(const Entity &) = delete;
+    auto operator=(const Entity &) -> Entity & = delete;
+    Entity(Entity &&) noexcept = default;
+    auto operator=(Entity &&) noexcept -> Entity & = default;
 
     auto set_active(bool active) -> void;
     auto is_active() const -> bool;
@@ -53,6 +60,9 @@ class Entity
     // TODO implement
     // Applies a local-space delta rotation in radians (Euler xyz), post-multiplied.
     //   auto rotate_local_by(::glm::vec3 radians_local) -> void;
+
+    auto set_name(std::string_view name) -> void;
+    auto set_transform(Transform transform) -> void;
 
   private:
     bool active_ = true;

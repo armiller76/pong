@@ -148,4 +148,14 @@ auto Entity::rotate_local_by(::glm::vec3 radians_local) -> void
     arm::not_implemented();
 }
 */
+auto Entity::set_name(std::string_view name) -> void
+{
+    name_ = name;
+}
+
+auto Entity::set_transform(Transform transform) -> void
+{
+    transform_ = transform;
+}
+
 } // namespace pong
