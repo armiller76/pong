@@ -30,14 +30,12 @@ namespace pong
 VulkanRenderer::VulkanRenderer(
     const VulkanDevice &device,
     const VulkanSurface &surface,
-    const Camera &camera,
     ResourceManager &resource_manager,
     std::uint32_t max_frames_in_flight,
     const Color clear_color)
     : max_frames_in_flight_{max_frames_in_flight}
     , device_{device}
     , surface_{surface}
-    , camera_{camera}
     , resource_manager_{resource_manager}
     , swapchain_{device_, surface_}
     , frame_command_context_{device_, max_frames_in_flight_}
@@ -85,10 +83,10 @@ auto VulkanRenderer::set_clear_color(const Color &color) -> void
     clear_color_ = {color.r, color.g, color.b, color.a};
 }
 
-auto VulkanRenderer::render(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data) -> void
+auto VulkanRenderer::render(const Scene &scene, const Camera &camera, ImDrawData *imgui_draw_data) -> void
 {
-    prepare_frame_(entities);
-    record_(entities, imgui_draw_data);
+    auto draw_items = prepare_frame_(scene);
+    record_(draw_items, camera, imgui_draw_data);
     end_frame_();
 
     if (framebuffer_resized_)
@@ -97,7 +95,7 @@ auto VulkanRenderer::render(const std::vector<Entity> &entities, ImDrawData *img
     }
 }
 
-auto VulkanRenderer::prepare_frame_(const std::vector<Entity> &entities) -> void
+auto VulkanRenderer::prepare_frame_(const Scene &scene) -> std::vector<DrawItem>
 {
     // recreates the swapchain if out of date, otherwise gets an image from the swapchain
     frame_command_context_.wait_for_fence();
@@ -125,34 +123,53 @@ auto VulkanRenderer::prepare_frame_(const std::vector<Entity> &entities) -> void
 
     // flatten entities -> draw_items, then sort by sort_key (tuple of pipeline_id, material_handle, mesh_handle,
     // depth_bucket)
-    draw_items_.clear();
-    draw_items_ =
-        std::views::enumerate(entities)
-        | std::views::transform(
-            [](std::tuple<std::size_t, const Entity &> entity_pair)
+
+    auto visit = [&](this auto &&self,
+                     EntityIndex entity_index,
+                     ::glm::mat4 parent_transform,
+                     std::vector<DrawItem> &draw_items) -> void
+    {
+        const auto &entity = scene.entities().at(entity_index.value);
+        const auto world_transform = parent_transform * ::glm::mat4(entity.transform());
+
+        if (entity.model().has_value())
+        {
+            for (const auto &renderable : entity.model().value().renderables)
             {
-                auto [entity_index, entity] = entity_pair;
-                return std::views::enumerate(entity.model().renderables)
-                       | std::views::transform(
-                           [entity_index](std::tuple<std::size_t, const Renderable &> renderable_pair)
-                           {
-                               auto [renderable_index, renderable] = renderable_pair;
-                               return DrawItem{
-                                   entity_index,
-                                   renderable_index,
-                                   make_draw_sort_key_(
-                                       0zu, /*pipeline_id unused for now*/
-                                       renderable.material_handle.has_value() ? renderable.material_handle.value()
-                                                                              : MaterialHandle{0},
-                                       renderable.mesh_handle,
-                                       0 /* depth_bucket unused for now*/)};
-                           });
-            })
-        | std::views::join | std::ranges::to<std::vector>();
-    std::ranges::sort(draw_items_, {}, &DrawItem::sort_key);
+                auto draw_item = DrawItem{};
+                draw_item.mesh_handle = renderable.mesh_handle;
+                draw_item.material_handle = renderable.material_handle.has_value()
+                                                ? std::make_optional<MaterialHandle>(renderable.material_handle.value())
+                                                : std::nullopt;
+                draw_item.model = world_transform;
+                draw_item.sort_key = make_draw_sort_key_(0zu, draw_item.material_handle.value(), draw_item.mesh_handle);
+                draw_items.push_back(std::move(draw_item));
+            }
+        }
+
+        if (entity.child_count() > 0zu)
+        {
+            for (const auto &index : entity.children())
+            {
+                self(index, world_transform, draw_items);
+            }
+        }
+    };
+
+    auto result = std::vector<DrawItem>();
+    for (const auto &entity_index : scene.root_indices())
+    {
+        visit(entity_index, ::glm::mat4x4(1.0f), result);
+    }
+
+    std::ranges::sort(result, {}, &DrawItem::sort_key);
+    return result;
 }
 
-auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *imgui_draw_data) -> void
+auto VulkanRenderer::record_(
+    [[maybe_unused]] const std::vector<DrawItem> &draw_items,
+    const Camera &camera,
+    ImDrawData *imgui_draw_data) -> void
 {
     const auto frame_index = frame_command_context_.current_frame_index();
 
@@ -175,7 +192,7 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
 
     // update view/projection matrix data into UBO
     auto temp_view_proj = ubo_vp{
-        .view = camera_.get_view_matrix(),
+        .view = camera.get_view_matrix(),
         .proj = ::glm::perspective(
             ::glm::radians(45.0f),
             static_cast<float>(swapchain_.extent().width) / swapchain_.extent().height,
@@ -219,13 +236,12 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
     command_buffer.bindDescriptorSets(
         ::vk::PipelineBindPoint::eGraphics, pipeline_resources_.layout, 0, *descriptor_sets_.at(frame_index), nullptr);
 
-    // iterate draw items
+    //    iterate draw items
     auto last_mesh = static_cast<const Mesh *>(nullptr);
-    for (const auto &draw_item : draw_items_)
+    for (const auto &draw_item : draw_items)
     {
         // get mesh and update vertex/index buffers if the mesh has changed since the last draw
-        auto &mesh = resource_manager_.get<Mesh>(
-            entities[draw_item.entity_index].model().renderables[draw_item.renderable_index].mesh_handle);
+        auto &mesh = resource_manager_.get<Mesh>(draw_item.mesh_handle);
         if (&mesh != last_mesh)
         {
             last_mesh = &mesh;
@@ -234,9 +250,8 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
         }
 
         // update model matrix. note that pong::Transform is overloaded to implicitly convert to a mat4
-        const auto model = ::glm::mat4(entities[draw_item.entity_index].transform());
         command_buffer.pushConstants<::glm::mat4>(
-            *pipeline_resources_.layout, ::vk::ShaderStageFlagBits::eVertex, 0u, model);
+            *pipeline_resources_.layout, ::vk::ShaderStageFlagBits::eVertex, 0u, draw_item.model);
 
         // draw the current entity
         command_buffer.drawIndexed(mesh.index_count(), 1, 0, 0, 0);
