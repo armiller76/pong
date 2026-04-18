@@ -183,6 +183,7 @@ auto VulkanRenderer::record_(const std::vector<Entity> &entities, ImDrawData *im
             static_cast<float>(swapchain_.extent().width) / swapchain_.extent().height,
             0.1f,
             100.0f)};
+    temp_view_proj.proj[1][1] *= -1.0f;
     uniform_buffers_[frame_index].upload(&temp_view_proj, sizeof(temp_view_proj));
 
     // start command buffer
