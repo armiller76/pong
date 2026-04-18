@@ -1,7 +1,7 @@
-add_executable(Pong pong.cpp)
+add_executable(pong pong.cpp)
 
 add_dependencies(
-  Pong
+  pong
   shaders
 )
 
@@ -12,7 +12,7 @@ add_subdirectory(platform)
 add_subdirectory(utils)
 
 target_compile_definitions(
-  Pong
+  pong
   PRIVATE NOMINMAX
           WIN32_LEAN_AND_MEAN
           APP_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
@@ -35,13 +35,13 @@ target_link_libraries(
 )
 
 target_link_libraries(
-  Pong
+  pong
   PRIVATE Vulkan::Vulkan
           ponglib
           fastgltf
 )
 target_include_directories(
-  Pong
+  pong
   PUBLIC ${Vulkan_INCLUDE_DIRS}
          ${CMAKE_CURRENT_SOURCE_DIR}
          ${CMAKE_CURRENT_SOURCE_DIR}/core
