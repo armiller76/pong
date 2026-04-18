@@ -29,8 +29,11 @@ class Entity
 
     auto name() const -> std::string_view;
 
-    auto model() -> Model &;
-    auto model() const -> const Model &;
+    auto model() -> std::optional<Model> &;
+    auto model() const -> const std::optional<Model> &;
+
+    auto children() const -> const std::vector<EntityIndex> &;
+    auto child_count() const -> std::size_t;
 
     auto transform() const -> const Transform &;
 
@@ -65,12 +68,14 @@ class Entity
 
     auto set_name(std::string_view name) -> void;
     auto set_transform(Transform transform) -> void;
+    auto add_child(EntityIndex index) -> void;
 
   private:
     bool active_ = true;
     std::string name_;
-    Model model_;
+    std::optional<Model> model_;
     Transform transform_;
+    std::vector<EntityIndex> children_;
 }; // class Entity
 
 } // namespace pong

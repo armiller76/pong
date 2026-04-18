@@ -44,14 +44,24 @@ auto Entity::name() const -> std::string_view
 }
 
 // TODO do we want non-const access to this?
-auto Entity::model() -> Model &
+auto Entity::model() -> std::optional<Model> &
 {
     return model_;
 }
 
-auto Entity::model() const -> const Model &
+auto Entity::model() const -> const std::optional<Model> &
 {
     return model_;
+}
+
+auto Entity::children() const -> const std::vector<EntityIndex> &
+{
+    return children_;
+}
+
+auto Entity::child_count() const -> std::size_t
+{
+    return children_.size();
 }
 
 auto Entity::transform() const -> const Transform &
@@ -160,6 +170,11 @@ auto Entity::set_name(std::string_view name) -> void
 auto Entity::set_transform(Transform transform) -> void
 {
     transform_ = transform;
+}
+
+auto Entity::add_child(EntityIndex index) -> void
+{
+    children_.push_back(index);
 }
 
 } // namespace pong
