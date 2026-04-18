@@ -7,7 +7,7 @@
             "command": "cmake",
             "args": [
                 "--preset",
-                "debug-with-tests"
+                "msvc-debug-with-tests"
             ],
             "group": "build"
         },
@@ -17,7 +17,7 @@
             "command": "cmake",
             "args": [
                 "--preset",
-                "debug-no-tests"
+                "msvc-debug-no-tests"
             ],
             "group": "build"
         },
@@ -52,6 +52,13 @@
             "problemMatcher": []
         },
         {
+            "label": "CMake: Build MSVC (No Tests)",
+            "type": "shell",
+            "command": "cmake --build build-msvc --config Debug",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
             "label": "CMake: Build Clang (No Tests)",
             "type": "shell",
             "command": "cmake --build build-clang --config Debug",
@@ -61,7 +68,7 @@
         {
             "label": "CMake: Build and Test MSVC (Debug)",
             "type": "shell",
-            "command": "cmake --build build --config Debug ; ctest --test-dir build -C Debug --output-on-failure",
+            "command": "cmake --build build-msvc --config Debug ; ctest --test-dir build-msvc -C Debug --output-on-failure",
             "group": "build",
             "problemMatcher": []
         },

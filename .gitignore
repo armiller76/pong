@@ -1,6 +1,8 @@
-build/
+build-msvc/
 build-clang/
 assets/shaders/bin/
 assets/gltf/
 third-party/imgui/imgui.ini
 .github/
+.cache/
+compile_commands.json

@@ -1,0 +1,5 @@
+Index:
+  Background: Build       # Enable project-wide background indexing
+
+InlayHints:
+  Enabled: false

@@ -2,10 +2,10 @@
     "version": 3,
     "configurePresets": [
         {
-            "name": "debug-with-tests",
+            "name": "msvc-debug-with-tests",
             "displayName": "MSVC Debug (with tests)",
             "generator": "Ninja Multi-Config",
-            "binaryDir": "${sourceDir}/build",
+            "binaryDir": "${sourceDir}/build-msvc",
             "cacheVariables": {
                 "BUILD_TESTING": "ON",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
@@ -14,10 +14,10 @@
             }
         },
         {
-            "name": "debug-no-tests",
+            "name": "msvc-debug-no-tests",
             "displayName": "MSVC Debug (no tests)",
             "generator": "Ninja Multi-Config",
-            "binaryDir": "${sourceDir}/build",
+            "binaryDir": "${sourceDir}/build-msvc",
             "cacheVariables": {
                 "BUILD_TESTING": "OFF",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
@@ -63,26 +63,31 @@
     "buildPresets": [
         {
             "name": "msvc-debug-with-tests",
-            "configurePreset": "debug-with-tests",
+            "displayName": "MSVC Debug (with tests)",
+            "configurePreset": "msvc-debug-with-tests",
             "configuration": "Debug"
         },
         {
             "name": "msvc-debug-no-tests",
-            "configurePreset": "debug-no-tests",
+            "displayName": "MSVC Debug (no tests)",
+            "configurePreset": "msvc-debug-no-tests",
             "configuration": "Debug"
         },
         {
             "name": "release",
+            "displayName": "Release",
             "configurePreset": "release",
             "configuration": "Release"
         },
         {
             "name": "clang-debug-with-tests",
+            "displayName": "Clang Debug (with tests)",
             "configurePreset": "clang-debug-with-tests",
             "configuration": "Debug"
         },
         {
             "name": "clang-debug-no-tests",
+            "displayName": "Clang Debug (no tests)",
             "configurePreset": "clang-debug-no-tests",
             "configuration": "Debug"
         }
