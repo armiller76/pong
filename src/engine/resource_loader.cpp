@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "core/entity.h"
+#include "core/scene.h"
 #include "engine/file.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "graphics/shader.h"
@@ -31,7 +32,7 @@ ResourceLoader::ResourceLoader(
     arm::log::debug("ResourceLoader constructor");
 }
 
-auto ResourceLoader::loadgltf(std::filesystem::path path) -> std::vector<Entity>
+auto ResourceLoader::loadgltf(std::filesystem::path path) -> Scene
 {
     auto gltf = FastGLTFWrapper();
     const auto loaded_asset = gltf.load(path);
@@ -43,14 +44,14 @@ auto ResourceLoader::loadgltf(std::filesystem::path path) -> std::vector<Entity>
     arm::log::debug(
         "gltf loaded:\n default scene index: {}\ndefault scene name: {}", default_scene_index, default_scene.name);
     auto entities = std::vector<Entity>();
+    auto root_indices = std::vector<EntityIndex>();
     for (auto i = 0zu; i < default_scene.root_node_indices.size(); ++i)
     {
         const auto &node = loaded_asset.nodes[default_scene.root_node_indices[i]];
-        const auto parent_transform = ::glm::mat4x4(1.0f);
         arm::log::debug("processing node {} with index #{}", node.name, default_scene.root_node_indices[i]);
-        process_loaded_node_(loaded_asset, node, entities, parent_transform);
+        root_indices.push_back(process_loaded_node_(loaded_asset, node, entities));
     }
-    return entities;
+    return {std::move(entities), std::move(root_indices)};
 }
 
 auto ResourceLoader::load(std::string_view name, std::filesystem::path path, ShaderStage stage) -> ShaderHandle
@@ -83,27 +84,27 @@ auto ResourceLoader::load(std::string_view name, Image &image) -> Texture2DHandl
 auto ResourceLoader::process_loaded_node_(
     const LoadedAsset &asset,
     const LoadedNode &node,
-    std::vector<Entity> &entities,
-    const ::glm::mat4x4 &parent_transform) -> void
+    std::vector<Entity> &entities) -> EntityIndex
 {
-    auto transform = parent_transform * ::glm::mat4(node.local_transform);
+    auto entity = Entity{};
+    entity.set_transform(node.local_transform);
+    entity.set_name(node.name);
+
     if (node.mesh_index.has_value())
     {
         // if mesh_index has a value, this is effectively an Entity.
         // Get the transform from node, model from its mesh
         arm::log::debug("  - node has mesh_index");
-        auto entity = Entity{};
         auto mesh_index = node.mesh_index.value();
-        entity.set_name(node.name);
-        entity.set_transform(transform);
-        entity.model().name = asset.meshes[mesh_index].name;
+        auto model = Model{};
+        model.name = asset.meshes[mesh_index].name;
 
         const auto &primitives = asset.meshes[mesh_index].primitives;
         arm::log::debug("  - node has {} primitives", primitives.size());
 
         for (auto i = 0zu; i < primitives.size(); ++i)
         {
-            auto name = std::format("{}_{}", entity.model().name, i);
+            auto name = std::format("{}_{}", model.name, i);
             auto mesh_handle =
                 resource_manager_.insert<Mesh>(name, {device_, name, primitives[i].vertices, primitives[i].indices});
             arm::log::debug("    - added mesh {} {}", name, mesh_handle.value);
@@ -121,20 +122,28 @@ auto ResourceLoader::process_loaded_node_(
                 renderable = Renderable{mesh_handle, std::nullopt};
                 arm::log::debug("    - without material");
             }
-            entity.model().renderables.push_back(std::move(renderable));
+            model.renderables.push_back(std::move(renderable));
         }
-        entities.push_back(std::move(entity));
-        arm::log::debug("Entity created with {} renderables", entity.model().renderables.size());
+        entity.model() = std::make_optional(std::move(model));
     }
     else
     {
-        // TODO do i really need to do anything here?
+        // mesh_index does not have a value. could be transform-only, camera, light, skin
+        // do stuff with those here. for now, we'll just explicitly state that there's no model for this entity, even
+        // tho it default constructs that way
+        entity.model() = std::nullopt;
     }
+
     for (auto i = 0zu; i < node.child_indices.size(); ++i)
     {
         arm::log::debug("Moving to child node, index #{}", node.child_indices[i]);
-        process_loaded_node_(asset, asset.nodes[node.child_indices[i]], entities, transform);
+        entity.add_child(process_loaded_node_(asset, asset.nodes[node.child_indices[i]], entities));
     }
+
+    arm::log::debug("Creating entity \"{}\"", entity.name());
+    auto result = EntityIndex{entities.size()};
+    entities.push_back(std::move(entity));
+    return result;
 }
 
 auto ResourceLoader::get_resource_id_(std::string_view name) -> std::uint64_t

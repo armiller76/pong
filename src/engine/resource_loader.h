@@ -16,6 +16,7 @@ namespace pong
 
 class Entity;
 class Image;
+class Scene;
 class VulkanDevice;
 enum class ShaderStage;
 
@@ -27,7 +28,7 @@ class ResourceLoader
         ResourceManager &resource_manager,
         std::filesystem::path absolute_path_to_assets);
 
-    auto loadgltf(std::filesystem::path path) -> std::vector<Entity>;
+    auto loadgltf(std::filesystem::path path) -> Scene;
 
     // Shader loading
     auto load(std::string_view name, std::filesystem::path path, ShaderStage stage) -> ShaderHandle;
@@ -40,11 +41,8 @@ class ResourceLoader
     std::filesystem::path absolute_path_to_assets_;
     ResourceManager &resource_manager_;
 
-    auto process_loaded_node_(
-        const LoadedAsset &asset,
-        const LoadedNode &node,
-        std::vector<Entity> &entities,
-        const ::glm::mat4x4 &parent_transform) -> void;
+    auto process_loaded_node_(const LoadedAsset &asset, const LoadedNode &node, std::vector<Entity> &entities)
+        -> EntityIndex;
     auto get_resource_id_(std::string_view name) -> std::uint64_t;
 }; // class ResourceLoader
 
