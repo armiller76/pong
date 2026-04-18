@@ -14,15 +14,15 @@ class Transform
   public:
     constexpr Transform()
         : position{}
-        , scale{1.0f}
         , rotation{::glm::quat_identity<float, ::glm::qualifier::defaultp>()}
+        , scale{1.0f}
     {
     }
 
     Transform(::glm::vec3 position, ::glm::vec3 scale, ::glm::quat rotation)
         : position{position}
-        , scale{scale}
         , rotation{normalize_safe(rotation)}
+        , scale{scale}
     {
     }
 
@@ -34,8 +34,8 @@ class Transform
     }
 
     ::glm::vec3 position;
-    ::glm::vec3 scale;
     ::glm::quat rotation;
+    ::glm::vec3 scale;
 };
 
 inline auto to_string(const Transform &transform) -> std::string
