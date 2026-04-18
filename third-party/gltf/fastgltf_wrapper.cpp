@@ -273,6 +273,9 @@ auto FastGLTFWrapper::extract_meshes_(::fastgltf::Asset &data, LoadedAsset &load
                         data.accessors[indices_accessor_index.value()],
                         [&](std::uint32_t index) { loaded_primitive.indices.push_back(index); });
 
+                    loaded_primitive.material_index = primitive.materialIndex.has_value()
+                                                          ? std::make_optional(primitive.materialIndex.value())
+                                                          : std::nullopt;
                     loaded_mesh.primitives.push_back(std::move(loaded_primitive));
                 }
             }
