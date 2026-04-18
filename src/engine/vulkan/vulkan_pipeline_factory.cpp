@@ -1,7 +1,6 @@
 #include "vulkan_pipeline_factory.h"
 
 #include <cstdint>
-#include <filesystem> // get rid of this once temp shader loading is gone
 #include <ranges>
 #include <vector>
 
@@ -13,7 +12,6 @@
 #include "graphics/vertex.h"
 #include "utils/hash.h"
 #include "utils/log.h"
-#include "vulkan_descriptor_pool.h"
 #include "vulkan_device.h"
 #include "vulkan_gpu_buffer.h"
 

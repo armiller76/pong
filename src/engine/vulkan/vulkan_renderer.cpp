@@ -1,24 +1,22 @@
 #include "vulkan_renderer.h"
 
-#include <algorithm>
-#include <array>
 #include <cstddef>
-#include <ranges>
-#include <tuple>
+#include <cstdint>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
 #include "core/entity.h"
 #include "core/resource_handles.h"
+#include "core/scene.h"
 #include "engine/resource_manager.h"
 #include "engine/ubo.h"
+#include "engine/vulkan/vulkan_gpu_buffer.h"
 #include "graphics/camera.h"
 #include "graphics/color.h"
 #include "graphics/model.h"
 #include "graphics/renderable.h"
 #include "imgui/imgui_wrapper.h"
-#include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
 #include "vulkan_depth_buffer.h"

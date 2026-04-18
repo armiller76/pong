@@ -2,13 +2,13 @@
 
 #include <array>
 #include <cstdint>
-#include <ranges>
 #include <string>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
 #include "utils/error.h"
+#include "utils/log.h"
 
 namespace pong
 {

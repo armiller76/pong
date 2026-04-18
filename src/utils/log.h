@@ -7,7 +7,7 @@
 #include <print>
 #include <string_view>
 
-#include "utils/formatter.h"
+#include "formatter.h" // IWYU pragma: keep
 
 namespace arm::log
 {

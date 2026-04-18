@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <tuple>
@@ -8,7 +7,6 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "core/entity.h"
 #include "core/resource_handles.h"
 #include "graphics/color.h"
 #include "graphics/mesh.h"
@@ -17,7 +15,6 @@
 #include "vulkan_frame_command_context.h"
 #include "vulkan_gpu_buffer.h"
 #include "vulkan_pipeline_factory.h"
-#include "vulkan_render_utils.h"
 #include "vulkan_swapchain.h"
 
 struct ImDrawData;

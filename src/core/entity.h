@@ -1,9 +1,11 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
-#include "graphics/glm_wrapper.h"
+#include "core/resource_handles.h"
 #include "graphics/model.h"
 #include "math/transform.h"
 

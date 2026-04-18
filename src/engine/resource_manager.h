@@ -1,13 +1,11 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
 #include <string_view>
 #include <unordered_map>
 
 #include "core/resource_handles.h"
 #include "core/resource_traits.h"
-#include "engine/vulkan/vulkan_utils.h"
 #include "graphics/material.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"

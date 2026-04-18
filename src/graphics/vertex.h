@@ -1,6 +1,6 @@
 #pragma once
 
-#include "glm_wrapper.h"
+#include "glm_wrapper.h" // IWYU pragma: keep
 
 namespace pong
 {

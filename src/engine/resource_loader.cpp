@@ -9,7 +9,6 @@
 #include "core/entity.h"
 #include "engine/file.h"
 #include "engine/vulkan/vulkan_device.h"
-#include "graphics/glm_wrapper.h"
 #include "graphics/shader.h"
 #include "graphics/utils.h"
 #include "resource_manager.h"

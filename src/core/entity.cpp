@@ -1,13 +1,17 @@
 #include "entity.h"
 
+#include <cstddef>
+#include <optional>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 #include "core/resource_handles.h"
-#include "graphics/glm_wrapper.h"
+#include "graphics/glm_wrapper.h" //IWYU pragma: keep
 #include "graphics/model.h"
 #include "math/transform.h"
 #include "math/utils.h"
-#include "utils/error.h"
+#include "utils/log.h"
 
 namespace pong
 {

@@ -1,13 +1,11 @@
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
 #include <string_view>
 
 #include "engine/vulkan/vulkan_gpu_buffer.h"
-#include "utils/log.h"
 #include "vertex.h"
 
 namespace pong
