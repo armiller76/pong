@@ -22,7 +22,7 @@ enum class AlphaMode
     Blend,
 };
 
-enum class MinFilterMode
+enum class FilterMode
 {
     Nearest,
     Linear,
@@ -30,12 +30,6 @@ enum class MinFilterMode
     LinearMipmapNearest,
     NearestMipmapLinear,
     LinearMipmapLinear,
-};
-
-enum class MagFilterMode
-{
-    Nearest,
-    Linear,
 };
 
 enum class WrapMode
@@ -94,16 +88,16 @@ struct LoadedTexture
 struct LoadedImage
 {
     std::string name;
-    // can store a path to a file, or the actual raw bytes
-    std::variant<std::filesystem::path, std::vector<std::uint8_t>> data;
+    std::vector<std::byte> data;
 };
 
 struct LoadedSampler
 {
-    MagFilterMode mag_filter;
-    MinFilterMode min_filter;
-    WrapMode wrap_u;
-    WrapMode wrap_v;
+    // mag_filter can only be Nearest or Linear! No Mipmaps!
+    FilterMode mag_filter = FilterMode::Linear;
+    FilterMode min_filter = FilterMode::Linear;
+    WrapMode wrap_u = WrapMode::Repeat;
+    WrapMode wrap_v = WrapMode::Repeat;
 };
 
 struct LoadedAsset
