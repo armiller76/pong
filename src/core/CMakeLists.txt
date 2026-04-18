@@ -3,7 +3,11 @@ add_library(
   STATIC
 )
 
-target_sources(core PRIVATE entity.cpp)
+target_sources(
+  core
+  PRIVATE entity.cpp
+          scene.cpp
+)
 
 # target_link_libraries(core PUBLIC )
 target_include_directories(
