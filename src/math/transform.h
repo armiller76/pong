@@ -2,6 +2,7 @@
 
 #include <format>
 #include <string>
+#include <vector>
 
 #include "graphics/glm_wrapper.h"
 #include "math/utils.h"
@@ -24,6 +25,13 @@ class Transform
         , rotation{normalize_safe(rotation)}
         , scale{scale}
     {
+    }
+
+    Transform(const ::glm::mat4x4 &model)
+    {
+        auto dummy1 = ::glm::vec3();
+        auto dummy2 = ::glm::vec4();
+        ::glm::decompose(model, scale, rotation, position, dummy1, dummy2);
     }
 
     operator ::glm::mat4() const
