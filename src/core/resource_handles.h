@@ -37,6 +37,12 @@ struct ModelHandle
     auto operator<=>(const ModelHandle &other) const -> auto = default;
 };
 
+struct EntityIndex
+{
+    std::uint64_t value;
+    auto operator<=>(const EntityIndex &other) const -> auto = default;
+};
+
 // struct ImageHandle
 //{
 //     std::uint64_t value;
