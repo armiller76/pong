@@ -72,42 +72,4 @@ auto Mesh::name() const noexcept -> std::string_view
     return name_;
 }
 
-auto Mesh::create_test_triangle(const VulkanDevice &device) -> Mesh
-{
-    const std::vector<Vertex> vertices = {
-        {{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
-        {{0.0f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.5f, 1.0f}},
-        {{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
-    };
-
-    const std::vector<std::uint32_t> indices = {
-        0,
-        2,
-        1,
-    };
-
-    return Mesh(device, "test_triangle", vertices, indices);
-}
-
-auto Mesh::create_test_rectangle(const VulkanDevice &device) -> Mesh
-{
-    const std::vector<Vertex> vertices = {
-        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 1.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
-    };
-
-    const std::vector<std::uint32_t> indices = {
-        0,
-        3,
-        1, // first triangle
-        1,
-        3,
-        2, // second triangle
-    };
-
-    return Mesh(device, "test_rectangle", vertices, indices);
-}
-
 } // namespace pong
