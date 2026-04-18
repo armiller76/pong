@@ -116,6 +116,18 @@ struct LoadedAsset
     std::vector<LoadedTexture> textures;
     std::vector<LoadedImage> images;
     std::vector<LoadedSampler> samplers;
+
+    auto reset()
+    {
+        default_scene_index = std::nullopt;
+        scenes.clear();
+        nodes.clear();
+        meshes.clear();
+        materials.clear();
+        textures.clear();
+        images.clear();
+        samplers.clear();
+    }
 };
 
 }
