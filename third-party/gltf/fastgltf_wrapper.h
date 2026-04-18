@@ -33,13 +33,13 @@ class FastGLTFWrapper
   private:
     std::unique_ptr<::fastgltf::Parser> parser_;
 
-    auto extract_images_(::fastgltf::Asset &data, LoadedAsset &loaded_asset) -> void;
-    auto extract_samplers_(::fastgltf::Asset &data, LoadedAsset &loaded_asset) -> void;
-    auto extract_textures_(::fastgltf::Asset &data, LoadedAsset &loaded_asset) -> void;
-    auto extract_materials_(::fastgltf::Asset &data, LoadedAsset &loaded_asset) -> void;
-    auto extract_meshes_(::fastgltf::Asset &data, LoadedAsset &loaded_asset) -> void;
-    auto extract_nodes_(::fastgltf::Asset &data, LoadedAsset &loaded_asset) -> void;
-    auto extract_scenes_(::fastgltf::Asset &data, LoadedAsset &loaded_asset) -> void;
+    auto extract_scenes_(::fastgltf::Asset &asset, LoadedAsset &loaded_asset) -> void;
+    auto extract_nodes_(::fastgltf::Asset &asset, LoadedAsset &loaded_asset) -> void;
+    auto extract_materials_(::fastgltf::Asset &asset, LoadedAsset &loaded_asset) -> void;
+    auto extract_meshes_(::fastgltf::Asset &asset, LoadedAsset &loaded_asset) -> void;
+    auto extract_images_(::fastgltf::Asset &asset, LoadedAsset &loaded_asset) -> void;
+    auto extract_samplers_(::fastgltf::Asset &asset, LoadedAsset &loaded_asset) -> void;
+    auto extract_textures_(::fastgltf::Asset &asset, LoadedAsset &loaded_asset) -> void;
 };
 
 }
