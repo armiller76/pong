@@ -8,6 +8,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "core/resource_handles.h"
+#include "engine/vulkan/vulkan_gpu_buffer.h"
 #include "graphics/color.h"
 #include "graphics/mesh.h"
 #include "vulkan_depth_buffer.h"
@@ -71,7 +72,8 @@ class VulkanRenderer
     ResourceManager &resource_manager_;
     VulkanSwapchain swapchain_;
     VulkanFrameCommandContext frame_command_context_;
-    std::vector<VulkanGpuBuffer> uniform_buffers_;
+    std::vector<VulkanGpuBuffer> view_proj_uniform_buffers_;
+    std::vector<VulkanGpuBuffer> material_uniform_buffers_;
     DepthBuffer depth_buffer_;
     VulkanDescriptorPool descriptor_pool_;
     VulkanPipelineFactory pipeline_factory_;

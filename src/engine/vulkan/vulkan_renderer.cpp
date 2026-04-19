@@ -39,27 +39,40 @@ VulkanRenderer::VulkanRenderer(
     , resource_manager_{resource_manager}
     , swapchain_{device_, surface_}
     , frame_command_context_{device_, max_frames_in_flight_}
-    , uniform_buffers_(
-          [&device, max_frames_in_flight]() -> std::vector<VulkanGpuBuffer>
+    , view_proj_uniform_buffers_(
+          [&]() -> std::vector<VulkanGpuBuffer>
           {
               auto buffers = std::vector<VulkanGpuBuffer>();
               for (std::size_t i = 0; i < max_frames_in_flight; ++i)
               {
                   buffers.push_back(
-                      {device,
-                       ::vk::DeviceSize{sizeof(ubo_vp)},
+                      {device_,
+                       ::vk::DeviceSize{sizeof(UBO_ViewProj)},
+                       ::vk::BufferUsageFlagBits::eUniformBuffer,
+                       ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible});
+              }
+              return buffers;
+          }())
+    , material_uniform_buffers_(
+          [&]() -> std::vector<VulkanGpuBuffer>
+          {
+              auto buffers = std::vector<VulkanGpuBuffer>();
+              for (std::size_t i = 0; i < max_frames_in_flight; ++i)
+              {
+                  buffers.push_back(
+                      {device_,
+                       ::vk::DeviceSize{sizeof(UBO_Material)},
                        ::vk::BufferUsageFlagBits::eUniformBuffer,
                        ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible});
               }
               return buffers;
           }())
     , depth_buffer_{device_, swapchain_.extent()}
-    , descriptor_pool_{device_, uniform_buffers_, max_frames_in_flight_}
+    , descriptor_pool_{device_, view_proj_uniform_buffers_, material_uniform_buffers_, max_frames_in_flight_}
     , pipeline_factory_{device_, resource_manager_}
     , pipeline_resources_{pipeline_factory_.create_graphics_pipeline(swapchain_.format(), depth_buffer_.format())}
-    , descriptor_sets_{descriptor_pool_.allocate_descriptor_sets(
-          pipeline_resources_.descriptor_set_layouts.at(0),
-          max_frames_in_flight_)}
+    , descriptor_sets_{descriptor_pool_
+                           .allocate_descriptor_sets(*pipeline_resources_.descriptor_set_layout, max_frames_in_flight_)}
     , clear_color_{clear_color.r, clear_color.g, clear_color.b, clear_color.a}
 {
     arm::log::debug("VulkanRenderer constructor");
@@ -191,7 +204,7 @@ auto VulkanRenderer::record_(
     rendering_info.pStencilAttachment = nullptr;
 
     // update view/projection matrix data into UBO
-    auto temp_view_proj = ubo_vp{
+    auto temp_view_proj = UBO_ViewProj{
         .view = camera.get_view_matrix(),
         .proj = ::glm::perspective(
             ::glm::radians(45.0f),
@@ -199,7 +212,7 @@ auto VulkanRenderer::record_(
             0.1f,
             100.0f)};
     temp_view_proj.proj[1][1] *= -1.0f;
-    uniform_buffers_[frame_index].upload(&temp_view_proj, sizeof(temp_view_proj));
+    view_proj_uniform_buffers_[frame_index].upload(&temp_view_proj, sizeof(UBO_ViewProj));
 
     // start command buffer
     auto &command_buffer = frame_command_context_.current_command_buffer();
@@ -247,6 +260,19 @@ auto VulkanRenderer::record_(
             last_mesh = &mesh;
             command_buffer.bindVertexBuffers(0, {mesh.vertex_buffer().native_handle()}, {0});
             command_buffer.bindIndexBuffer({mesh.index_buffer().native_handle()}, 0, ::vk::IndexType::eUint32);
+        }
+
+        // update material data into UBO
+        if (draw_item.material_handle.has_value())
+        {
+            auto &draw_item_material = resource_manager_.get<Material>(draw_item.material_handle.value());
+            auto material_data = UBO_Material{
+                .base_color_factor = draw_item_material.base_color_factor,
+                .metallic_factor = draw_item_material.metallic_factor,
+                .roughness_factor = draw_item_material.roughness_factor,
+                .pad1 = 0.0f,
+                .pad2 = 0.0f};
+            material_uniform_buffers_[frame_index].upload(&material_data, sizeof(UBO_Material));
         }
 
         // update model matrix. note that pong::Transform is overloaded to implicitly convert to a mat4

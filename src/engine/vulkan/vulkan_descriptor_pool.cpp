@@ -15,10 +15,12 @@ namespace pong
 
 VulkanDescriptorPool::VulkanDescriptorPool(
     const VulkanDevice &device,
-    const std::vector<VulkanGpuBuffer> &uniform_buffers,
+    const std::vector<VulkanGpuBuffer> &view_proj_uniform_buffers,
+    const std::vector<VulkanGpuBuffer> &material_uniform_buffers,
     const std::uint32_t max_frames_in_flight)
     : device_{device}
-    , uniform_buffers_{uniform_buffers}
+    , view_proj_uniform_buffers_{view_proj_uniform_buffers}
+    , material_uniform_buffers_{material_uniform_buffers}
     , frames_in_flight_{max_frames_in_flight}
     , pool_{create_pool_()}
 {
@@ -47,25 +49,43 @@ auto VulkanDescriptorPool::allocate_descriptor_sets(
 
     for (std::size_t i = 0; i < frames_in_flight; ++i)
     {
-        auto ubo_vp_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
-        ubo_vp_descriptor_buffer_info.buffer = uniform_buffers_.at(i).native_handle();
-        ubo_vp_descriptor_buffer_info.offset = 0;
-        ubo_vp_descriptor_buffer_info.range = sizeof(ubo_vp);
+        auto view_proj_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
+        view_proj_descriptor_buffer_info.buffer = view_proj_uniform_buffers_.at(i).native_handle();
+        view_proj_descriptor_buffer_info.offset = 0;
+        view_proj_descriptor_buffer_info.range = sizeof(UBO_ViewProj);
 
-        auto ubo_write_descriptor_set = ::vk::WriteDescriptorSet{};
-        ubo_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
-        ubo_write_descriptor_set.pNext = nullptr;
-        ubo_write_descriptor_set.dstSet = descriptor_sets.at(i);
-        ubo_write_descriptor_set.dstBinding = 0;
-        ubo_write_descriptor_set.dstArrayElement = 0;
-        ubo_write_descriptor_set.descriptorCount = 1;
-        ubo_write_descriptor_set.descriptorType = ::vk::DescriptorType::eUniformBuffer;
-        ubo_write_descriptor_set.pImageInfo = nullptr;
-        ubo_write_descriptor_set.pBufferInfo = &ubo_vp_descriptor_buffer_info;
-        ubo_write_descriptor_set.pTexelBufferView = nullptr;
+        auto view_proj_write_descriptor_set = ::vk::WriteDescriptorSet{};
+        view_proj_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
+        view_proj_write_descriptor_set.pNext = nullptr;
+        view_proj_write_descriptor_set.dstSet = descriptor_sets.at(i);
+        view_proj_write_descriptor_set.dstBinding = 0;
+        view_proj_write_descriptor_set.dstArrayElement = 0;
+        view_proj_write_descriptor_set.descriptorCount = 1;
+        view_proj_write_descriptor_set.descriptorType = ::vk::DescriptorType::eUniformBuffer;
+        view_proj_write_descriptor_set.pImageInfo = nullptr;
+        view_proj_write_descriptor_set.pBufferInfo = &view_proj_descriptor_buffer_info;
+        view_proj_write_descriptor_set.pTexelBufferView = nullptr;
+
+        auto material_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
+        material_descriptor_buffer_info.buffer = material_uniform_buffers_.at(i).native_handle();
+        material_descriptor_buffer_info.offset = 0;
+        material_descriptor_buffer_info.range = sizeof(UBO_Material);
+
+        auto material_write_descriptor_set = ::vk::WriteDescriptorSet{};
+        material_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
+        material_write_descriptor_set.pNext = nullptr;
+        material_write_descriptor_set.dstSet = descriptor_sets.at(i);
+        material_write_descriptor_set.dstBinding = 2;
+        material_write_descriptor_set.dstArrayElement = 0;
+        material_write_descriptor_set.descriptorCount = 1;
+        material_write_descriptor_set.descriptorType = ::vk::DescriptorType::eUniformBuffer;
+        material_write_descriptor_set.pImageInfo = nullptr;
+        material_write_descriptor_set.pBufferInfo = &material_descriptor_buffer_info;
+        material_write_descriptor_set.pTexelBufferView = nullptr;
 
         auto descriptors = std::array{
-            ubo_write_descriptor_set,
+            view_proj_write_descriptor_set,
+            material_write_descriptor_set,
         };
 
         device_.native_handle().updateDescriptorSets(descriptors, {});
@@ -76,17 +96,22 @@ auto VulkanDescriptorPool::allocate_descriptor_sets(
 
 auto VulkanDescriptorPool::create_pool_() -> ::vk::raii::DescriptorPool
 {
-    auto vertex_pool_size = ::vk::DescriptorPoolSize{};
-    vertex_pool_size.type = ::vk::DescriptorType::eUniformBuffer;
-    vertex_pool_size.descriptorCount = frames_in_flight_;
+    auto view_matrix_pool_size = ::vk::DescriptorPoolSize{};
+    view_matrix_pool_size.type = ::vk::DescriptorType::eUniformBuffer;
+    view_matrix_pool_size.descriptorCount = frames_in_flight_;
 
     auto sampler_pool_size = ::vk::DescriptorPoolSize{};
     sampler_pool_size.type = ::vk::DescriptorType::eCombinedImageSampler;
     sampler_pool_size.descriptorCount = frames_in_flight_;
 
+    auto material_pool_size = ::vk::DescriptorPoolSize{};
+    material_pool_size.type = ::vk::DescriptorType::eUniformBuffer;
+    material_pool_size.descriptorCount = frames_in_flight_;
+
     auto pool_sizes = std::array{
-        vertex_pool_size,
+        view_matrix_pool_size,
         sampler_pool_size,
+        material_pool_size,
     };
 
     auto pool_create_info = ::vk::DescriptorPoolCreateInfo{};

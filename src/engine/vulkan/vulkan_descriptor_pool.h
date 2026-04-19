@@ -16,7 +16,8 @@ class VulkanDescriptorPool
   public:
     VulkanDescriptorPool(
         const VulkanDevice &device,
-        const std::vector<VulkanGpuBuffer> &uniform_buffers,
+        const std::vector<VulkanGpuBuffer> &view_proj_uniform_buffers,
+        const std::vector<VulkanGpuBuffer> &material_uniform_buffers,
         const std::uint32_t max_frames_in_flight);
     ~VulkanDescriptorPool() = default;
 
@@ -34,7 +35,8 @@ class VulkanDescriptorPool
     auto create_pool_() -> ::vk::raii::DescriptorPool;
 
     const VulkanDevice &device_;
-    const std::vector<VulkanGpuBuffer> &uniform_buffers_;
+    const std::vector<VulkanGpuBuffer> &view_proj_uniform_buffers_;
+    const std::vector<VulkanGpuBuffer> &material_uniform_buffers_;
     std::uint32_t frames_in_flight_;
     ::vk::raii::DescriptorPool pool_;
 };

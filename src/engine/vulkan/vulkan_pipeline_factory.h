@@ -1,12 +1,6 @@
 #pragma once
 
-#include <cstdint>
-#include <string>
-#include <vector>
-
 #include <vulkan/vulkan_raii.hpp>
-
-#include "graphics/shader.h"
 
 namespace pong
 {
@@ -21,7 +15,7 @@ struct VulkanPipelineResources
 {
     ::vk::raii::PipelineLayout layout;
     ::vk::raii::Pipeline pipeline;
-    std::vector<::vk::raii::DescriptorSetLayout> descriptor_set_layouts;
+    ::vk::raii::DescriptorSetLayout descriptor_set_layout;
 }; // struct VulkanPipelineResources
 
 class VulkanPipelineFactory

@@ -1,7 +1,6 @@
 #include "vulkan_pipeline_factory.h"
 
 #include <cstdint>
-#include <ranges>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -35,12 +34,12 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     auto &vertex_shader = resource_manager_.get<Shader>(ShaderHandle{hash_string("simple.vert")});
     auto &fragment_shader = resource_manager_.get<Shader>(ShaderHandle{hash_string("simple.frag")});
 
-    auto vertex_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
-    vertex_ubo_layout_binding.binding = 0u;
-    vertex_ubo_layout_binding.descriptorType = ::vk::DescriptorType::eUniformBuffer;
-    vertex_ubo_layout_binding.descriptorCount = 1u;
-    vertex_ubo_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eVertex;
-    vertex_ubo_layout_binding.pImmutableSamplers = nullptr;
+    auto view_proj_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
+    view_proj_ubo_layout_binding.binding = 0u;
+    view_proj_ubo_layout_binding.descriptorType = ::vk::DescriptorType::eUniformBuffer;
+    view_proj_ubo_layout_binding.descriptorCount = 1u;
+    view_proj_ubo_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eVertex;
+    view_proj_ubo_layout_binding.pImmutableSamplers = nullptr;
 
     auto texture_sampler_layout_binding = ::vk::DescriptorSetLayoutBinding{};
     texture_sampler_layout_binding.binding = 1u;
@@ -49,9 +48,17 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     texture_sampler_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eFragment;
     texture_sampler_layout_binding.pImmutableSamplers = nullptr;
 
+    auto material_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
+    material_ubo_layout_binding.binding = 2u;
+    material_ubo_layout_binding.descriptorType = ::vk::DescriptorType::eUniformBuffer;
+    material_ubo_layout_binding.descriptorCount = 1u;
+    material_ubo_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eFragment;
+    material_ubo_layout_binding.pImmutableSamplers = nullptr;
+
     auto layout_bindings = std::vector{
-        vertex_ubo_layout_binding,
+        view_proj_ubo_layout_binding,
         texture_sampler_layout_binding,
+        material_ubo_layout_binding,
     };
 
     auto descriptor_set_layout_create_info = ::vk::DescriptorSetLayoutCreateInfo{};
@@ -61,12 +68,10 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     descriptor_set_layout_create_info.bindingCount = static_cast<std::uint32_t>(layout_bindings.size());
     descriptor_set_layout_create_info.pBindings = layout_bindings.data();
 
-    auto descriptor_set_layouts = std::vector<::vk::raii::DescriptorSetLayout>{};
-    descriptor_set_layouts.emplace_back(device_.native_handle(), descriptor_set_layout_create_info);
+    auto descriptor_set_layout =
+        ::vk::raii::DescriptorSetLayout{device_.native_handle(), descriptor_set_layout_create_info};
 
-    auto descriptor_set_pipeline_layout_array =
-        std::views::transform(descriptor_set_layouts, [](const auto &e) { return *e; })
-        | std::ranges::to<std::vector>();
+    auto descriptor_set_pipeline_layout_array = std::vector{*descriptor_set_layout};
 
     auto model_push_constant_range = ::vk::PushConstantRange{};
     model_push_constant_range.stageFlags = ::vk::ShaderStageFlagBits::eVertex;
@@ -266,7 +271,7 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     return {
         .layout = std::move(pipeline_layout),
         .pipeline = std::move(pipeline),
-        .descriptor_set_layouts = std::move(descriptor_set_layouts),
+        .descriptor_set_layout = std::move(descriptor_set_layout),
     };
 }
 
