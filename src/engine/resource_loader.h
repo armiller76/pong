@@ -6,9 +6,9 @@
 #include <vector>
 
 #include "core/resource_handles.h"
+#include "core/scene.h"
 #include "engine/vulkan/vulkan_immediate_command_context.h"
 #include "gltf/fastgltf_primitives.h"
-#include "gltf/fastgltf_wrapper.h"
 #include "resource_manager.h"
 
 namespace pong
@@ -16,7 +16,6 @@ namespace pong
 
 class Entity;
 class Image;
-class Scene;
 class VulkanDevice;
 enum class ShaderStage;
 
@@ -41,6 +40,7 @@ class ResourceLoader
     std::filesystem::path absolute_path_to_assets_;
     ResourceManager &resource_manager_;
 
+    auto upload_texture_(const LoadedAsset &asset, std::size_t texture_index) -> Texture2DHandle;
     auto process_loaded_node_(const LoadedAsset &asset, const LoadedNode &node, std::vector<Entity> &entities)
         -> EntityIndex;
     auto get_resource_id_(std::string_view name) -> std::uint64_t;

@@ -6,11 +6,17 @@
 #include <string_view>
 #include <vector>
 
+#include "stb_image/stb_image.h"
+
 #include "core/entity.h"
+#include "core/resource_handles.h"
 #include "core/scene.h"
 #include "engine/file.h"
 #include "engine/vulkan/vulkan_device.h"
+#include "gltf/fastgltf_wrapper.h"
+#include "graphics/image.h"
 #include "graphics/shader.h"
+#include "graphics/texture2d.h"
 #include "graphics/utils.h"
 #include "resource_manager.h"
 #include "utils/hash.h"
@@ -81,8 +87,34 @@ auto ResourceLoader::load(std::string_view name, Image &image) -> Texture2DHandl
     return resource_manager_.insert<Texture2D>(name, std::move(texture));
 }
 
+auto ResourceLoader::upload_texture_(const LoadedAsset &asset, std::size_t texture_index) -> Texture2DHandle
+{
+    auto &loaded_texture = asset.textures[texture_index];
+    auto &loaded_image = asset.images[loaded_texture.image_index];
+    auto &data = loaded_image.data;
+    auto width = int{};
+    auto height = int{};
+    auto num_channels = int{};
+    auto pixels = stbi_load_from_memory(
+        reinterpret_cast<const stbi_uc *>(data.data()),
+        static_cast<int>(data.size()),
+        &width,
+        &height,
+        &num_channels,
+        STBI_rgb_alpha);
+    auto extent = Extent2D{static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height)};
+    auto image = Image{
+        loaded_image.name,
+        extent,
+        ImageFormat::RGBA8,
+        {pixels, static_cast<std::size_t>(width) * height * STBI_rgb_alpha}};
+    auto result = resource_manager_.insert<Texture2D>(loaded_image.name, {image, device_});
+    stbi_image_free(pixels);
+    return result;
+}
+
 auto ResourceLoader::process_loaded_node_(
-    const LoadedAsset &asset,
+    const LoadedAsset &loaded_asset,
     const LoadedNode &node,
     std::vector<Entity> &entities) -> EntityIndex
 {
@@ -97,9 +129,9 @@ auto ResourceLoader::process_loaded_node_(
         arm::log::debug("  - node has mesh_index");
         auto mesh_index = node.mesh_index.value();
         auto model = Model{};
-        model.name = asset.meshes[mesh_index].name;
+        model.name = loaded_asset.meshes[mesh_index].name;
 
-        const auto &primitives = asset.meshes[mesh_index].primitives;
+        const auto &primitives = loaded_asset.meshes[mesh_index].primitives;
         arm::log::debug("  - node has {} primitives", primitives.size());
 
         for (auto i = 0zu; i < primitives.size(); ++i)
@@ -112,10 +144,32 @@ auto ResourceLoader::process_loaded_node_(
             auto renderable = Renderable{};
             if (primitives[i].material_index.has_value())
             {
-                auto material_name = asset.materials[primitives[i].material_index.value()].name;
-                auto material_handle = resource_manager_.insert<Material>(material_name, {material_name});
+                auto &loaded_material = loaded_asset.materials[primitives[i].material_index.value()];
+                auto material = Material{};
+                material.name = loaded_material.name;
+                material.base_color_factor = loaded_material.base_color_factor;
+                material.metallic_factor = loaded_material.metallic_factor;
+                material.roughness_factor = loaded_material.roughness_factor;
+                material.alpha_mode = loaded_material.alpha_mode;
+                if (loaded_material.base_color_texture_index.has_value())
+                {
+                    material.base_color_texture_handle = std::make_optional(
+                        upload_texture_(loaded_asset, loaded_material.base_color_texture_index.value()));
+                }
+                if (loaded_material.metallic_roughness_texture_index.has_value())
+                {
+                    material.metallic_roughness_texture_handle = std::make_optional(
+                        upload_texture_(loaded_asset, loaded_material.metallic_roughness_texture_index.value()));
+                }
+                if (loaded_material.normal_texture.has_value())
+                {
+                    material.normal_texture_handle =
+                        std::make_optional(upload_texture_(loaded_asset, loaded_material.normal_texture.value()));
+                }
+
+                auto material_handle = resource_manager_.insert<Material>(material.name, std::move(material));
                 renderable = Renderable{mesh_handle, std::make_optional(material_handle)};
-                arm::log::debug("    - with material {} {}", material_name, material_handle.value);
+                arm::log::debug("    - with material {} {:#x}", loaded_material.name, material_handle.value);
             }
             else
             {
@@ -129,15 +183,15 @@ auto ResourceLoader::process_loaded_node_(
     else
     {
         // mesh_index does not have a value. could be transform-only, camera, light, skin
-        // do stuff with those here. for now, we'll just explicitly state that there's no model for this entity, even
-        // tho it default constructs that way
+        // do stuff with those here. for now, we'll just explicitly state that there's no model for this entity,
+        // even tho it default constructs that way
         entity.model() = std::nullopt;
     }
 
     for (auto i = 0zu; i < node.child_indices.size(); ++i)
     {
         arm::log::debug("Moving to child node, index #{}", node.child_indices[i]);
-        entity.add_child(process_loaded_node_(asset, asset.nodes[node.child_indices[i]], entities));
+        entity.add_child(process_loaded_node_(loaded_asset, loaded_asset.nodes[node.child_indices[i]], entities));
     }
 
     arm::log::debug("Creating entity \"{}\"", entity.name());
