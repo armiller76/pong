@@ -22,6 +22,7 @@ target_link_libraries(
   engine
   PUBLIC glm::glm
          imgui
+         stb_image
 )
 
 if(ENABLE_SPIRV_VALIDATION)

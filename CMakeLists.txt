@@ -142,6 +142,7 @@ if(MSVC)
   )
 endif()
 add_subdirectory(third-party/gltf)
+add_subdirectory(third-party/stb_image)
 
 add_subdirectory(assets/shaders)
 add_subdirectory(src)
