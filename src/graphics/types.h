@@ -10,7 +10,13 @@ enum class AlphaMode
     Blend,
 };
 
-enum class FilterMode
+enum class MagFilterMode
+{
+    Nearest,
+    Linear,
+};
+
+enum class MinFilterMode
 {
     Nearest,
     Linear,

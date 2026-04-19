@@ -329,13 +329,12 @@ auto FastGLTFWrapper::extract_samplers_(::fastgltf::Asset &asset, LoadedAsset &l
         {
             auto loaded_sampler = LoadedSampler{};
 
-            loaded_sampler.mag_filter =
-                sampler.magFilter.has_value() ? to_pong(sampler.magFilter.value()) : loaded_sampler.mag_filter;
-            arm::ensure(
-                loaded_sampler.mag_filter == FilterMode::Linear || loaded_sampler.mag_filter == FilterMode::Nearest,
-                "sampler MagFilter cannot use mipmaps");
-            loaded_sampler.min_filter =
-                sampler.minFilter.has_value() ? to_pong(sampler.minFilter.value()) : loaded_sampler.min_filter;
+            loaded_sampler.mag_filter = sampler.magFilter.has_value()
+                                            ? to_pong<MagFilterMode>(sampler.magFilter.value())
+                                            : loaded_sampler.mag_filter;
+            loaded_sampler.min_filter = sampler.minFilter.has_value()
+                                            ? to_pong<MinFilterMode>(sampler.minFilter.value())
+                                            : loaded_sampler.min_filter;
             loaded_sampler.wrap_u = to_pong(sampler.wrapS);
             loaded_sampler.wrap_v = to_pong(sampler.wrapT);
             loaded_asset.samplers.push_back(loaded_sampler);

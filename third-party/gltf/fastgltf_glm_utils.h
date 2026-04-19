@@ -3,7 +3,8 @@
 #include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
 
-#include "graphics/glm_wrapper.h"
+#include "graphics/glm_wrapper.h" //IWYU pragma: keep
+#include "graphics/types.h"
 #include "utils/exception.h"
 
 // specializations so fastgltf can fill out glm vectors
@@ -66,18 +67,32 @@ constexpr auto inline to_pong(::fastgltf::AlphaMode alpha_mode) -> AlphaMode
     }
 }
 
-auto inline to_pong(::fastgltf::Filter filter) -> FilterMode
+template <typename T>
+auto inline to_pong(::fastgltf::Filter filter) -> T
 {
-    switch (filter)
+    if constexpr (std::is_same_v<T, MagFilterMode>)
     {
-        using enum ::fastgltf::Filter;
-        case Nearest: FilterMode::Nearest;
-        case Linear: FilterMode::Linear;
-        case NearestMipMapNearest: FilterMode::NearestMipmapNearest;
-        case NearestMipMapLinear: FilterMode::NearestMipmapLinear;
-        case LinearMipMapNearest: FilterMode::LinearMipmapNearest;
-        case LinearMipMapLinear: FilterMode::LinearMipmapLinear;
-        default: throw arm::Exception("unknown FilterMode");
+        switch (filter)
+        {
+            using enum ::fastgltf::Filter;
+            case Nearest: return T::Nearest;
+            case Linear: return T::Linear;
+            default: throw arm::Exception("unknown FilterMode");
+        }
+    }
+    else
+    {
+        switch (filter)
+        {
+            using enum ::fastgltf::Filter;
+            case Nearest: return T::Nearest;
+            case Linear: return T::Linear;
+            case NearestMipMapNearest: return T::NearestMipmapNearest;
+            case NearestMipMapLinear: return T::NearestMipmapLinear;
+            case LinearMipMapNearest: return T::LinearMipmapNearest;
+            case LinearMipMapLinear: return T::LinearMipmapLinear;
+            default: throw arm::Exception("unknown FilterMode");
+        }
     }
 }
 

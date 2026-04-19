@@ -69,8 +69,8 @@ struct LoadedImage
 struct LoadedSampler
 {
     // mag_filter can only be Nearest or Linear! No Mipmaps!
-    FilterMode mag_filter = FilterMode::Linear;
-    FilterMode min_filter = FilterMode::Linear;
+    MagFilterMode mag_filter = MagFilterMode::Linear;
+    MinFilterMode min_filter = MinFilterMode::Linear;
     WrapMode wrap_u = WrapMode::Repeat;
     WrapMode wrap_v = WrapMode::Repeat;
 };
