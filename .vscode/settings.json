@@ -1,5 +1,6 @@
 {
     "todo-tree.tree.scanMode": "workspace",
     "C_Cpp.intelliSenseEngine": "disabled",
-    "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json"
+    "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
+    "vim.surround": true
 }
