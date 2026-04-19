@@ -1,11 +1,11 @@
 #version 450
 
-layout(binding = 0) uniform UBO
+layout(std140, binding = 0) uniform UBO
 {
     mat4 view;
     mat4 proj;
 }
-ubo_mvp;
+ubo_vp;
 
 layout(push_constant) uniform PushConstants
 {
@@ -24,7 +24,7 @@ layout(location = 2) out vec2 out_uv;
 
 void main()
 {
-    gl_Position = ubo_mvp.proj * ubo_mvp.view * push_model.model * vec4(in_position, 1.0);
+    gl_Position = ubo_vp.proj * ubo_vp.view * push_model.model * vec4(in_position, 1.0);
     out_color = in_color;
 
     // TODO this won't work with non-uniform scaling. Use inverse transpose of model matrix ($$$)
