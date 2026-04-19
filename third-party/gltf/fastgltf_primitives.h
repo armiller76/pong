@@ -2,42 +2,17 @@
 
 #include <cstddef>
 #include <cstdint>
-#include <filesystem>
 #include <optional>
 #include <string>
-#include <variant>
 #include <vector>
 
-#include "graphics/glm_wrapper.h"
+#include "graphics/glm_wrapper.h" // IWYU pragma: keep
+#include "graphics/types.h"
 #include "graphics/vertex.h"
 #include "math/transform.h"
 
 namespace pong
 {
-
-enum class AlphaMode
-{
-    Opaque,
-    Mask,
-    Blend,
-};
-
-enum class FilterMode
-{
-    Nearest,
-    Linear,
-    NearestMipmapNearest,
-    LinearMipmapNearest,
-    NearestMipmapLinear,
-    LinearMipmapLinear,
-};
-
-enum class WrapMode
-{
-    Repeat,
-    MirroredRepeat,
-    ClampToEdge,
-};
 
 struct LoadedPrimitive
 {
