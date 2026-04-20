@@ -32,22 +32,20 @@ auto VulkanDescriptorPool::native_handle() const -> ::vk::DescriptorPool
     return *pool_;
 }
 
-auto VulkanDescriptorPool::allocate_descriptor_sets(
-    const ::vk::DescriptorSetLayout &layout,
-    std::uint32_t frames_in_flight) -> std::vector<vk::raii::DescriptorSet>
+auto VulkanDescriptorPool::allocate_per_frame_descriptor_sets(const ::vk::raii::DescriptorSetLayout &layout)
+    -> std::vector<vk::raii::DescriptorSet>
 {
-    auto layouts = std::vector<::vk::DescriptorSetLayout>(frames_in_flight, layout);
-
+    auto layout_array = std::vector(frames_in_flight_, *layout);
     auto descriptor_set_allocate_info = ::vk::DescriptorSetAllocateInfo{};
     descriptor_set_allocate_info.sType = ::vk::StructureType::eDescriptorSetAllocateInfo;
     descriptor_set_allocate_info.pNext = nullptr;
     descriptor_set_allocate_info.descriptorPool = *pool_;
-    descriptor_set_allocate_info.descriptorSetCount = static_cast<std::uint32_t>(layouts.size());
-    descriptor_set_allocate_info.pSetLayouts = layouts.data();
+    descriptor_set_allocate_info.descriptorSetCount = static_cast<std::uint32_t>(layout_array.size());
+    descriptor_set_allocate_info.pSetLayouts = layout_array.data();
 
     auto descriptor_sets = device_.native_handle().allocateDescriptorSets(descriptor_set_allocate_info);
 
-    for (std::size_t i = 0; i < frames_in_flight; ++i)
+    for (std::size_t i = 0; i < frames_in_flight_; ++i)
     {
         auto view_proj_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
         view_proj_descriptor_buffer_info.buffer = view_proj_uniform_buffers_.at(i).native_handle();
@@ -75,7 +73,7 @@ auto VulkanDescriptorPool::allocate_descriptor_sets(
         material_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
         material_write_descriptor_set.pNext = nullptr;
         material_write_descriptor_set.dstSet = descriptor_sets.at(i);
-        material_write_descriptor_set.dstBinding = 2;
+        material_write_descriptor_set.dstBinding = 1;
         material_write_descriptor_set.dstArrayElement = 0;
         material_write_descriptor_set.descriptorCount = 1;
         material_write_descriptor_set.descriptorType = ::vk::DescriptorType::eUniformBuffer;
@@ -94,31 +92,44 @@ auto VulkanDescriptorPool::allocate_descriptor_sets(
     return descriptor_sets;
 } // allocate_descriptor_sets
 
+auto VulkanDescriptorPool::allocate_single_descriptor_set(const ::vk::raii::DescriptorSetLayout &layout)
+    -> vk::raii::DescriptorSet
+{
+    auto layout_array = std::vector{
+        *layout,
+    };
+    auto descriptor_set_allocate_info = ::vk::DescriptorSetAllocateInfo{};
+    descriptor_set_allocate_info.sType = ::vk::StructureType::eDescriptorSetAllocateInfo;
+    descriptor_set_allocate_info.pNext = nullptr;
+    descriptor_set_allocate_info.descriptorPool = *pool_;
+    descriptor_set_allocate_info.descriptorSetCount = static_cast<std::uint32_t>(layout_array.size());
+    descriptor_set_allocate_info.pSetLayouts = layout_array.data();
+    return std::move(device_.native_handle().allocateDescriptorSets(descriptor_set_allocate_info)[0]);
+}
+
 auto VulkanDescriptorPool::create_pool_() -> ::vk::raii::DescriptorPool
 {
-    auto view_matrix_pool_size = ::vk::DescriptorPoolSize{};
-    view_matrix_pool_size.type = ::vk::DescriptorType::eUniformBuffer;
-    view_matrix_pool_size.descriptorCount = frames_in_flight_;
+    constexpr auto MAX_MATERIALS = 100u; // TODO MAGIC NUMBER
+
+    auto ubo_pool_size = ::vk::DescriptorPoolSize{};
+    ubo_pool_size.type = ::vk::DescriptorType::eUniformBuffer;
+    ubo_pool_size.descriptorCount = frames_in_flight_ * 2u; // one vert/proj, one material UBO, per frame
 
     auto sampler_pool_size = ::vk::DescriptorPoolSize{};
     sampler_pool_size.type = ::vk::DescriptorType::eCombinedImageSampler;
-    sampler_pool_size.descriptorCount = frames_in_flight_;
-
-    auto material_pool_size = ::vk::DescriptorPoolSize{};
-    material_pool_size.type = ::vk::DescriptorType::eUniformBuffer;
-    material_pool_size.descriptorCount = frames_in_flight_;
+    sampler_pool_size.descriptorCount =
+        MAX_MATERIALS * 3; // potentially 3 samplers per material // TODO fix magic number
 
     auto pool_sizes = std::array{
-        view_matrix_pool_size,
+        ubo_pool_size,
         sampler_pool_size,
-        material_pool_size,
     };
 
     auto pool_create_info = ::vk::DescriptorPoolCreateInfo{};
     pool_create_info.sType = ::vk::StructureType::eDescriptorPoolCreateInfo;
     pool_create_info.pNext = nullptr;
     pool_create_info.flags = ::vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-    pool_create_info.maxSets = frames_in_flight_;
+    pool_create_info.maxSets = MAX_MATERIALS * 3 + frames_in_flight_;
     pool_create_info.poolSizeCount = static_cast<std::uint32_t>(pool_sizes.size());
     pool_create_info.pPoolSizes = pool_sizes.data();
 
