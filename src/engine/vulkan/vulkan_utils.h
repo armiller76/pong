@@ -2,10 +2,9 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "graphics/image.h"
+#include "graphics/image_format.h"
 #include "graphics/shader.h"
 #include "math/rectangle.h"
-#include "utils/error.h"
 #include "utils/exception.h"
 
 namespace pong

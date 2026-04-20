@@ -1,7 +1,5 @@
 #pragma once
 
-#include <cstddef>
-
 #include <vulkan/vulkan_raii.hpp>
 
 namespace pong
