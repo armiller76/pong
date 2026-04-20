@@ -3,6 +3,8 @@
 #include <optional>
 #include <string>
 
+#include <vulkan/vulkan_raii.hpp>
+
 #include "core/resource_handles.h"
 #include "graphics/glm_wrapper.h" // IWYU pragma: keep
 #include "graphics/types.h"
@@ -20,6 +22,13 @@ struct Material
     std::optional<Texture2DHandle> metallic_roughness_texture_handle;
     std::optional<Texture2DHandle> normal_texture_handle;
     AlphaMode alpha_mode;
+    ::vk::raii::DescriptorSet descriptor_set;
+
+    Material()
+        : descriptor_set{nullptr}
+    {
+    }
+
 }; // struct Material
 
 } // namespace pong
