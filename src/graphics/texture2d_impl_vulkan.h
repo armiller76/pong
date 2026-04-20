@@ -7,7 +7,6 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "engine/vulkan/vulkan_gpu_image.h"
-#include "math/rectangle.h"
 
 namespace pong
 

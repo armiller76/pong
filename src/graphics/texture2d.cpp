@@ -2,14 +2,13 @@
 
 #include <cstdint>
 #include <memory>
-#include <span>
-#include <string>
 #include <string_view>
+
+#include <vulkan/vulkan_raii.hpp>
 
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_utils.h"
 #include "image.h"
-#include "math/rectangle.h"
 #include "texture2d_impl_vulkan.h"
 
 namespace pong
@@ -40,6 +39,16 @@ auto Texture2D::width() const -> std::uint32_t
 auto Texture2D::height() const -> std::uint32_t
 {
     return impl_->height();
+}
+
+auto Texture2D::image_view() const -> ::vk::ImageView
+{
+    return impl_->image_view();
+}
+
+auto Texture2D::sampler() const -> ::vk::Sampler
+{
+    return impl_->sampler();
 }
 
 auto Texture2D::upload_pixels(VulkanImmediateCommandContext &command_context, const Image &image) -> void

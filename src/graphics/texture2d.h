@@ -1,13 +1,12 @@
 #pragma once
 
 #include <memory>
-#include <span>
-#include <string>
 #include <string_view>
+
+#include <vulkan/vulkan_raii.hpp>
 
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_gpu_image.h"
-#include "math/rectangle.h"
 #include "texture2d_impl_vulkan.h"
 
 namespace pong
@@ -30,6 +29,8 @@ class Texture2D
     auto name() const -> std::string_view;
     auto width() const -> std::uint32_t;
     auto height() const -> std::uint32_t;
+    auto image_view() const -> ::vk::ImageView;
+    auto sampler() const -> ::vk::Sampler;
 
     // TODO consider the pixel upload path returning pixels_uploaded or some confirmation of success?
     auto upload_pixels(VulkanImmediateCommandContext &command_context, const Image &image) -> void;
