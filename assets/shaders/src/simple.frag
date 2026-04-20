@@ -1,11 +1,10 @@
 #version 450
 
-// layout binding = 0 is used in the vertex shader view/proj matrix.
-// 0 could be reused here, but to avoid confusing myself, keeping all UBO bindings unique for now
+layout(set = 1, binding = 0) uniform sampler2D base_color_factor_sampler;
+layout(set = 1, binding = 1) uniform sampler2D metallic_factor_sampler;
+layout(set = 1, binding = 2) uniform sampler2D normal_sampler;
 
-layout(binding = 1) uniform sampler2D tex_sampler;
-
-layout(std140, binding = 2) uniform Material
+layout(std140, set = 0, binding = 1) uniform Material
 {
     vec4 base_color_factor;
     float metallic_factor;
@@ -21,5 +20,6 @@ layout(location = 0) out vec4 out_color;
 
 void main()
 {
-    out_color = vec4(ubo_material.base_color_factor.xyz, 1.0);
+    // out_color = vec4(ubo_material.base_color_factor.xyz, 1.0);
+    out_color = texture(base_color_factor_sampler, in_uv) * ubo_material.base_color_factor;
 }
