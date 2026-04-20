@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <format>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "stb_image/stb_image.h"
@@ -31,11 +32,18 @@ ResourceLoader::ResourceLoader(
     ResourceManager &resource_manager,
     std::filesystem::path absolute_path_to_assets)
     : device_{device}
-    , command_context_{device_, "resource_loader_command_context"sv}
-    , absolute_path_to_assets_{absolute_path_to_assets}
     , resource_manager_{resource_manager}
+    , absolute_path_to_assets_{absolute_path_to_assets}
+    , command_context_{device_, "resource_loader_command_context"sv}
 {
     arm::log::debug("ResourceLoader constructor");
+    constexpr auto white = std::array<std::uint8_t, 4>{255u, 255u, 255u, 255u};
+    auto image = Image{"white_1x1", Extent2D{1u, 1u}, ImageFormat::RGBA8, white};
+    auto fallback_texture = Texture2D(image, device_);
+    fallback_texture.upload_pixels(command_context_, image);
+    fallback_texture_handle_ =
+        std::make_optional(resource_manager_.insert<Texture2D>("fallback_1x1_white", std::move(fallback_texture)));
+    arm::ensure(fallback_texture_handle_.has_value(), "failed to create fallback texture");
 }
 
 auto ResourceLoader::loadgltf(std::filesystem::path path) -> Scene
@@ -87,6 +95,18 @@ auto ResourceLoader::load(std::string_view name, Image &image) -> Texture2DHandl
     return resource_manager_.insert<Texture2D>(name, std::move(texture));
 }
 
+auto ResourceLoader::get_or_fallback_(std::optional<Texture2DHandle> texture_handle) -> Texture2D &
+{
+    if (texture_handle.has_value())
+    {
+        if (resource_manager_.contains<Texture2D>(texture_handle.value()))
+        {
+            return resource_manager_.get<Texture2D>(texture_handle.value());
+        }
+    }
+    return resource_manager_.get<Texture2D>(fallback_texture_handle_.value());
+}
+
 auto ResourceLoader::upload_texture_(const LoadedAsset &asset, std::size_t texture_index) -> Texture2DHandle
 {
     auto &loaded_texture = asset.textures[texture_index];
@@ -108,8 +128,13 @@ auto ResourceLoader::upload_texture_(const LoadedAsset &asset, std::size_t textu
         extent,
         ImageFormat::RGBA8,
         {pixels, static_cast<std::size_t>(width) * height * STBI_rgb_alpha}};
-    auto result = resource_manager_.insert<Texture2D>(loaded_image.name, {image, device_});
+
+    auto texture = Texture2D(image, device_);
+    texture.upload_pixels(command_context_, image);
+
+    auto result = resource_manager_.insert<Texture2D>(loaded_image.name, std::move(texture));
     stbi_image_free(pixels);
+
     return result;
 }
 
@@ -166,6 +191,66 @@ auto ResourceLoader::process_loaded_node_(
                     material.normal_texture_handle =
                         std::make_optional(upload_texture_(loaded_asset, loaded_material.normal_texture.value()));
                 }
+
+                auto descriptor_set = resource_manager_.allocate_material_descriptor_set();
+                auto &base_texture = get_or_fallback_(material.base_color_texture_handle);
+                auto &metal_texture = get_or_fallback_(material.metallic_roughness_texture_handle);
+                auto &normal_texture = get_or_fallback_(material.normal_texture_handle);
+
+                auto base_descriptor_image_info = ::vk::DescriptorImageInfo{};
+                base_descriptor_image_info.sampler = base_texture.sampler();
+                base_descriptor_image_info.imageView = base_texture.image_view();
+                base_descriptor_image_info.imageLayout = ::vk::ImageLayout::eShaderReadOnlyOptimal;
+
+                auto metal_descriptor_image_info = ::vk::DescriptorImageInfo{};
+                metal_descriptor_image_info.sampler = metal_texture.sampler();
+                metal_descriptor_image_info.imageView = metal_texture.image_view();
+                metal_descriptor_image_info.imageLayout = ::vk::ImageLayout::eShaderReadOnlyOptimal;
+
+                auto normal_descriptor_image_info = ::vk::DescriptorImageInfo{};
+                normal_descriptor_image_info.sampler = normal_texture.sampler();
+                normal_descriptor_image_info.imageView = normal_texture.image_view();
+                normal_descriptor_image_info.imageLayout = ::vk::ImageLayout::eShaderReadOnlyOptimal;
+
+                auto base_write_descriptor_set = ::vk::WriteDescriptorSet{};
+                base_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
+                base_write_descriptor_set.pNext = nullptr;
+                base_write_descriptor_set.dstSet = *descriptor_set;
+                base_write_descriptor_set.dstBinding = 0;
+                base_write_descriptor_set.dstArrayElement = 0;
+                base_write_descriptor_set.descriptorCount = 1;
+                base_write_descriptor_set.descriptorType = ::vk::DescriptorType::eCombinedImageSampler;
+                base_write_descriptor_set.pImageInfo = &base_descriptor_image_info;
+                base_write_descriptor_set.pBufferInfo = nullptr;
+                base_write_descriptor_set.pTexelBufferView = nullptr;
+
+                auto metal_write_descriptor_set = ::vk::WriteDescriptorSet{};
+                metal_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
+                metal_write_descriptor_set.pNext = nullptr;
+                metal_write_descriptor_set.dstSet = *descriptor_set;
+                metal_write_descriptor_set.dstBinding = 1;
+                metal_write_descriptor_set.dstArrayElement = 0;
+                metal_write_descriptor_set.descriptorCount = 1;
+                metal_write_descriptor_set.descriptorType = ::vk::DescriptorType::eCombinedImageSampler;
+                metal_write_descriptor_set.pImageInfo = &metal_descriptor_image_info;
+                metal_write_descriptor_set.pBufferInfo = nullptr;
+                metal_write_descriptor_set.pTexelBufferView = nullptr;
+
+                auto normal_write_descriptor_set = ::vk::WriteDescriptorSet{};
+                normal_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
+                normal_write_descriptor_set.pNext = nullptr;
+                normal_write_descriptor_set.dstSet = *descriptor_set;
+                normal_write_descriptor_set.dstBinding = 2;
+                normal_write_descriptor_set.dstArrayElement = 0;
+                normal_write_descriptor_set.descriptorCount = 1;
+                normal_write_descriptor_set.descriptorType = ::vk::DescriptorType::eCombinedImageSampler;
+                normal_write_descriptor_set.pImageInfo = &normal_descriptor_image_info;
+                normal_write_descriptor_set.pBufferInfo = nullptr;
+                normal_write_descriptor_set.pTexelBufferView = nullptr;
+
+                device_.native_handle().updateDescriptorSets(
+                    {base_write_descriptor_set, metal_write_descriptor_set, normal_write_descriptor_set}, {});
+                material.descriptor_set = std::move(descriptor_set);
 
                 auto material_handle = resource_manager_.insert<Material>(material.name, std::move(material));
                 renderable = Renderable{mesh_handle, std::make_optional(material_handle)};

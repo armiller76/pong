@@ -6,11 +6,14 @@
 
 #include "core/resource_handles.h"
 #include "core/resource_traits.h"
+#include "engine/vulkan/vulkan_render_utils.h"
 #include "graphics/material.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
 #include "graphics/texture2d.h"
 #include "utils/error.h"
+#include "vulkan/vulkan_descriptor_pool.h"
+#include "vulkan/vulkan_render_utils.h"
 
 namespace pong
 {
@@ -21,6 +24,8 @@ class ResourceManager
 {
   public:
     explicit ResourceManager()
+        : descriptor_pool_{nullptr}
+        , pipeline_resources_{nullptr}
     {
         arm::log::debug("ResourceManager constructor");
     }
@@ -30,6 +35,21 @@ class ResourceManager
     auto operator=(const ResourceManager &) -> ResourceManager & = delete;
     ResourceManager(ResourceManager &&) noexcept = delete;
     auto operator=(ResourceManager &&) noexcept -> ResourceManager & = delete;
+
+    auto allocate_material_descriptor_set() -> ::vk::raii::DescriptorSet
+    {
+        return descriptor_pool_->allocate_single_descriptor_set(pipeline_resources_->texture_descriptor_set_layout);
+    }
+
+    auto set_pipeline_resources(VulkanPipelineResources &pipeline_resources) -> void
+    {
+        pipeline_resources_ = &pipeline_resources;
+    }
+
+    auto set_descriptor_pool(VulkanDescriptorPool &descriptor_pool) -> void
+    {
+        descriptor_pool_ = &descriptor_pool;
+    }
 
     template <typename ResourceType>
     auto insert(std::string_view name, ResourceType &&obj) ->
@@ -93,6 +113,8 @@ class ResourceManager
     }
 
   private:
+    VulkanDescriptorPool *descriptor_pool_;
+    VulkanPipelineResources *pipeline_resources_;
     std::unordered_map<ShaderHandle, Shader> shaders_;
     std::unordered_map<MeshHandle, Mesh> meshes_;
     std::unordered_map<Texture2DHandle, Texture2D> textures_;
@@ -122,6 +144,24 @@ class ResourceManager
             static_assert(sizeof(MapType) == 0, "unsupported resource type");
             std::unreachable();
         }
+    }
+
+    auto get_descriptor_pool_() const -> const VulkanDescriptorPool *
+    {
+        if (descriptor_pool_ != nullptr)
+        {
+            return descriptor_pool_;
+        }
+        return nullptr;
+    }
+
+    auto get_pipeline_resources_() const -> const VulkanPipelineResources *
+    {
+        if (pipeline_resources_ != nullptr)
+        {
+            return pipeline_resources_;
+        }
+        return nullptr;
     }
 
     static constexpr auto get_resource_id_(std::string_view str) -> std::uint64_t

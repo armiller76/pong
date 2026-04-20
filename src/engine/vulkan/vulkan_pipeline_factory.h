@@ -2,6 +2,8 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "vulkan_render_utils.h"
+
 namespace pong
 {
 
@@ -10,13 +12,6 @@ class ResourceManager;
 class VulkanDevice;
 class VulkanDescriptorPool;
 class VulkanGpuBuffer;
-
-struct VulkanPipelineResources
-{
-    ::vk::raii::PipelineLayout layout;
-    ::vk::raii::Pipeline pipeline;
-    ::vk::raii::DescriptorSetLayout descriptor_set_layout;
-}; // struct VulkanPipelineResources
 
 class VulkanPipelineFactory
 {

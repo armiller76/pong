@@ -36,10 +36,12 @@ class ResourceLoader
 
   private:
     const VulkanDevice &device_;
-    VulkanImmediateCommandContext command_context_;
-    std::filesystem::path absolute_path_to_assets_;
     ResourceManager &resource_manager_;
+    std::filesystem::path absolute_path_to_assets_;
+    VulkanImmediateCommandContext command_context_;
+    std::optional<Texture2DHandle> fallback_texture_handle_;
 
+    auto get_or_fallback_(std::optional<Texture2DHandle> texture_handle) -> Texture2D &;
     auto upload_texture_(const LoadedAsset &asset, std::size_t texture_index) -> Texture2DHandle;
     auto process_loaded_node_(const LoadedAsset &asset, const LoadedNode &node, std::vector<Entity> &entities)
         -> EntityIndex;
