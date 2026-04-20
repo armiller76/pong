@@ -71,11 +71,13 @@ VulkanRenderer::VulkanRenderer(
     , descriptor_pool_{device_, view_proj_uniform_buffers_, material_uniform_buffers_, max_frames_in_flight_}
     , pipeline_factory_{device_, resource_manager_}
     , pipeline_resources_{pipeline_factory_.create_graphics_pipeline(swapchain_.format(), depth_buffer_.format())}
-    , descriptor_sets_{descriptor_pool_
-                           .allocate_descriptor_sets(*pipeline_resources_.descriptor_set_layout, max_frames_in_flight_)}
+    , descriptor_sets_{descriptor_pool_.allocate_per_frame_descriptor_sets(
+          pipeline_resources_.ubo_descriptor_set_layout)}
     , clear_color_{clear_color.r, clear_color.g, clear_color.b, clear_color.a}
 {
     arm::log::debug("VulkanRenderer constructor");
+    resource_manager_.set_pipeline_resources(pipeline_resources_);
+    resource_manager_.set_descriptor_pool(descriptor_pool_);
 }
 
 auto VulkanRenderer::recreate_resources() -> void
@@ -247,10 +249,15 @@ auto VulkanRenderer::record_(
             1.0f});
     command_buffer.setScissor(0, ::vk::Rect2D{::vk::Offset2D{0, 0}, swapchain_.extent()});
     command_buffer.bindDescriptorSets(
-        ::vk::PipelineBindPoint::eGraphics, pipeline_resources_.layout, 0, *descriptor_sets_.at(frame_index), nullptr);
+        ::vk::PipelineBindPoint::eGraphics,
+        pipeline_resources_.layout,
+        /*firstSet=*/0,
+        *descriptor_sets_.at(frame_index),
+        nullptr);
 
     //    iterate draw items
     auto last_mesh = static_cast<const Mesh *>(nullptr);
+    auto last_material = static_cast<const Material *>(nullptr);
     for (const auto &draw_item : draw_items)
     {
         // get mesh and update vertex/index buffers if the mesh has changed since the last draw
@@ -262,22 +269,32 @@ auto VulkanRenderer::record_(
             command_buffer.bindIndexBuffer({mesh.index_buffer().native_handle()}, 0, ::vk::IndexType::eUint32);
         }
 
-        // update material data into UBO
+        // update model matrix
+        command_buffer.pushConstants<::glm::mat4>(
+            *pipeline_resources_.layout, ::vk::ShaderStageFlagBits::eVertex, 0u, draw_item.model);
+
+        // update material data
         if (draw_item.material_handle.has_value())
         {
             auto &draw_item_material = resource_manager_.get<Material>(draw_item.material_handle.value());
-            auto material_data = UBO_Material{
-                .base_color_factor = draw_item_material.base_color_factor,
-                .metallic_factor = draw_item_material.metallic_factor,
-                .roughness_factor = draw_item_material.roughness_factor,
-                .pad1 = 0.0f,
-                .pad2 = 0.0f};
-            material_uniform_buffers_[frame_index].upload(&material_data, sizeof(UBO_Material));
+            if (&draw_item_material != last_material)
+            {
+                last_material = &draw_item_material;
+                auto material_data = UBO_Material{
+                    .base_color_factor = draw_item_material.base_color_factor,
+                    .metallic_factor = draw_item_material.metallic_factor,
+                    .roughness_factor = draw_item_material.roughness_factor,
+                    .pad1 = 0.0f,
+                    .pad2 = 0.0f};
+                command_buffer.bindDescriptorSets(
+                    ::vk::PipelineBindPoint::eGraphics,
+                    pipeline_resources_.layout,
+                    1,
+                    *draw_item_material.descriptor_set,
+                    nullptr);
+                material_uniform_buffers_[frame_index].upload(&material_data, sizeof(UBO_Material));
+            }
         }
-
-        // update model matrix. note that pong::Transform is overloaded to implicitly convert to a mat4
-        command_buffer.pushConstants<::glm::mat4>(
-            *pipeline_resources_.layout, ::vk::ShaderStageFlagBits::eVertex, 0u, draw_item.model);
 
         // draw the current entity
         command_buffer.drawIndexed(mesh.index_count(), 1, 0, 0, 0);
