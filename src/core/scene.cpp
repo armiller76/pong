@@ -32,6 +32,11 @@ auto Scene::insert_entity(Entity &&entity) -> EntityIndex
     return result;
 }
 
+auto Scene::entities() -> std::vector<Entity> &
+{
+    return entities_;
+}
+
 auto Scene::entities() const -> const std::vector<Entity> &
 {
     return entities_;

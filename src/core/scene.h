@@ -18,6 +18,7 @@ class Scene
     auto insert_root(Entity &&entity) -> EntityIndex;
     auto insert_entity(Entity &&entity) -> EntityIndex;
 
+    auto entities() -> std::vector<Entity> &; // TODO get rid of this when not needed for debug
     auto entities() const -> const std::vector<Entity> &;
     auto root_indices() const -> const std::vector<EntityIndex> &;
 
