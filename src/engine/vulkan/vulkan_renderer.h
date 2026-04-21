@@ -73,7 +73,6 @@ class VulkanRenderer
     VulkanSwapchain swapchain_;
     VulkanFrameCommandContext frame_command_context_;
     std::vector<VulkanGpuBuffer> view_proj_uniform_buffers_;
-    std::vector<VulkanGpuBuffer> material_uniform_buffers_;
     DepthBuffer depth_buffer_;
     VulkanDescriptorPool descriptor_pool_;
     VulkanPipelineFactory pipeline_factory_;
