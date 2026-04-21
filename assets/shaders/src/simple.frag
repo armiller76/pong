@@ -4,7 +4,7 @@ layout(set = 1, binding = 0) uniform sampler2D base_color_factor_sampler;
 layout(set = 1, binding = 1) uniform sampler2D metallic_factor_sampler;
 layout(set = 1, binding = 2) uniform sampler2D normal_sampler;
 
-layout(std140, set = 0, binding = 1) uniform Material
+layout(std140, set = 1, binding = 3) uniform Material
 {
     vec4 base_color_factor;
     float metallic_factor;
