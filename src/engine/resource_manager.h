@@ -1,19 +1,17 @@
 #pragma once
 
-#include <cstdint>
 #include <string_view>
 #include <unordered_map>
 
 #include "core/resource_handles.h"
 #include "core/resource_traits.h"
+#include "engine/vulkan/vulkan_descriptor_pool.h"
 #include "engine/vulkan/vulkan_render_utils.h"
 #include "graphics/material.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
 #include "graphics/texture2d.h"
 #include "utils/error.h"
-#include "vulkan/vulkan_descriptor_pool.h"
-#include "vulkan/vulkan_render_utils.h"
 
 namespace pong
 {
@@ -38,7 +36,8 @@ class ResourceManager
 
     auto allocate_material_descriptor_set() -> ::vk::raii::DescriptorSet
     {
-        return descriptor_pool_->allocate_single_descriptor_set(pipeline_resources_->texture_descriptor_set_layout);
+        return descriptor_pool_->allocate_material_descriptor_set(
+            pipeline_resources_->per_material_descriptor_set_layout);
     }
 
     auto set_pipeline_resources(VulkanPipelineResources &pipeline_resources) -> void
@@ -56,7 +55,7 @@ class ResourceManager
         typename ResourceTraits<std::remove_cvref_t<ResourceType>>::handle_type
     {
         using T = std::remove_cvref_t<ResourceType>;
-        const auto key = typename ResourceTraits<T>::handle_type{get_resource_id_(name)};
+        const auto key = typename ResourceTraits<T>::handle_type{get_resource_id(name)};
         auto &map = get_map_<T>();
 
         auto [entry, inserted] = map.try_emplace(key, std::move(obj));
@@ -98,7 +97,7 @@ class ResourceManager
         auto &map = get_map_<ResourceType>();
         if constexpr (std::is_convertible_v<QueryType, std::string_view>)
         {
-            auto key = typename ResourceTraits<ResourceType>::handle_type{get_resource_id_(query)};
+            auto key = typename ResourceTraits<ResourceType>::handle_type{get_resource_id(query)};
             return map.contains(key);
         }
         else if constexpr (std::is_same_v<QueryType, typename ResourceTraits<ResourceType>::handle_type>)
@@ -162,11 +161,6 @@ class ResourceManager
             return pipeline_resources_;
         }
         return nullptr;
-    }
-
-    static constexpr auto get_resource_id_(std::string_view str) -> std::uint64_t
-    {
-        return hash_string(str);
     }
 };
 
