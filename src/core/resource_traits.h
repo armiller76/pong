@@ -5,7 +5,7 @@
 namespace pong
 {
 
-struct Material;
+class Material;
 class Mesh;
 struct Model;
 struct Shader;
