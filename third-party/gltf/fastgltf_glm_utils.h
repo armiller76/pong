@@ -3,7 +3,7 @@
 #include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
 
-#include "graphics/glm_wrapper.h" //IWYU pragma: keep
+#include "graphics/glm_wrapper.h" // IWYU pragma: keep
 #include "graphics/types.h"
 #include "utils/exception.h"
 
