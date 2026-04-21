@@ -35,6 +35,7 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     auto &vertex_shader = resource_manager_.get<Shader>(ShaderHandle{hash_string("simple.vert")});
     auto &fragment_shader = resource_manager_.get<Shader>(ShaderHandle{hash_string("simple.frag")});
 
+    // ---- SET 0 ---- //
     auto view_proj_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
     view_proj_ubo_layout_binding.binding = 0u;
     view_proj_ubo_layout_binding.descriptorType = ::vk::DescriptorType::eUniformBuffer;
@@ -42,28 +43,25 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     view_proj_ubo_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eVertex;
     view_proj_ubo_layout_binding.pImmutableSamplers = nullptr;
 
-    auto material_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
-    material_ubo_layout_binding.binding = 1u;
-    material_ubo_layout_binding.descriptorType = ::vk::DescriptorType::eUniformBuffer;
-    material_ubo_layout_binding.descriptorCount = 1u;
-    material_ubo_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eFragment;
-    material_ubo_layout_binding.pImmutableSamplers = nullptr;
-
-    auto ubo_layout_bindings = std::vector{
+    // ---- SET 0 ---- //
+    auto per_frame_layout_bindings = std::vector{
         view_proj_ubo_layout_binding,
-        material_ubo_layout_binding,
     };
 
-    auto ubo_descriptor_set_layout_create_info = ::vk::DescriptorSetLayoutCreateInfo{};
-    ubo_descriptor_set_layout_create_info.sType = ::vk::StructureType::eDescriptorSetLayoutCreateInfo;
-    ubo_descriptor_set_layout_create_info.pNext = nullptr;
-    ubo_descriptor_set_layout_create_info.flags = {};
-    ubo_descriptor_set_layout_create_info.bindingCount = static_cast<std::uint32_t>(ubo_layout_bindings.size());
-    ubo_descriptor_set_layout_create_info.pBindings = ubo_layout_bindings.data();
+    // ---- SET 0 ---- //
+    auto per_frame_descriptor_set_layout_create_info = ::vk::DescriptorSetLayoutCreateInfo{};
+    per_frame_descriptor_set_layout_create_info.sType = ::vk::StructureType::eDescriptorSetLayoutCreateInfo;
+    per_frame_descriptor_set_layout_create_info.pNext = nullptr;
+    per_frame_descriptor_set_layout_create_info.flags = {};
+    per_frame_descriptor_set_layout_create_info.bindingCount =
+        static_cast<std::uint32_t>(per_frame_layout_bindings.size());
+    per_frame_descriptor_set_layout_create_info.pBindings = per_frame_layout_bindings.data();
 
-    auto ubo_descriptor_set_layout =
-        ::vk::raii::DescriptorSetLayout{device_.native_handle(), ubo_descriptor_set_layout_create_info};
+    // ---- SET 0 ---- //
+    auto per_frame_descriptor_set_layout =
+        ::vk::raii::DescriptorSetLayout{device_.native_handle(), per_frame_descriptor_set_layout_create_info};
 
+    // ---- SET 1 ---- //
     auto base_sampler_layout_binding = ::vk::DescriptorSetLayoutBinding{};
     base_sampler_layout_binding.binding = 0u;
     base_sampler_layout_binding.descriptorType = ::vk::DescriptorType::eCombinedImageSampler;
@@ -71,6 +69,7 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     base_sampler_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eFragment;
     base_sampler_layout_binding.pImmutableSamplers = nullptr;
 
+    // ---- SET 1 ---- //
     auto metal_sampler_layout_binding = ::vk::DescriptorSetLayoutBinding{};
     metal_sampler_layout_binding.binding = 1u;
     metal_sampler_layout_binding.descriptorType = ::vk::DescriptorType::eCombinedImageSampler;
@@ -78,6 +77,7 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     metal_sampler_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eFragment;
     metal_sampler_layout_binding.pImmutableSamplers = nullptr;
 
+    // ---- SET 1 ---- //
     auto normal_sampler_layout_binding = ::vk::DescriptorSetLayoutBinding{};
     normal_sampler_layout_binding.binding = 2u;
     normal_sampler_layout_binding.descriptorType = ::vk::DescriptorType::eCombinedImageSampler;
@@ -85,26 +85,38 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     normal_sampler_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eFragment;
     normal_sampler_layout_binding.pImmutableSamplers = nullptr;
 
-    auto texture_sampler_layout_bindings = std::vector{
+    // ---- SET 1 ---- //
+    auto material_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
+    material_ubo_layout_binding.binding = 3u;
+    material_ubo_layout_binding.descriptorType = ::vk::DescriptorType::eUniformBuffer;
+    material_ubo_layout_binding.descriptorCount = 1u;
+    material_ubo_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eFragment;
+    material_ubo_layout_binding.pImmutableSamplers = nullptr;
+
+    // ---- SET 1 ---- //
+    auto per_material_layout_bindings = std::vector{
         base_sampler_layout_binding,
         metal_sampler_layout_binding,
         normal_sampler_layout_binding,
+        material_ubo_layout_binding,
     };
 
-    auto texture_sampler_descriptor_set_layout_create_info = ::vk::DescriptorSetLayoutCreateInfo{};
-    texture_sampler_descriptor_set_layout_create_info.sType = ::vk::StructureType::eDescriptorSetLayoutCreateInfo;
-    texture_sampler_descriptor_set_layout_create_info.pNext = nullptr;
-    texture_sampler_descriptor_set_layout_create_info.flags = {};
-    texture_sampler_descriptor_set_layout_create_info.bindingCount =
-        static_cast<std::uint32_t>(texture_sampler_layout_bindings.size());
-    texture_sampler_descriptor_set_layout_create_info.pBindings = texture_sampler_layout_bindings.data();
+    // ---- SET 1 ---- //
+    auto per_material_descriptor_set_layout_create_info = ::vk::DescriptorSetLayoutCreateInfo{};
+    per_material_descriptor_set_layout_create_info.sType = ::vk::StructureType::eDescriptorSetLayoutCreateInfo;
+    per_material_descriptor_set_layout_create_info.pNext = nullptr;
+    per_material_descriptor_set_layout_create_info.flags = {};
+    per_material_descriptor_set_layout_create_info.bindingCount =
+        static_cast<std::uint32_t>(per_material_layout_bindings.size());
+    per_material_descriptor_set_layout_create_info.pBindings = per_material_layout_bindings.data();
 
-    auto texture_descriptor_set_layout =
-        ::vk::raii::DescriptorSetLayout{device_.native_handle(), texture_sampler_descriptor_set_layout_create_info};
+    // ---- SET 1 ---- //
+    auto per_material_descriptor_set_layout =
+        ::vk::raii::DescriptorSetLayout{device_.native_handle(), per_material_descriptor_set_layout_create_info};
 
     auto pipeline_descriptor_set_layouts = std::vector{
-        *ubo_descriptor_set_layout,
-        *texture_descriptor_set_layout,
+        *per_frame_descriptor_set_layout,
+        *per_material_descriptor_set_layout,
     };
 
     auto model_push_constant_range = ::vk::PushConstantRange{};
@@ -304,8 +316,8 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     return {
         .layout = std::move(pipeline_layout),
         .pipeline = std::move(pipeline),
-        .ubo_descriptor_set_layout = std::move(ubo_descriptor_set_layout),
-        .texture_descriptor_set_layout = std::move(texture_descriptor_set_layout),
+        .per_frame_descriptor_set_layout = std::move(per_frame_descriptor_set_layout),
+        .per_material_descriptor_set_layout = std::move(per_material_descriptor_set_layout),
     };
 }
 
