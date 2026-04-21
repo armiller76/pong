@@ -77,7 +77,7 @@ auto VulkanGpuBuffer::upload(const void *data, std::size_t bytes, std::size_t of
     }
 }
 
-auto VulkanGpuBuffer::native_handle() const -> ::vk::Buffer
+auto VulkanGpuBuffer::native_handle() const -> const ::vk::Buffer
 {
     return *buffer_;
 }
