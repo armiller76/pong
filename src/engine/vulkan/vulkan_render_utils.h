@@ -9,8 +9,8 @@ struct VulkanPipelineResources
 {
     ::vk::raii::PipelineLayout layout;
     ::vk::raii::Pipeline pipeline;
-    ::vk::raii::DescriptorSetLayout ubo_descriptor_set_layout;
-    ::vk::raii::DescriptorSetLayout texture_descriptor_set_layout;
+    ::vk::raii::DescriptorSetLayout per_frame_descriptor_set_layout;
+    ::vk::raii::DescriptorSetLayout per_material_descriptor_set_layout;
 }; // struct VulkanPipelineResources
 
 struct transition_info
