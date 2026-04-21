@@ -63,20 +63,22 @@ int main()
             std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"),
             pong::ShaderStage::Fragment);
 
+        auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, resource_manager, 2u);
+
         auto scene = resource_loader.loadgltf("assets/gltf/CesiumMilkTruck/CesiumMilkTruck.glb");
+        // auto scene = resource_loader.loadgltf("assets/gltf/BoomBox/BoomBox.glb");
 
         auto main_camera = pong::Camera();
-        main_camera.set_position({0.0f, -5.0f, 10.0f});
+        main_camera.set_position({0.0f, 2.0f, 10.0f});
         main_camera.set_view_target({0.0f, 0.0f, 0.0f});
-        auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, resource_manager, 2u);
         auto imgui = pong::ImguiWrapper{window.win32_handles().window, vk_renderer, vk_instance, project_root};
 
         auto prev_time = std::chrono::high_resolution_clock::now();
-        auto accum_time = 0.0f;
+        // auto accum_time = 0.0f;
         while (!window.should_close())
         {
             auto start_time = std::chrono::high_resolution_clock::now();
-            auto delta = std::chrono::duration<float>(start_time - prev_time);
+            // auto delta = std::chrono::duration<float>(start_time - prev_time);
             prev_time = start_time;
 
             window.process_events();
@@ -84,14 +86,16 @@ int main()
             imgui.begin_frame();
             imgui.render(); // calls ImGui::EndFrame()
 
-            accum_time += delta.count();
-            auto angle_x = accum_time * 0.00025f;
-            auto angle_y = accum_time * 0.00033f;
-            auto angle_z = accum_time * 0.0005f;
-            auto rotation = ::glm::quat(1, 0, 0, 0);
-            rotation = ::glm::rotate(rotation, angle_x, {1, 0, 0});
-            rotation = ::glm::rotate(rotation, angle_y, {0, 1, 0});
-            rotation = ::glm::rotate(rotation, angle_z, {0, 0, 1});
+            // accum_time += delta.count();
+            // auto angle_x = accum_time * 0.00025f;
+            // auto angle_y = accum_time * 0.00033f;
+            // auto angle_z = accum_time * 0.0005f;
+            // auto rotation = ::glm::quat(1, 0, 0, 0);
+            // rotation = ::glm::rotate(rotation, angle_x, {1, 0, 0});
+            // rotation = ::glm::rotate(rotation, angle_y, {0, 1, 0});
+            // rotation = ::glm::rotate(rotation, angle_z, {0, 0, 1});
+
+            scene.entities().at(scene.root_indices().at(0).value).rotate_by({0.0f, 0.0001f, 0.0f});
 
             vk_renderer.render(scene, main_camera, imgui.get_draw_data());
         }
