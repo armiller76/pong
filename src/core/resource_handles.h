@@ -3,9 +3,17 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <string_view>
+
+#include "utils/hash.h"
 
 namespace pong
 {
+
+static inline constexpr auto get_resource_id(std::string_view str) -> std::uint64_t
+{
+    return hash_string(str);
+}
 
 struct ShaderHandle
 {
