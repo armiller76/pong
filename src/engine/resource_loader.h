@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <filesystem>
 #include <string_view>
 #include <vector>
@@ -9,6 +8,7 @@
 #include "core/scene.h"
 #include "engine/vulkan/vulkan_immediate_command_context.h"
 #include "gltf/fastgltf_primitives.h"
+#include "graphics/image_format.h"
 #include "resource_manager.h"
 
 namespace pong
@@ -42,10 +42,9 @@ class ResourceLoader
     std::optional<Texture2DHandle> fallback_texture_handle_;
 
     auto get_or_fallback_(std::optional<Texture2DHandle> texture_handle) -> Texture2D &;
-    auto upload_texture_(const LoadedAsset &asset, std::size_t texture_index) -> Texture2DHandle;
+    auto upload_texture_(const LoadedAsset &asset, std::size_t texture_index, ImageFormat format) -> Texture2DHandle;
     auto process_loaded_node_(const LoadedAsset &asset, const LoadedNode &node, std::vector<Entity> &entities)
         -> EntityIndex;
-    auto get_resource_id_(std::string_view name) -> std::uint64_t;
 }; // class ResourceLoader
 
 } // namespace pong

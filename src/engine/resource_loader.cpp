@@ -20,7 +20,6 @@
 #include "graphics/texture2d.h"
 #include "graphics/utils.h"
 #include "resource_manager.h"
-#include "utils/hash.h"
 #include "utils/log.h"
 
 namespace pong
@@ -107,7 +106,8 @@ auto ResourceLoader::get_or_fallback_(std::optional<Texture2DHandle> texture_han
     return resource_manager_.get<Texture2D>(fallback_texture_handle_.value());
 }
 
-auto ResourceLoader::upload_texture_(const LoadedAsset &asset, std::size_t texture_index) -> Texture2DHandle
+auto ResourceLoader::upload_texture_(const LoadedAsset &asset, std::size_t texture_index, ImageFormat format)
+    -> Texture2DHandle
 {
     auto &loaded_texture = asset.textures[texture_index];
     auto &loaded_image = asset.images[loaded_texture.image_index];
@@ -123,11 +123,8 @@ auto ResourceLoader::upload_texture_(const LoadedAsset &asset, std::size_t textu
         &num_channels,
         STBI_rgb_alpha);
     auto extent = Extent2D{static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height)};
-    auto image = Image{
-        loaded_image.name,
-        extent,
-        ImageFormat::RGBA8,
-        {pixels, static_cast<std::size_t>(width) * height * STBI_rgb_alpha}};
+    auto image =
+        Image{loaded_image.name, extent, format, {pixels, static_cast<std::size_t>(width) * height * STBI_rgb_alpha}};
 
     auto texture = Texture2D(image, device_);
     texture.upload_pixels(command_context_, image);
@@ -170,52 +167,41 @@ auto ResourceLoader::process_loaded_node_(
             if (primitives[i].material_index.has_value())
             {
                 auto &loaded_material = loaded_asset.materials[primitives[i].material_index.value()];
-                auto material = Material{};
-                material.name = loaded_material.name;
-                material.base_color_factor = loaded_material.base_color_factor;
-                material.metallic_factor = loaded_material.metallic_factor;
-                material.roughness_factor = loaded_material.roughness_factor;
-                material.alpha_mode = loaded_material.alpha_mode;
+                auto material = Material{
+                    device_,
+                    loaded_material.name,
+                    resource_manager_.allocate_material_descriptor_set(),
+                    loaded_material.base_color_factor,
+                    loaded_material.metallic_factor,
+                    loaded_material.roughness_factor,
+                    loaded_material.alpha_mode};
                 if (loaded_material.base_color_texture_index.has_value())
                 {
-                    material.base_color_texture_handle = std::make_optional(
-                        upload_texture_(loaded_asset, loaded_material.base_color_texture_index.value()));
+                    material.set_base_color_texture_handle(upload_texture_(
+                        loaded_asset, loaded_material.base_color_texture_index.value(), ImageFormat::RGBA8));
                 }
                 if (loaded_material.metallic_roughness_texture_index.has_value())
                 {
-                    material.metallic_roughness_texture_handle = std::make_optional(
-                        upload_texture_(loaded_asset, loaded_material.metallic_roughness_texture_index.value()));
+                    material.set_metallic_roughness_texture_handle(upload_texture_(
+                        loaded_asset, loaded_material.metallic_roughness_texture_index.value(), ImageFormat::RGBA8));
                 }
                 if (loaded_material.normal_texture.has_value())
                 {
-                    material.normal_texture_handle =
-                        std::make_optional(upload_texture_(loaded_asset, loaded_material.normal_texture.value()));
+                    material.set_normal_texture_handle(
+                        upload_texture_(loaded_asset, loaded_material.normal_texture.value(), ImageFormat::RGBA8));
                 }
 
-                auto descriptor_set = resource_manager_.allocate_material_descriptor_set();
-                auto &base_texture = get_or_fallback_(material.base_color_texture_handle);
-                auto &metal_texture = get_or_fallback_(material.metallic_roughness_texture_handle);
-                auto &normal_texture = get_or_fallback_(material.normal_texture_handle);
+                auto &base_texture = get_or_fallback_(material.get_base_color_texture_handle());
 
                 auto base_descriptor_image_info = ::vk::DescriptorImageInfo{};
                 base_descriptor_image_info.sampler = base_texture.sampler();
                 base_descriptor_image_info.imageView = base_texture.image_view();
                 base_descriptor_image_info.imageLayout = ::vk::ImageLayout::eShaderReadOnlyOptimal;
 
-                auto metal_descriptor_image_info = ::vk::DescriptorImageInfo{};
-                metal_descriptor_image_info.sampler = metal_texture.sampler();
-                metal_descriptor_image_info.imageView = metal_texture.image_view();
-                metal_descriptor_image_info.imageLayout = ::vk::ImageLayout::eShaderReadOnlyOptimal;
-
-                auto normal_descriptor_image_info = ::vk::DescriptorImageInfo{};
-                normal_descriptor_image_info.sampler = normal_texture.sampler();
-                normal_descriptor_image_info.imageView = normal_texture.image_view();
-                normal_descriptor_image_info.imageLayout = ::vk::ImageLayout::eShaderReadOnlyOptimal;
-
                 auto base_write_descriptor_set = ::vk::WriteDescriptorSet{};
                 base_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
                 base_write_descriptor_set.pNext = nullptr;
-                base_write_descriptor_set.dstSet = *descriptor_set;
+                base_write_descriptor_set.dstSet = material.descriptor_set();
                 base_write_descriptor_set.dstBinding = 0;
                 base_write_descriptor_set.dstArrayElement = 0;
                 base_write_descriptor_set.descriptorCount = 1;
@@ -224,10 +210,17 @@ auto ResourceLoader::process_loaded_node_(
                 base_write_descriptor_set.pBufferInfo = nullptr;
                 base_write_descriptor_set.pTexelBufferView = nullptr;
 
+                auto &metal_texture = get_or_fallback_(material.get_metallic_roughness_texture_handle());
+
+                auto metal_descriptor_image_info = ::vk::DescriptorImageInfo{};
+                metal_descriptor_image_info.sampler = metal_texture.sampler();
+                metal_descriptor_image_info.imageView = metal_texture.image_view();
+                metal_descriptor_image_info.imageLayout = ::vk::ImageLayout::eShaderReadOnlyOptimal;
+
                 auto metal_write_descriptor_set = ::vk::WriteDescriptorSet{};
                 metal_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
                 metal_write_descriptor_set.pNext = nullptr;
-                metal_write_descriptor_set.dstSet = *descriptor_set;
+                metal_write_descriptor_set.dstSet = material.descriptor_set();
                 metal_write_descriptor_set.dstBinding = 1;
                 metal_write_descriptor_set.dstArrayElement = 0;
                 metal_write_descriptor_set.descriptorCount = 1;
@@ -236,10 +229,17 @@ auto ResourceLoader::process_loaded_node_(
                 metal_write_descriptor_set.pBufferInfo = nullptr;
                 metal_write_descriptor_set.pTexelBufferView = nullptr;
 
+                auto &normal_texture = get_or_fallback_(material.get_normal_texture_handle());
+
+                auto normal_descriptor_image_info = ::vk::DescriptorImageInfo{};
+                normal_descriptor_image_info.sampler = normal_texture.sampler();
+                normal_descriptor_image_info.imageView = normal_texture.image_view();
+                normal_descriptor_image_info.imageLayout = ::vk::ImageLayout::eShaderReadOnlyOptimal;
+
                 auto normal_write_descriptor_set = ::vk::WriteDescriptorSet{};
                 normal_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
                 normal_write_descriptor_set.pNext = nullptr;
-                normal_write_descriptor_set.dstSet = *descriptor_set;
+                normal_write_descriptor_set.dstSet = material.descriptor_set();
                 normal_write_descriptor_set.dstBinding = 2;
                 normal_write_descriptor_set.dstArrayElement = 0;
                 normal_write_descriptor_set.descriptorCount = 1;
@@ -248,11 +248,31 @@ auto ResourceLoader::process_loaded_node_(
                 normal_write_descriptor_set.pBufferInfo = nullptr;
                 normal_write_descriptor_set.pTexelBufferView = nullptr;
 
-                device_.native_handle().updateDescriptorSets(
-                    {base_write_descriptor_set, metal_write_descriptor_set, normal_write_descriptor_set}, {});
-                material.descriptor_set = std::move(descriptor_set);
+                auto material_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
+                material_descriptor_buffer_info.buffer = material.get_buffer().native_handle();
+                material_descriptor_buffer_info.offset = 0;
+                material_descriptor_buffer_info.range = sizeof(UBO_Material);
 
-                auto material_handle = resource_manager_.insert<Material>(material.name, std::move(material));
+                auto material_write_descriptor_set = ::vk::WriteDescriptorSet{};
+                material_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
+                material_write_descriptor_set.pNext = nullptr;
+                material_write_descriptor_set.dstSet = material.descriptor_set();
+                material_write_descriptor_set.dstBinding = 3;
+                material_write_descriptor_set.dstArrayElement = 0;
+                material_write_descriptor_set.descriptorCount = 1;
+                material_write_descriptor_set.descriptorType = ::vk::DescriptorType::eUniformBuffer;
+                material_write_descriptor_set.pImageInfo = nullptr;
+                material_write_descriptor_set.pBufferInfo = &material_descriptor_buffer_info;
+                material_write_descriptor_set.pTexelBufferView = nullptr;
+
+                device_.native_handle().updateDescriptorSets(
+                    {base_write_descriptor_set,
+                     metal_write_descriptor_set,
+                     normal_write_descriptor_set,
+                     material_write_descriptor_set},
+                    {});
+
+                auto material_handle = resource_manager_.insert<Material>(material.name(), std::move(material));
                 renderable = Renderable{mesh_handle, std::make_optional(material_handle)};
                 arm::log::debug("    - with material {} {:#x}", loaded_material.name, material_handle.value);
             }
@@ -283,11 +303,6 @@ auto ResourceLoader::process_loaded_node_(
     auto result = EntityIndex{entities.size()};
     entities.push_back(std::move(entity));
     return result;
-}
-
-auto ResourceLoader::get_resource_id_(std::string_view name) -> std::uint64_t
-{
-    return hash_string(name);
 }
 
 } // namespace pong
