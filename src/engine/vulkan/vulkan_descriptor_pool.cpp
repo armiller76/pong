@@ -6,10 +6,10 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "engine/ubo.h"
+#include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_gpu_buffer.h"
 #include "utils/error.h"
 #include "utils/log.h"
-#include "vulkan_device.h"
-#include "vulkan_gpu_buffer.h"
 
 namespace pong
 {
@@ -90,17 +90,16 @@ auto VulkanDescriptorPool::allocate_material_descriptor_set(const ::vk::raii::De
 auto VulkanDescriptorPool::create_pool_() -> ::vk::raii::DescriptorPool
 {
     // TODO MAX_MATERIALS is a magic number!
-    const auto ubo_total = PER_FRAME_UBO_COUNT * frames_in_flight_;
-    const auto sampler_total = MAX_MATERIALS * SAMPLERS_PER_MATERIAL + SINGLE_UBO_COUNT;
-    const auto set_total = ubo_total + sampler_total;
+    const auto ubo_count = PER_FRAME_UBO_COUNT * frames_in_flight_ + MATERIAL_UBO_COUNT * MAX_MATERIALS;
+    const auto sampler_count = MAX_MATERIALS * SAMPLERS_PER_MATERIAL;
 
     auto ubo_pool_size = ::vk::DescriptorPoolSize{};
     ubo_pool_size.type = ::vk::DescriptorType::eUniformBuffer;
-    ubo_pool_size.descriptorCount = std::uint32_t{ubo_total};
+    ubo_pool_size.descriptorCount = ubo_count;
 
     auto sampler_pool_size = ::vk::DescriptorPoolSize{};
     sampler_pool_size.type = ::vk::DescriptorType::eCombinedImageSampler;
-    sampler_pool_size.descriptorCount = std::uint32_t{sampler_total};
+    sampler_pool_size.descriptorCount = sampler_count;
 
     auto pool_sizes = std::array{
         ubo_pool_size,
@@ -111,7 +110,7 @@ auto VulkanDescriptorPool::create_pool_() -> ::vk::raii::DescriptorPool
     pool_create_info.sType = ::vk::StructureType::eDescriptorPoolCreateInfo;
     pool_create_info.pNext = nullptr;
     pool_create_info.flags = ::vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-    pool_create_info.maxSets = std::uint32_t{set_total};
+    pool_create_info.maxSets = frames_in_flight_ + MAX_MATERIALS;
     pool_create_info.poolSizeCount = static_cast<std::uint32_t>(pool_sizes.size());
     pool_create_info.pPoolSizes = pool_sizes.data();
 

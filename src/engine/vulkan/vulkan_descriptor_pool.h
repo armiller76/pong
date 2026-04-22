@@ -42,7 +42,7 @@ class VulkanDescriptorPool
     static const std::uint32_t MAX_MATERIALS = 100u;
     static const std::uint32_t SAMPLERS_PER_MATERIAL = 3u; // base, metal/rough, normal,
     static const std::uint32_t PER_FRAME_UBO_COUNT = 1u;   // view/proj data,
-    static const std::uint32_t SINGLE_UBO_COUNT = 1u;      // one material factor,
+    static const std::uint32_t MATERIAL_UBO_COUNT = 1u;    // one material factor,
 };
 
 }
