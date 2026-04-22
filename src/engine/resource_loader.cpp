@@ -13,14 +13,15 @@
 #include "core/resource_handles.h"
 #include "core/scene.h"
 #include "engine/file.h"
+#include "engine/resource_manager.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "gltf/fastgltf_wrapper.h"
 #include "graphics/image.h"
 #include "graphics/shader.h"
 #include "graphics/texture2d.h"
 #include "graphics/utils.h"
-#include "resource_manager.h"
 #include "utils/log.h"
+
 
 namespace pong
 {
@@ -43,6 +44,15 @@ ResourceLoader::ResourceLoader(
     fallback_texture_handle_ =
         std::make_optional(resource_manager_.insert<Texture2D>("fallback_1x1_white", std::move(fallback_texture)));
     arm::ensure(fallback_texture_handle_.has_value(), "failed to create fallback texture");
+
+    load(
+        "simple.vert"sv,
+        std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_vert.spv"),
+        pong::ShaderStage::Vertex);
+    load(
+        "simple.frag"sv,
+        std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"),
+        pong::ShaderStage::Fragment);
 }
 
 auto ResourceLoader::loadgltf(std::filesystem::path path) -> Scene

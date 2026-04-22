@@ -8,15 +8,16 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "core/resource_handles.h"
+#include "engine/resource_loader.h"
+#include "engine/resource_manager.h"
+#include "engine/vulkan/vulkan_depth_buffer.h"
+#include "engine/vulkan/vulkan_descriptor_pool.h"
+#include "engine/vulkan/vulkan_frame_command_context.h"
 #include "engine/vulkan/vulkan_gpu_buffer.h"
+#include "engine/vulkan/vulkan_pipeline_factory.h"
+#include "engine/vulkan/vulkan_swapchain.h"
 #include "graphics/color.h"
 #include "graphics/mesh.h"
-#include "vulkan_depth_buffer.h"
-#include "vulkan_descriptor_pool.h"
-#include "vulkan_frame_command_context.h"
-#include "vulkan_gpu_buffer.h"
-#include "vulkan_pipeline_factory.h"
-#include "vulkan_swapchain.h"
 
 struct ImDrawData;
 
@@ -45,7 +46,6 @@ class VulkanRenderer
     VulkanRenderer(
         const VulkanDevice &device,
         const VulkanSurface &surface,
-        ResourceManager &resource_manager,
         std::uint32_t max_frames_in_flight,
         const Color clear_color = {0.42f, 0.42f, 0.42f, 1.0f});
     ~VulkanRenderer() = default;
@@ -55,8 +55,14 @@ class VulkanRenderer
     VulkanRenderer(VulkanRenderer &&) = delete;
     VulkanRenderer &operator=(VulkanRenderer &&) = delete;
 
+    auto shutdown() -> void;
+
     auto recreate_resources() -> void;
+
     auto set_clear_color(const Color &color) -> void;
+
+    auto load_scene(std::string_view filename) -> Scene;
+
     auto render(const Scene &scene, const Camera &camera, ImDrawData *imgui_draw_data) -> void;
 
   private:
@@ -69,7 +75,8 @@ class VulkanRenderer
 
     const VulkanDevice &device_;
     const VulkanSurface &surface_;
-    ResourceManager &resource_manager_;
+    ResourceManager resource_manager_;
+    ResourceLoader resource_loader_;
     VulkanSwapchain swapchain_;
     VulkanFrameCommandContext frame_command_context_;
     std::vector<VulkanGpuBuffer> view_proj_uniform_buffers_;

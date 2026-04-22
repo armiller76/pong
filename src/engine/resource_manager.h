@@ -34,6 +34,15 @@ class ResourceManager
     ResourceManager(ResourceManager &&) noexcept = delete;
     auto operator=(ResourceManager &&) noexcept -> ResourceManager & = delete;
 
+    auto shutdown() -> void
+    {
+        for (const auto &[handle, material] : materials_)
+        {
+            material.descriptor_set().getDevice().freeDescriptorSets(
+                descriptor_pool_->native_handle(), *material.descriptor_set());
+        }
+    }
+
     auto allocate_material_descriptor_set() -> ::vk::raii::DescriptorSet
     {
         return descriptor_pool_->allocate_material_descriptor_set(

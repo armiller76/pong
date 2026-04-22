@@ -1,6 +1,5 @@
 #include <chrono>
 #include <cstdlib>
-#include <filesystem>
 #include <string>
 #include <string_view>
 
@@ -14,7 +13,6 @@
 #include "engine/vulkan/vulkan_surface.h"
 #include "graphics/camera.h"
 #include "graphics/mesh.h"
-#include "graphics/shader.h"
 #include "imgui/imgui_wrapper.h"
 #include "math/rectangle.h"
 #include "platform/win32_window.h"
@@ -50,23 +48,9 @@ int main()
         const auto vk_surface = window.create_vulkan_surface(vk_instance);
         const auto vk_device = pong::VulkanDevice(vk_instance, vk_surface);
 
-        auto resource_manager = pong::ResourceManager();
-        auto resource_loader =
-            pong::ResourceLoader(vk_device, resource_manager, "c:/dev/Pong/assets"sv); // TODO hardcoded path
-
-        resource_loader.load(
-            "simple.vert"sv,
-            std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_vert.spv"),
-            pong::ShaderStage::Vertex);
-        resource_loader.load(
-            "simple.frag"sv,
-            std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"),
-            pong::ShaderStage::Fragment);
-
-        auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, resource_manager, 2u);
-
-        auto scene = resource_loader.loadgltf("assets/gltf/CesiumMilkTruck/CesiumMilkTruck.glb");
-        // auto scene = resource_loader.loadgltf("assets/gltf/BoomBox/BoomBox.glb");
+        auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, 2u);
+        auto scene = vk_renderer.load_scene("assets/gltf/CesiumMilkTruck/CesiumMilkTruck.glb");
+        // auto scene = vk_renderer.load_scene("assets/gltf/BoomBox/BoomBox.glb");
 
         auto main_camera = pong::Camera();
         main_camera.set_position({0.0f, 2.0f, 10.0f});
@@ -99,7 +83,7 @@ int main()
 
             vk_renderer.render(scene, main_camera, imgui.get_draw_data());
         }
-
+        vk_renderer.shutdown();
         return EXIT_SUCCESS;
     }
     catch (::vk::SystemError &e)

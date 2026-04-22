@@ -1,6 +1,6 @@
 #include "vulkan_renderer.h"
 
-#include <cstddef>
+#include "string_view"
 #include <cstdint>
 #include <vector>
 
@@ -11,7 +11,10 @@
 #include "core/scene.h"
 #include "engine/resource_manager.h"
 #include "engine/ubo.h"
+#include "engine/vulkan/vulkan_depth_buffer.h"
+#include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_gpu_buffer.h"
+#include "engine/vulkan/vulkan_render_utils.h"
 #include "graphics/camera.h"
 #include "graphics/color.h"
 #include "graphics/model.h"
@@ -19,24 +22,23 @@
 #include "imgui/imgui_wrapper.h"
 #include "utils/exception.h"
 #include "utils/log.h"
-#include "vulkan_depth_buffer.h"
-#include "vulkan_device.h"
-#include "vulkan_render_utils.h"
 
 namespace pong
 {
+
+using namespace std::literals;
 
 // TODO update to use Sync2 objects
 VulkanRenderer::VulkanRenderer(
     const VulkanDevice &device,
     const VulkanSurface &surface,
-    ResourceManager &resource_manager,
     std::uint32_t max_frames_in_flight,
     const Color clear_color)
     : max_frames_in_flight_{max_frames_in_flight}
     , device_{device}
     , surface_{surface}
-    , resource_manager_{resource_manager}
+    , resource_manager_{}
+    , resource_loader_{device_, resource_manager_, "c:/dev/Pong/assets"sv}
     , swapchain_{device_, surface_}
     , frame_command_context_{device_, max_frames_in_flight_}
     , view_proj_uniform_buffers_(
@@ -66,6 +68,11 @@ VulkanRenderer::VulkanRenderer(
     resource_manager_.set_descriptor_pool(descriptor_pool_);
 }
 
+auto VulkanRenderer::shutdown() -> void
+{
+    resource_manager_.shutdown();
+}
+
 auto VulkanRenderer::recreate_resources() -> void
 {
     // TODO eventually, let's not waitidle unless absolutely needed (ie don't call this every frame of a resize)
@@ -82,6 +89,11 @@ auto VulkanRenderer::recreate_resources() -> void
 auto VulkanRenderer::set_clear_color(const Color &color) -> void
 {
     clear_color_ = {color.r, color.g, color.b, color.a};
+}
+
+auto VulkanRenderer::load_scene(std::string_view filename) -> Scene
+{
+    return resource_loader_.loadgltf(filename);
 }
 
 auto VulkanRenderer::render(const Scene &scene, const Camera &camera, ImDrawData *imgui_draw_data) -> void
