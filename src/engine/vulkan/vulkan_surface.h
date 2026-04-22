@@ -20,7 +20,7 @@ class VulkanSurface
     VulkanSurface &operator=(const VulkanSurface &) = delete;
     ~VulkanSurface() = default;
 
-    auto get() const -> const ::vk::raii::SurfaceKHR &;
+    auto native_handle() const -> const ::vk::raii::SurfaceKHR &;
 
     auto get_surface_capabilities(const ::vk::raii::PhysicalDevice &physical_device) const
         -> ::vk::SurfaceCapabilitiesKHR;

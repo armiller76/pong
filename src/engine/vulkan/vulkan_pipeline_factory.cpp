@@ -31,10 +31,6 @@ VulkanPipelineFactory::VulkanPipelineFactory(const VulkanDevice &device, Resourc
 auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_format, ::vk::Format depth_format)
     -> VulkanPipelineResources
 {
-    // TODO get rid of this garbage once you get into pipelines
-    auto &vertex_shader = resource_manager_.get<Shader>(ShaderHandle{hash_string("simple.vert")});
-    auto &fragment_shader = resource_manager_.get<Shader>(ShaderHandle{hash_string("simple.frag")});
-
     // ---- SET 0 ---- //
     auto view_proj_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
     view_proj_ubo_layout_binding.binding = 0u;
@@ -137,8 +133,8 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     rendering_create_info.pColorAttachmentFormats = formats.data();
     rendering_create_info.depthAttachmentFormat = depth_format;
 
-    auto shader_stages = std::vector<::vk::PipelineShaderStageCreateInfo>();
-
+    // TODO hardcoded shader
+    auto &vertex_shader = resource_manager_.get<Shader>(ShaderHandle{hash_string("simple.vert")});
     auto vertex_create_info = ::vk::ShaderModuleCreateInfo{};
     vertex_create_info.sType = ::vk::StructureType::eShaderModuleCreateInfo;
     vertex_create_info.codeSize = vertex_shader.spirv_view().size_bytes();
@@ -152,8 +148,9 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     vertex_stage_create_info.module = *vertex;
     vertex_stage_create_info.pName = "main";
     vertex_stage_create_info.pSpecializationInfo = nullptr;
-    shader_stages.push_back(vertex_stage_create_info);
 
+    // TODO hardcoded shader
+    auto &fragment_shader = resource_manager_.get<Shader>(ShaderHandle{hash_string("simple.frag")});
     auto fragment_create_info = ::vk::ShaderModuleCreateInfo{};
     fragment_create_info.sType = ::vk::StructureType::eShaderModuleCreateInfo;
     fragment_create_info.codeSize = fragment_shader.spirv_view().size_bytes();
@@ -167,7 +164,11 @@ auto VulkanPipelineFactory::create_graphics_pipeline(::vk::Format swapchain_form
     fragment_stage_create_info.module = *fragment;
     fragment_stage_create_info.pName = "main";
     fragment_stage_create_info.pSpecializationInfo = nullptr;
-    shader_stages.push_back(fragment_stage_create_info);
+
+    auto shader_stages = std::array{
+        vertex_stage_create_info,
+        fragment_stage_create_info,
+    };
 
     // TODO check configuration
     auto vertex_input_binding_description = vertex_input_binding_description_factory();

@@ -7,9 +7,10 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/vulkan/vulkan_command_pool.h"
+#include "engine/vulkan/vulkan_device.h"
 #include "utils/error.h"
-#include "vulkan_command_pool.h"
-#include "vulkan_device.h"
+
 
 namespace pong
 {

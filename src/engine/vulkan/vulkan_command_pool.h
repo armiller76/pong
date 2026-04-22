@@ -5,11 +5,9 @@
 #include <format>
 #include <string>
 #include <string_view>
-#include <utility>
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "utils/error.h"
 #include "vulkan_device.h"
 
 namespace pong

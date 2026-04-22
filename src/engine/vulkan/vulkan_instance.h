@@ -19,7 +19,7 @@ class VulkanInstance
         uint32_t minor_version,
         uint32_t patch_version);
 
-    auto get() const -> const ::vk::raii::Instance &;
+    auto native_handle() const -> const ::vk::raii::Instance &;
 
   private:
     std::string application_name_;

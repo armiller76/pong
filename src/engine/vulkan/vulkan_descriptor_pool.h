@@ -5,8 +5,8 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "vulkan_device.h"
-#include "vulkan_gpu_buffer.h"
+#include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_gpu_buffer.h"
 
 namespace pong
 {
@@ -21,9 +21,9 @@ class VulkanDescriptorPool
     ~VulkanDescriptorPool() = default;
 
     VulkanDescriptorPool(const VulkanDescriptorPool &) = delete;
-    VulkanDescriptorPool &operator=(const VulkanDescriptorPool &) = delete;
-    VulkanDescriptorPool(VulkanDescriptorPool &&) = default;
-    VulkanDescriptorPool &operator=(VulkanDescriptorPool &&) = delete;
+    auto operator=(const VulkanDescriptorPool &) -> VulkanDescriptorPool & = delete;
+    VulkanDescriptorPool(VulkanDescriptorPool &&) noexcept = default;
+    auto operator=(VulkanDescriptorPool &&) noexcept -> VulkanDescriptorPool & = delete;
 
     auto native_handle() const -> ::vk::DescriptorPool;
 

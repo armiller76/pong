@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <string_view>
+
 #include <vulkan/vulkan_raii.hpp>
 #include <windows.h>
 
@@ -9,7 +10,6 @@
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_win32.h"
 
-#include "engine/vulkan/vulkan_descriptor_pool.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_renderer.h"
@@ -62,7 +62,7 @@ auto ImguiWrapper::init_vulkan() -> void
 {
     auto init_info = ImGui_ImplVulkan_InitInfo{};
     init_info.ApiVersion = VK_API_VERSION_1_3;
-    init_info.Instance = *vk_instance_.get();
+    init_info.Instance = *vk_instance_.native_handle();
     init_info.PhysicalDevice = *vk_renderer_.device_.physical_device();
     init_info.Device = *vk_renderer_.device_.native_handle();
     init_info.QueueFamily = vk_renderer_.device_.graphics_queue_family_index();

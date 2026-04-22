@@ -2,17 +2,16 @@
 
 #include <array>
 #include <cstdint>
-#include <ranges>
 #include <set>
 #include <string_view>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/vulkan/vulkan_instance.h"
+#include "engine/vulkan/vulkan_surface.h"
 #include "utils/error.h"
 #include "utils/exception.h"
-#include "vulkan_instance.h"
-#include "vulkan_surface.h"
 
 namespace
 {
@@ -28,13 +27,8 @@ namespace pong
 {
 
 VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &surface)
-    : physical_device_({})
-    , device_({})
-    , graphics_queue_family_index_(0)
-    , present_queue_family_index_(0)
-    , supports_api13_(false)
-    , supports_dynamic_rendering_(false)
-    , supports_sync2_(false)
+    : physical_device_{nullptr}
+    , device_{nullptr}
 {
     arm::log::debug("VulkanDevice constructor");
     arm::log::debug("Starting device selection and creation...");
@@ -45,7 +39,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
         ::vk::KHRSynchronization2ExtensionName,
         ::vk::KHRDynamicRenderingExtensionName};
 
-    const auto available_devices = instance.get().enumeratePhysicalDevices();
+    const auto available_devices = instance.native_handle().enumeratePhysicalDevices();
     arm::ensure(!available_devices.empty(), "No available graphics devices");
 
     auto device_infos = std::vector<VulkanDeviceInfo>();
@@ -127,7 +121,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
 
     std::ranges::sort(device_infos, std::greater{}, &VulkanDeviceInfo::score);
 
-    physical_device_ = ::vk::raii::PhysicalDevice(instance.get(), device_infos[0].physical_device);
+    physical_device_ = ::vk::raii::PhysicalDevice(instance.native_handle(), device_infos[0].physical_device);
     graphics_queue_family_index_ = device_infos[0].graphics_index;
     present_queue_family_index_ = device_infos[0].present_index;
     arm::log::debug(

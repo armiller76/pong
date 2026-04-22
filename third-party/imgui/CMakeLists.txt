@@ -8,6 +8,7 @@ target_sources(imgui PRIVATE imgui_wrapper.cpp)
 target_include_directories(
   imgui
   PUBLIC ${PROJECT_SOURCE_DIR}/src
+         ${PROJECT_SOURCE_DIR}/third-party
          ${imgui_SOURCE_DIR}
          ${imgui_SOURCE_DIR}/backends
          ${Vulkan_INCLUDE_DIRS}

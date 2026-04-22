@@ -4,9 +4,11 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "utils/error.h"
 #include "utils/log.h"
 #include "vulkan_command_pool.h"
 #include "vulkan_device.h"
+
 
 namespace pong
 

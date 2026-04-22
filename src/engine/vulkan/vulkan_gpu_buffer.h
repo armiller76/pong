@@ -4,6 +4,8 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "utils/error.h"
+
 namespace pong
 {
 
@@ -19,10 +21,10 @@ class VulkanGpuBuffer
         ::vk::MemoryPropertyFlags memory_flags);
     ~VulkanGpuBuffer() = default;
 
-    VulkanGpuBuffer(VulkanGpuBuffer &&) noexcept = default;
-    VulkanGpuBuffer &operator=(VulkanGpuBuffer &&) noexcept = default;
     VulkanGpuBuffer(const VulkanGpuBuffer &) = delete;
-    VulkanGpuBuffer &operator=(const VulkanGpuBuffer &) = delete;
+    auto operator=(const VulkanGpuBuffer &) -> VulkanGpuBuffer & = delete;
+    VulkanGpuBuffer(VulkanGpuBuffer &&) noexcept = default;
+    auto operator=(VulkanGpuBuffer &&) noexcept -> VulkanGpuBuffer & = default;
 
     auto map(this auto &&self) -> auto &&;
     auto unmap() -> void;
@@ -38,5 +40,13 @@ class VulkanGpuBuffer
     ::vk::raii::DeviceMemory memory_;
     ::vk::MemoryPropertyFlags memory_flags_;
 }; // class GpuBuffer
+
+auto VulkanGpuBuffer::map(this auto &&self) -> auto &&
+{
+    arm::ensure(
+        (self.memory_flags_ & ::vk::MemoryPropertyFlagBits::eHostVisible) == ::vk::MemoryPropertyFlagBits::eHostVisible,
+        "mapping requires HOST_VISIBLE memory");
+    return self.memory_.mapMemory(0, self.size_);
+}
 
 } // namespace pong

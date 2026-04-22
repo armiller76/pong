@@ -4,25 +4,25 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_gpu_buffer.h"
+#include "engine/vulkan/vulkan_immediate_command_context.h"
+#include "engine/vulkan/vulkan_render_utils.h"
+#include "engine/vulkan/vulkan_utils.h"
 #include "graphics/image.h"
 #include "utils/log.h"
-#include "vulkan_device.h"
-#include "vulkan_gpu_buffer.h"
-#include "vulkan_immediate_command_context.h"
-#include "vulkan_render_utils.h"
-#include "vulkan_utils.h"
 
 namespace pong
 {
 
 VulkanGpuImage::VulkanGpuImage(const VulkanDevice &device, ::vk::Extent2D extent, ::vk::Format format)
     : device_{&device}
+    , extent_{extent}
+    , format_{format}
     , image_{nullptr}
     , memory_{nullptr}
     , view_{nullptr}
     , sampler_{nullptr}
-    , extent_{extent}
-    , format_{format}
 {
     arm::log::debug("VulkanGpuImage Constructor");
 

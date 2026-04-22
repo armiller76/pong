@@ -15,7 +15,7 @@ class VulkanGpuImage
     VulkanGpuImage(const VulkanDevice &device, ::vk::Extent2D extent, ::vk::Format format);
     ~VulkanGpuImage() = default;
 
-    // movable but non-copyable or move assignable
+    // movable but non-copyable
     VulkanGpuImage(const VulkanGpuImage &) = delete;
     auto operator=(const VulkanGpuImage &) -> VulkanGpuImage & = delete;
     VulkanGpuImage(VulkanGpuImage &&) noexcept = default;
@@ -31,12 +31,12 @@ class VulkanGpuImage
 
   private:
     const VulkanDevice *device_;
+    ::vk::Extent2D extent_;
+    ::vk::Format format_;
     ::vk::raii::Image image_;
     ::vk::raii::DeviceMemory memory_;
     ::vk::raii::ImageView view_;
     ::vk::raii::Sampler sampler_;
-    ::vk::Extent2D extent_;
-    ::vk::Format format_;
 
 }; // class VulkanGpuImage
 

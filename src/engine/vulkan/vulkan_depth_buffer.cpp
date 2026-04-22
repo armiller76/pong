@@ -15,6 +15,8 @@ DepthBuffer::DepthBuffer(const VulkanDevice &device, ::vk::Extent2D extent)
     , memory_{nullptr}
     , view_{nullptr}
 {
+    arm::log::debug("DepthBuffer constructor");
+
     auto create_info = ::vk::ImageCreateInfo{};
     create_info.sType = ::vk::StructureType::eImageCreateInfo;
     create_info.pNext = nullptr;

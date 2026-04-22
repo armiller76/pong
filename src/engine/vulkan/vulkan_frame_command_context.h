@@ -5,8 +5,6 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "utils/error.h"
-
 namespace pong
 {
 class VulkanDevice;
@@ -19,9 +17,9 @@ class VulkanFrameCommandContext
     ~VulkanFrameCommandContext() = default;
 
     VulkanFrameCommandContext(const VulkanFrameCommandContext &) = delete;
-    VulkanFrameCommandContext &operator=(const VulkanFrameCommandContext &) = delete;
-    VulkanFrameCommandContext(VulkanFrameCommandContext &&) = delete;
-    VulkanFrameCommandContext &operator=(VulkanFrameCommandContext &&) = delete;
+    auto operator=(const VulkanFrameCommandContext &) -> VulkanFrameCommandContext & = delete;
+    VulkanFrameCommandContext(VulkanFrameCommandContext &&) noexcept = delete;
+    auto operator=(VulkanFrameCommandContext &&) noexcept -> VulkanFrameCommandContext & = delete;
 
     auto wait_for_fence() -> void;
     auto advance_frame() -> void;

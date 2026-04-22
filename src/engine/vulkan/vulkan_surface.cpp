@@ -6,17 +6,16 @@
 #include "utils/log.h"
 #include "vulkan_instance.h"
 
-
 namespace pong
 {
 
 VulkanSurface::VulkanSurface(const VulkanInstance &vk_instance, const Win32WindowHandles &handles)
-    : surface_(vk_instance.get(), ::vk::Win32SurfaceCreateInfoKHR({}, handles.instance, handles.window))
+    : surface_(vk_instance.native_handle(), ::vk::Win32SurfaceCreateInfoKHR({}, handles.instance, handles.window))
 {
     arm::log::debug("VulkanSurface constructor");
 }
 
-auto VulkanSurface::get() const -> const ::vk::raii::SurfaceKHR &
+auto VulkanSurface::native_handle() const -> const ::vk::raii::SurfaceKHR &
 {
     return surface_;
 }

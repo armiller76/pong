@@ -64,9 +64,9 @@ auto VulkanSwapchain::semaphores() const -> const std::vector<::vk::raii::Semaph
 
 auto VulkanSwapchain::init_() -> void
 {
-    capabilities_ = device_.physical_device().getSurfaceCapabilitiesKHR(surface_.get());
-    formats_ = device_.physical_device().getSurfaceFormatsKHR(surface_.get());
-    modes_ = device_.physical_device().getSurfacePresentModesKHR(surface_.get());
+    capabilities_ = device_.physical_device().getSurfaceCapabilitiesKHR(surface_.native_handle());
+    formats_ = device_.physical_device().getSurfaceFormatsKHR(surface_.native_handle());
+    modes_ = device_.physical_device().getSurfacePresentModesKHR(surface_.native_handle());
     // if the device didn't give us any surface formats or present modes, crash
     if (formats_.empty() || modes_.empty())
     {
@@ -97,7 +97,7 @@ auto VulkanSwapchain::create_() -> void
     // begin creating swapchain
     auto swapchain_create_info = ::vk::SwapchainCreateInfoKHR{};
     swapchain_create_info.sType = ::vk::StructureType::eSwapchainCreateInfoKHR;
-    swapchain_create_info.surface = *surface_.get();
+    swapchain_create_info.surface = *surface_.native_handle();
     swapchain_create_info.minImageCount = image_count;
     swapchain_create_info.imageFormat = surface_format_;
     swapchain_create_info.imageColorSpace = color_space_;
