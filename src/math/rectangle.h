@@ -39,6 +39,8 @@ struct Extent2D
             arm::log::warn("Extent2D with zero component w={} h={}", w, h);
         }
     }
+
+    constexpr auto operator==(const Extent2D &other) const -> bool = default;
 };
 
 struct Rectangle
