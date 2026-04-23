@@ -90,6 +90,8 @@ auto Win32Window::process_events() -> void
 
 auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT
 {
+    static auto resize_in_process = false;
+
     if (ImGui_ImplWin32_WndProcHandler(window, msg, wParam, lParam))
     {
         return true;
@@ -97,9 +99,25 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
 
     switch (msg)
     {
+        case WM_ENTERSIZEMOVE:
+        {
+            resize_in_process = true;
+            return ERROR_SUCCESS;
+        }
+        case WM_EXITSIZEMOVE:
+        {
+            resize_in_process = false;
+
+            for (const auto &[id, callback] : resize_callbacks_)
+            {
+                callback(window_rect_.extent.width, window_rect_.extent.height);
+            }
+
+            return ERROR_SUCCESS;
+        }
         case WM_SIZE:
         {
-            if (wParam != SIZE_MINIMIZED)
+            if (wParam != SIZE_MINIMIZED && !resize_in_process)
             {
                 window_rect_.extent.width = LOWORD(lParam);
                 window_rect_.extent.height = HIWORD(lParam);
@@ -109,7 +127,7 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
                     callback(window_rect_.extent.width, window_rect_.extent.height);
                 }
             }
-            return 0;
+            return ERROR_SUCCESS;
         }
 
         case WM_CLOSE:
@@ -122,14 +140,14 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
             }
 
             ::PostQuitMessage(0);
-            return 0;
+            return ERROR_SUCCESS;
         }
 
         case WM_DESTROY:
         {
             should_close_ = true;
             ::PostQuitMessage(0);
-            return 0;
+            return ERROR_SUCCESS;
         }
 
         default:

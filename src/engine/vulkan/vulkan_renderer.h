@@ -42,6 +42,19 @@ class VulkanRenderer
         DrawSortKey sort_key;
     };
 
+    enum class RenderStatusCode
+    {
+        ReadyToRecord,
+        SkipMinimized,
+        RecreateRequested,
+        Error,
+    };
+    struct RenderStatus
+    {
+        RenderStatusCode code;
+        std::vector<DrawItem> draw_items;
+    };
+
   public:
     VulkanRenderer(
         const VulkanDevice &device,
@@ -57,7 +70,7 @@ class VulkanRenderer
 
     auto shutdown() -> void;
 
-    auto recreate_resources() -> void;
+    auto recreate_resources() -> bool;
 
     auto set_clear_color(const Color &color) -> void;
 
@@ -66,10 +79,11 @@ class VulkanRenderer
     auto render(const Scene &scene, const Camera &camera, ImDrawData *imgui_draw_data) -> void;
 
   private:
-    auto prepare_frame_(const Scene &scene) -> std::vector<DrawItem>;
+    auto prepare_frame_(const Scene &scene) -> RenderStatus;
     auto record_(const std::vector<DrawItem> &draw_items, const Camera &camera, ImDrawData *imgui_draw_data = nullptr)
         -> void;
     auto end_frame_() -> void;
+    auto handle_out_of_date_() -> void;
 
     std::uint32_t max_frames_in_flight_;
 

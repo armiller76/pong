@@ -15,6 +15,7 @@
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_gpu_buffer.h"
 #include "engine/vulkan/vulkan_render_utils.h"
+#include "engine/vulkan/vulkan_surface.h"
 #include "graphics/camera.h"
 #include "graphics/color.h"
 #include "graphics/model.h"
@@ -37,7 +38,7 @@ VulkanRenderer::VulkanRenderer(
     : max_frames_in_flight_{max_frames_in_flight}
     , device_{device}
     , surface_{surface}
-    , resource_manager_{device_}
+    , resource_manager_{}
     , resource_loader_{device_, resource_manager_, "c:/dev/Pong/assets"sv}
     , swapchain_{device_, surface_}
     , frame_command_context_{device_, max_frames_in_flight_}
@@ -75,18 +76,29 @@ auto VulkanRenderer::shutdown() -> void
     resource_manager_.shutdown();
 }
 
-auto VulkanRenderer::recreate_resources() -> void
+// returns true if swapchain is recreated, false if minimized
+auto VulkanRenderer::recreate_resources() -> bool
 {
-    // TODO eventually, let's not waitidle unless absolutely needed (ie don't call this every frame of a resize)
+    auto current_caps = device_.physical_device().getSurfaceCapabilitiesKHR(surface_.native_handle());
+    if (current_caps.currentExtent.height == 0 || current_caps.currentExtent.width == 0)
+    {
+        return false;
+    }
 
     device_.native_handle().waitIdle();
     swapchain_.recreate();
     depth_buffer_ = {device_, swapchain_.extent()};
+
+    // TODO the renderer should keep a list of resize callbacks.
+    // can the window callback list be referenced? or should the window defer all resize callbacks directly to the
+    // app/renderer?
     if (imgui_resize_callback)
     {
         imgui_resize_callback();
     }
+
     framebuffer_resized_ = false;
+    return true;
 }
 
 auto VulkanRenderer::set_clear_color(const Color &color) -> void
@@ -101,38 +113,86 @@ auto VulkanRenderer::load_scene(std::string_view filename) -> Scene
 
 auto VulkanRenderer::render(const Scene &scene, const Camera &camera, ImDrawData *imgui_draw_data) -> void
 {
-    auto draw_items = prepare_frame_(scene);
-    record_(draw_items, camera, imgui_draw_data);
-    end_frame_();
+    auto render_status = prepare_frame_(scene);
 
+    switch (render_status.code)
+    {
+        case RenderStatusCode::ReadyToRecord:
+        {
+            record_(render_status.draw_items, camera, imgui_draw_data);
+            end_frame_();
+        }
+        break;
+        case RenderStatusCode::SkipMinimized:
+        {
+            return;
+        }
+        case RenderStatusCode::RecreateRequested:
+        {
+            recreate_resources();
+            return;
+        }
+        case RenderStatusCode::Error:
+        default:
+        {
+            throw arm::Exception("render error");
+        }
+    }
     if (framebuffer_resized_)
     {
         recreate_resources();
     }
 }
 
-auto VulkanRenderer::prepare_frame_(const Scene &scene) -> std::vector<DrawItem>
+auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
 {
     // recreates the swapchain if out of date, otherwise gets an image from the swapchain
     frame_command_context_.wait_for_fence();
     for (;;)
     {
-        auto [result, swap_chain_image_index] = swapchain_.native_handle().acquireNextImage(
-            UINT64_MAX, frame_command_context_.current_image_available_semaphore(), VK_NULL_HANDLE);
+        try
+        {
+            auto [vk_result, swap_chain_image_index] = swapchain_.native_handle().acquireNextImage(
+                UINT64_MAX, frame_command_context_.current_image_available_semaphore(), VK_NULL_HANDLE);
 
-        using enum ::vk::Result;
-        if (result == eSuccess || result == eSuboptimalKHR)
-        {
-            current_swap_chain_image_index_ = swap_chain_image_index;
-            framebuffer_resized_ |= (result == eSuboptimalKHR);
-            break;
+            using enum ::vk::Result;
+            if (vk_result == eSuccess || vk_result == eSuboptimalKHR)
+            {
+                current_swap_chain_image_index_ = swap_chain_image_index;
+                framebuffer_resized_ |= (vk_result == eSuboptimalKHR);
+                break;
+            }
+            if (vk_result == eErrorOutOfDateKHR)
+            {
+                // true on successful recreate, false if minimized
+                if (recreate_resources())
+                {
+                    continue;
+                }
+                else
+                {
+                    return {RenderStatusCode::SkipMinimized, {}};
+                }
+            }
+            throw arm::Exception("Unable to aquire swapchain image ({})", ::vk::to_string(vk_result));
         }
-        if (result == eErrorOutOfDateKHR)
+        catch (const ::vk::SystemError &e)
         {
-            recreate_resources();
-            continue;
+            auto result = static_cast<::vk::Result>(e.code().value());
+            if (result == ::vk::Result::eErrorOutOfDateKHR)
+            {
+                // true on successful recreate, false if minimized
+                if (recreate_resources())
+                {
+                    continue;
+                }
+                else
+                {
+                    return {RenderStatusCode::SkipMinimized, {}};
+                }
+            }
+            throw; // if anything other than OutOfDate, which shouldn't happen, don't bury it
         }
-        throw arm::Exception("Unable to aquire swapchain image ({})", ::vk::to_string(result));
     }
 
     // we have a swapchain image at this point, though swapchain could be suboptimal. render anyway. this may change
@@ -179,13 +239,11 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> std::vector<DrawItem>
     }
 
     std::ranges::sort(result, {}, &DrawItem::sort_key);
-    return result;
+    return {RenderStatusCode::ReadyToRecord, std::move(result)};
 }
 
-auto VulkanRenderer::record_(
-    [[maybe_unused]] const std::vector<DrawItem> &draw_items,
-    const Camera &camera,
-    ImDrawData *imgui_draw_data) -> void
+auto VulkanRenderer::record_(const std::vector<DrawItem> &draw_items, const Camera &camera, ImDrawData *imgui_draw_data)
+    -> void
 {
     const auto frame_index = frame_command_context_.current_frame_index();
 
@@ -319,6 +377,7 @@ auto VulkanRenderer::end_frame_() -> void
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &*swapchain_.semaphores().at(current_swap_chain_image_index_);
 
+    frame_command_context_.reset_fence();
     device_.graphics_queue().submit(submit_info, *frame_command_context_.current_fence());
 
     auto present_info = ::vk::PresentInfoKHR{};
@@ -328,10 +387,24 @@ auto VulkanRenderer::end_frame_() -> void
     present_info.pSwapchains = &*swapchain_.native_handle();
     present_info.pImageIndices = &current_swap_chain_image_index_;
 
-    const auto present_result = device_.present_queue().presentKHR(present_info);
-    if (present_result == ::vk::Result::eErrorOutOfDateKHR || present_result == ::vk::Result::eSuboptimalKHR)
+    try
     {
-        framebuffer_resized_ = true;
+        const auto present_result = device_.present_queue().presentKHR(present_info);
+        if (present_result == ::vk::Result::eErrorOutOfDateKHR || present_result == ::vk::Result::eSuboptimalKHR)
+        {
+            framebuffer_resized_ = true;
+        }
+    }
+    catch (const ::vk::SystemError &e)
+    {
+        auto result = static_cast<::vk::Result>(e.code().value());
+        if (result == ::vk::Result::eErrorOutOfDateKHR)
+        {
+            framebuffer_resized_ = true;
+            frame_command_context_.advance_frame();
+            return;
+        }
+        throw; // if anything other than OutOfDate, which shouldn't happen, don't bury it
     }
 
     frame_command_context_.advance_frame();
