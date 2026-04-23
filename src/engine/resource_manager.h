@@ -21,8 +21,9 @@ class VulkanDevice;
 class ResourceManager
 {
   public:
-    explicit ResourceManager()
-        : descriptor_pool_{nullptr}
+    explicit ResourceManager(const VulkanDevice &device)
+        : device_{device}
+        , descriptor_pool_{nullptr}
         , pipeline_resources_{nullptr}
     {
         arm::log::debug("ResourceManager constructor");
@@ -38,9 +39,11 @@ class ResourceManager
     {
         for (const auto &[handle, material] : materials_)
         {
-            material.descriptor_set().getDevice().freeDescriptorSets(
-                descriptor_pool_->native_handle(), *material.descriptor_set());
+            arm::log::debug("freeing descriptor set for material {}", material.name());
+            (*device_.native_handle())
+                .freeDescriptorSets(descriptor_pool_->native_handle(), *material.descriptor_set());
         }
+        materials_.clear();
     }
 
     auto allocate_material_descriptor_set() -> ::vk::raii::DescriptorSet
@@ -121,6 +124,7 @@ class ResourceManager
     }
 
   private:
+    const VulkanDevice &device_;
     VulkanDescriptorPool *descriptor_pool_;
     VulkanPipelineResources *pipeline_resources_;
     std::unordered_map<ShaderHandle, Shader> shaders_;

@@ -1,7 +1,7 @@
 #include "vulkan_renderer.h"
 
-#include "string_view"
 #include <cstdint>
+#include <string_view>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -37,7 +37,7 @@ VulkanRenderer::VulkanRenderer(
     : max_frames_in_flight_{max_frames_in_flight}
     , device_{device}
     , surface_{surface}
-    , resource_manager_{}
+    , resource_manager_{device_}
     , resource_loader_{device_, resource_manager_, "c:/dev/Pong/assets"sv}
     , swapchain_{device_, surface_}
     , frame_command_context_{device_, max_frames_in_flight_}
@@ -70,12 +70,15 @@ VulkanRenderer::VulkanRenderer(
 
 auto VulkanRenderer::shutdown() -> void
 {
+    device_.native_handle().waitIdle();
+    descriptor_sets_.clear();
     resource_manager_.shutdown();
 }
 
 auto VulkanRenderer::recreate_resources() -> void
 {
     // TODO eventually, let's not waitidle unless absolutely needed (ie don't call this every frame of a resize)
+
     device_.native_handle().waitIdle();
     swapchain_.recreate();
     depth_buffer_ = {device_, swapchain_.extent()};
