@@ -22,7 +22,6 @@
 #include "graphics/utils.h"
 #include "utils/log.h"
 
-
 namespace pong
 {
 using namespace std::literals;
@@ -63,15 +62,13 @@ auto ResourceLoader::loadgltf(std::filesystem::path path) -> Scene
     // const auto scene_count = loaded_asset.scenes.size();
     const auto default_scene_index = loaded_asset.default_scene_index.value_or(0);
     const auto &default_scene = loaded_asset.scenes[default_scene_index];
+    arm::log::debug("gltf loaded default scene index/name: {}: {}", default_scene_index, default_scene.name);
 
-    arm::log::debug(
-        "gltf loaded:\n default scene index: {}\ndefault scene name: {}", default_scene_index, default_scene.name);
     auto entities = std::vector<Entity>();
     auto root_indices = std::vector<EntityIndex>();
     for (auto i = 0zu; i < default_scene.root_node_indices.size(); ++i)
     {
         const auto &node = loaded_asset.nodes[default_scene.root_node_indices[i]];
-        arm::log::debug("processing node {} with index #{}", node.name, default_scene.root_node_indices[i]);
         root_indices.push_back(process_loaded_node_(loaded_asset, node, entities));
     }
     return {std::move(entities), std::move(root_indices)};
@@ -153,25 +150,21 @@ auto ResourceLoader::process_loaded_node_(
     auto entity = Entity{};
     entity.set_transform(node.local_transform);
     entity.set_name(node.name);
+    arm::log::debug("  gltf node: {}", node.name);
 
     if (node.mesh_index.has_value())
     {
-        // if mesh_index has a value, this is effectively an Entity.
-        // Get the transform from node, model from its mesh
-        arm::log::debug("  - node has mesh_index");
         auto mesh_index = node.mesh_index.value();
         auto model = Model{};
         model.name = loaded_asset.meshes[mesh_index].name;
 
         const auto &primitives = loaded_asset.meshes[mesh_index].primitives;
-        arm::log::debug("  - node has {} primitives", primitives.size());
-
         for (auto i = 0zu; i < primitives.size(); ++i)
         {
             auto name = std::format("{}_{}", model.name, i);
             auto mesh_handle =
                 resource_manager_.insert<Mesh>(name, {device_, name, primitives[i].vertices, primitives[i].indices});
-            arm::log::debug("    - added mesh {} {}", name, mesh_handle.value);
+            arm::log::debug("    added mesh {} {:x}", name, mesh_handle.value);
 
             auto renderable = Renderable{};
             if (primitives[i].material_index.has_value())
@@ -284,12 +277,11 @@ auto ResourceLoader::process_loaded_node_(
 
                 auto material_handle = resource_manager_.insert<Material>(material.name(), std::move(material));
                 renderable = Renderable{mesh_handle, std::make_optional(material_handle)};
-                arm::log::debug("    - with material {} {:#x}", loaded_material.name, material_handle.value);
+                arm::log::debug("    added material {} {:x}", loaded_material.name, material_handle.value);
             }
             else
             {
                 renderable = Renderable{mesh_handle, std::nullopt};
-                arm::log::debug("    - without material");
             }
             model.renderables.push_back(std::move(renderable));
         }
@@ -305,11 +297,10 @@ auto ResourceLoader::process_loaded_node_(
 
     for (auto i = 0zu; i < node.child_indices.size(); ++i)
     {
-        arm::log::debug("Moving to child node, index #{}", node.child_indices[i]);
         entity.add_child(process_loaded_node_(loaded_asset, loaded_asset.nodes[node.child_indices[i]], entities));
     }
 
-    arm::log::debug("Creating entity \"{}\"", entity.name());
+    arm::log::debug("Creating entity '{}'", entity.name());
     auto result = EntityIndex{entities.size()};
     entities.push_back(std::move(entity));
     return result;
