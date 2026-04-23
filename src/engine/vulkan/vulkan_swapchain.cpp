@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <format>
-#include <ranges>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -97,7 +96,7 @@ auto VulkanSwapchain::create_() -> void
     // begin creating swapchain
     auto swapchain_create_info = ::vk::SwapchainCreateInfoKHR{};
     swapchain_create_info.sType = ::vk::StructureType::eSwapchainCreateInfoKHR;
-    swapchain_create_info.surface = *surface_.native_handle();
+    swapchain_create_info.surface = surface_.native_handle();
     swapchain_create_info.minImageCount = image_count;
     swapchain_create_info.imageFormat = surface_format_;
     swapchain_create_info.imageColorSpace = color_space_;

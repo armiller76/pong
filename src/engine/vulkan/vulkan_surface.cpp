@@ -15,9 +15,14 @@ VulkanSurface::VulkanSurface(const VulkanInstance &vk_instance, const Win32Windo
     arm::log::debug("VulkanSurface constructor");
 }
 
-auto VulkanSurface::native_handle() const -> const ::vk::raii::SurfaceKHR &
+auto VulkanSurface::get() const -> const ::vk::raii::SurfaceKHR &
 {
     return surface_;
+}
+
+auto VulkanSurface::native_handle() const -> const ::vk::SurfaceKHR &
+{
+    return *surface_;
 }
 
 auto VulkanSurface::get_surface_capabilities(const ::vk::raii::PhysicalDevice &physical_device) const
