@@ -49,6 +49,7 @@ int main()
         const auto vk_device = pong::VulkanDevice(vk_instance, vk_surface);
 
         auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, 2u);
+        window.add_resize_callback([&vk_renderer](std::uint32_t, std::uint32_t) { vk_renderer.recreate_resources(); });
         auto scene = vk_renderer.load_scene("assets/gltf/CesiumMilkTruck/CesiumMilkTruck.glb");
         // auto scene = vk_renderer.load_scene("assets/gltf/BoomBox/BoomBox.glb");
 
