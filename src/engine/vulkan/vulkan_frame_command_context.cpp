@@ -11,7 +11,6 @@
 #include "engine/vulkan/vulkan_device.h"
 #include "utils/error.h"
 
-
 namespace pong
 {
 
@@ -71,10 +70,12 @@ auto VulkanFrameCommandContext::wait_for_fence() -> void
 {
     auto result = device_.native_handle().waitForFences(*current_fence(), VK_TRUE, UINT64_MAX);
     arm::ensure(result == ::vk::Result::eSuccess, "Failed to wait for fence");
-
-    device_.native_handle().resetFences(*current_fence());
 }
 
+auto VulkanFrameCommandContext::reset_fence() -> void
+{
+    device_.native_handle().resetFences(*current_fence());
+}
 auto VulkanFrameCommandContext::advance_frame() -> void
 {
     current_frame_ = (current_frame_ + 1) % frames_in_flight_;

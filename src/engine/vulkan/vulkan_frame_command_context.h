@@ -21,6 +21,7 @@ class VulkanFrameCommandContext
     VulkanFrameCommandContext(VulkanFrameCommandContext &&) noexcept = delete;
     auto operator=(VulkanFrameCommandContext &&) noexcept -> VulkanFrameCommandContext & = delete;
 
+    auto reset_fence() -> void;
     auto wait_for_fence() -> void;
     auto advance_frame() -> void;
 
