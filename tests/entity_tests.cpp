@@ -1,5 +1,4 @@
 #include <cmath>
-#include <cstdint>
 #include <limits>
 #include <optional>
 #include <string_view>
@@ -28,8 +27,8 @@ TEST(Entity, ConstructsWithExpectedState)
 
     EXPECT_TRUE(entity.is_active());
     EXPECT_EQ(entity.name(), "player");
-    EXPECT_EQ(entity.model().name, "player_model");
-    EXPECT_EQ(entity.model().renderables[0].mesh_handle, handle);
+    EXPECT_EQ(entity.model().value().name, "player_model");
+    EXPECT_EQ(entity.model().value().renderables[0].mesh_handle, handle);
     EXPECT_FLOAT_EQ(entity.transform().position.x, 1.0f);
     EXPECT_FLOAT_EQ(entity.transform().position.y, 2.0f);
     EXPECT_FLOAT_EQ(entity.transform().position.z, 3.0f);
