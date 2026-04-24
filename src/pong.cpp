@@ -12,6 +12,7 @@
 #include "engine/vulkan/vulkan_renderer.h"
 #include "engine/vulkan/vulkan_surface.h"
 #include "graphics/camera.h"
+#include "graphics/color.h"
 #include "graphics/mesh.h"
 #include "imgui/imgui_wrapper.h"
 #include "math/rectangle.h"
@@ -23,9 +24,10 @@ int main()
 {
     using namespace std::literals;
 
-    std::string project_root{"c:/dev/Pong"};
-    std::string app_name{"Pong"};
-    std::string engine_name{"NotAnEngine"};
+    auto project_root = std::string{"c:/dev/Pong"};
+    auto app_name = std::string{"Pong"};
+    auto engine_name = std::string{"NotAnEngine"};
+    auto clear_color = pong::Color{0.42f, 0.42f, 0.42f, 1.04};
 
     auto window_rect = pong::Rectangle{.offset{100u, 100u}, .extent{800u, 600u}};
 
@@ -43,13 +45,12 @@ int main()
             static_cast<uint32_t>(APP_VERSION_PATCH)};
 
         // TODO: other platforms
-        auto window = pong::Win32Window(app_name, window_rect);
+        auto window = pong::Win32Window(app_name, window_rect, clear_color);
 
         const auto vk_surface = window.create_vulkan_surface(vk_instance);
         const auto vk_device = pong::VulkanDevice(vk_instance, vk_surface);
 
-        auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, 2u);
-        window.add_resize_callback([&vk_renderer](std::uint32_t, std::uint32_t) { vk_renderer.recreate_resources(); });
+        auto vk_renderer = pong::VulkanRenderer(vk_device, vk_surface, 2u, clear_color);
         auto scene = vk_renderer.load_scene("assets/gltf/CesiumMilkTruck/CesiumMilkTruck.glb");
         // auto scene = vk_renderer.load_scene("assets/gltf/BoomBox/BoomBox.glb");
 
@@ -58,15 +59,43 @@ int main()
         main_camera.set_view_target({0.0f, 0.0f, 0.0f});
         auto imgui = pong::ImguiWrapper{window.win32_handles().window, vk_renderer, vk_instance, project_root};
 
-        auto prev_time = std::chrono::high_resolution_clock::now();
+        auto last_window_recreate_time = std::chrono::high_resolution_clock::now();
+        auto was_resize_pending = false;
         // auto accum_time = 0.0f;
         while (!window.should_close())
         {
             auto start_time = std::chrono::high_resolution_clock::now();
-            // auto delta = std::chrono::duration<float>(start_time - prev_time);
-            prev_time = start_time;
+            auto renderer_needs_recreate = false;
 
             window.process_events();
+
+            if (!window.is_minimized())
+            {
+                if (vk_renderer.needs_recreate())
+                {
+                    renderer_needs_recreate = true;
+                }
+                else if (was_resize_pending && !window.resize_pending())
+                {
+                    renderer_needs_recreate = true;
+                }
+                else if (window.resize_pending() && start_time - last_window_recreate_time >= 50ms) // TODO Magic number
+                {
+                    renderer_needs_recreate = true;
+                }
+            }
+            else
+            {
+                continue;
+            }
+
+            was_resize_pending = window.resize_pending();
+
+            if (renderer_needs_recreate)
+            {
+                vk_renderer.recreate_resources();
+                last_window_recreate_time = start_time;
+            }
 
             imgui.begin_frame();
             imgui.render(); // calls ImGui::EndFrame()
