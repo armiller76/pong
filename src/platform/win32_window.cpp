@@ -6,6 +6,7 @@
 
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_surface.h"
+#include "graphics/color.h"
 #include "imgui.h"
 #include "math/rectangle.h"
 #include "utils/error.h"
@@ -24,7 +25,7 @@ Win32Window::~Win32Window()
     ::UnregisterClassA(class_name_.c_str(), hinstance_);
 }
 
-Win32Window::Win32Window(std::string_view app_name, Rectangle window_rect)
+Win32Window::Win32Window(std::string_view app_name, Rectangle window_rect, Color clear_color)
     : hinstance_{::GetModuleHandleA(0)}
     , should_close_{false}
     , app_name_{app_name}
@@ -69,6 +70,13 @@ Win32Window::Win32Window(std::string_view app_name, Rectangle window_rect)
         throw arm::Exception("CreateWindowEx failed");
     }
 
+    clear_brush_ = {
+        ::CreateSolidBrush(
+            RGB(Color::float_to_srgb_byte(clear_color.r),
+                Color::float_to_srgb_byte(clear_color.g),
+                Color::float_to_srgb_byte(clear_color.b))),
+        ::DeleteObject};
+
     ::ShowWindow(hwnd_, SW_SHOWNORMAL);
     ::UpdateWindow(hwnd_);
 }
@@ -98,6 +106,16 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
 
     switch (msg)
     {
+        case WM_ERASEBKGND:
+        {
+            auto hdc = HDC(wParam);
+            auto window_rect = RECT{};
+
+            ::GetClientRect(hwnd_, &window_rect);
+            ::FillRect(hdc, &window_rect, clear_brush_);
+            return 1;
+        }
+        break;
         case WM_ENTERSIZEMOVE:
         {
             resize_pending_ = true;
