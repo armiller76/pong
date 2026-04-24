@@ -15,6 +15,7 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 namespace pong
 {
+using namespace std::literals;
 
 Win32Window::~Win32Window()
 {
@@ -90,8 +91,6 @@ auto Win32Window::process_events() -> void
 
 auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT
 {
-    static auto resize_in_process = false;
-
     if (ImGui_ImplWin32_WndProcHandler(window, msg, wParam, lParam))
     {
         return true;
@@ -101,44 +100,34 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
     {
         case WM_ENTERSIZEMOVE:
         {
-            resize_in_process = true;
+            resize_pending_ = true;
             return ERROR_SUCCESS;
         }
         case WM_EXITSIZEMOVE:
         {
-            resize_in_process = false;
-
-            for (const auto &[id, callback] : resize_callbacks_)
-            {
-                callback(window_rect_.extent.width, window_rect_.extent.height);
-            }
-
+            resize_pending_ = false;
             return ERROR_SUCCESS;
         }
         case WM_SIZE:
         {
-            if (wParam != SIZE_MINIMIZED && !resize_in_process)
+            if (wParam != SIZE_MINIMIZED)
             {
+                is_minimized_ = false;
                 window_rect_.extent.width = LOWORD(lParam);
                 window_rect_.extent.height = HIWORD(lParam);
-
-                for (const auto &[id, callback] : resize_callbacks_)
-                {
-                    callback(window_rect_.extent.width, window_rect_.extent.height);
-                }
             }
+            else
+            {
+                is_minimized_ = true;
+            }
+
             return ERROR_SUCCESS;
         }
 
         case WM_CLOSE:
         {
             should_close_ = true;
-
-            for (const auto &[id, callback] : close_callbacks_)
-            {
-                callback();
-            }
-
+            fire_close_callbacks();
             ::PostQuitMessage(0);
             return ERROR_SUCCESS;
         }
@@ -157,7 +146,7 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
     }
 }
 
-auto Win32Window::extent() const -> Extent2D
+auto Win32Window::extent() const -> const Extent2D
 {
     return window_rect_.extent;
 }
@@ -182,6 +171,14 @@ auto Win32Window::create_vulkan_surface(const VulkanInstance &instance) const ->
     return VulkanSurface{instance, win32_handles()};
 }
 
+auto Win32Window::fire_close_callbacks() -> void
+{
+    for (const auto &[id, callback] : close_callbacks_)
+    {
+        callback();
+    }
+}
+
 auto Win32Window::add_close_callback(std::function<void()> close_callback) -> std::uint64_t
 {
     auto token = ++current_callback_token_;
@@ -196,6 +193,14 @@ auto Win32Window::remove_close_callback(std::uint64_t callback_handle) -> void
         "Can't remove close_callbacks_ handle ({}) which is not in the map",
         callback_handle);
     close_callbacks_.erase(callback_handle);
+}
+
+auto Win32Window::fire_resize_callbacks() -> void
+{
+    for (const auto &[id, callback] : resize_callbacks_)
+    {
+        callback(window_rect_.extent.width, window_rect_.extent.height);
+    }
 }
 
 auto Win32Window::add_resize_callback(std::function<void(std::uint32_t, std::uint32_t)> resize_callback)
@@ -213,6 +218,16 @@ auto Win32Window::remove_resize_callback(std::uint64_t callback_handle) -> void
         "Can't remove resize_callbacks_ handle ({}) which is not in the map",
         callback_handle);
     resize_callbacks_.erase(callback_handle);
+}
+
+auto Win32Window::resize_pending() -> bool
+{
+    return resize_pending_;
+}
+
+auto Win32Window::is_minimized() -> bool
+{
+    return is_minimized_;
 }
 
 auto CALLBACK Win32Window::instance_window_callback(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT
