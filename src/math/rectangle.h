@@ -9,12 +9,8 @@ namespace pong
 
 struct Offset2D
 {
-    std::int32_t x;
-    std::int32_t y;
-
     constexpr Offset2D()
-        : x{0}
-        , y{0}
+        : Offset2D(0u, 0u)
     {
     }
 
@@ -23,12 +19,19 @@ struct Offset2D
         , y{y}
     {
     }
+
+    constexpr auto operator==(const Offset2D &other) const -> bool = default;
+
+    std::int32_t x;
+    std::int32_t y;
 };
 
 struct Extent2D
 {
-    std::uint32_t width;
-    std::uint32_t height;
+    constexpr Extent2D()
+        : Extent2D(100u, 100u)
+    {
+    }
 
     constexpr Extent2D(std::uint32_t w, std::uint32_t h)
         : width{w}
@@ -41,8 +44,12 @@ struct Extent2D
     }
 
     constexpr auto operator==(const Extent2D &other) const -> bool = default;
+
+    std::uint32_t width;
+    std::uint32_t height;
 };
 
+// default construct gives you offset(0,0) and extent(100,100)
 struct Rectangle
 {
     Offset2D offset;
