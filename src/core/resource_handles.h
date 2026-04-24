@@ -10,7 +10,7 @@
 namespace pong
 {
 
-static inline constexpr auto get_resource_id(std::string_view str) -> std::uint64_t
+constexpr auto get_resource_id(std::string_view str) -> std::uint64_t
 {
     return hash_string(str);
 }
@@ -51,13 +51,7 @@ struct EntityIndex
     auto operator<=>(const EntityIndex &other) const -> auto = default;
 };
 
-// struct ImageHandle
-//{
-//     std::uint64_t value;
-//     auto operator==(const ImageHandle &other) const -> bool = default;
-// };
-
-}
+} // namespace pong
 
 template <>
 struct std::hash<pong::ShaderHandle>
@@ -103,12 +97,3 @@ struct std::hash<pong::ModelHandle>
         return std::hash<std::uint64_t>{}(obj.value);
     }
 };
-
-// template <>
-// struct std::hash<pong::ImageHandle>
-//{
-//     auto operator()(const pong::ImageHandle &obj) const noexcept -> std::size_t
-//     {
-//         return std::hash<std::uint64_t>{}(obj.value);
-//     }
-// };
