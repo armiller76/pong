@@ -2,7 +2,7 @@
 
 #include "math/rectangle.h"
 #include "platform/win32_window.h"
-
+#include "utils/exception.h"
 
 namespace pong
 {
@@ -83,6 +83,37 @@ TEST(Win32Window, SizePixelsReflectsInternalState)
     auto s = test_window.window.extent();
     EXPECT_GT(s.width, 0u);
     EXPECT_GT(s.height, 0u);
+}
+
+TEST(Win32Window, ResizeDuringSizeMoveIsSuppressedUntilExit)
+{
+    TestWindow test_window;
+
+    int hit_count = 0;
+    auto h = test_window.window.add_resize_callback([&](std::uint32_t, std::uint32_t) { ++hit_count; });
+
+    test_window.window.handle_message(nullptr, WM_ENTERSIZEMOVE, 0, 0);
+    test_window.window.handle_message(nullptr, WM_SIZE, SIZE_RESTORED, MAKELPARAM(1200, 700));
+
+    EXPECT_EQ(hit_count, 0);
+
+    test_window.window.handle_message(nullptr, WM_EXITSIZEMOVE, 0, 0);
+
+    EXPECT_EQ(hit_count, 1);
+
+    test_window.window.remove_resize_callback(h);
+}
+
+TEST(Win32Window, RemoveCloseCallbackThrowsForUnknownHandle)
+{
+    TestWindow test_window;
+    EXPECT_THROW(test_window.window.remove_close_callback(999999), arm::Exception);
+}
+
+TEST(Win32Window, RemoveResizeCallbackThrowsForUnknownHandle)
+{
+    TestWindow test_window;
+    EXPECT_THROW(test_window.window.remove_resize_callback(999999), arm::Exception);
 }
 
 }
