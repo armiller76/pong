@@ -19,14 +19,16 @@ class VulkanWindow
     virtual auto process_events() -> void = 0;
     virtual auto should_close() const -> bool = 0;
 
-    virtual auto extent() const -> Extent2D = 0;
+    virtual auto extent() const -> const Extent2D = 0;
     virtual auto set_title(std::string_view title) -> void = 0;
 
     virtual auto create_vulkan_surface(const VulkanInstance &instance) const -> VulkanSurface = 0;
 
+    virtual auto fire_close_callbacks() -> void = 0;
     virtual auto add_close_callback(std::function<void()>) -> std::uint64_t = 0;
     virtual auto remove_close_callback(std::uint64_t) -> void = 0;
 
+    virtual auto fire_resize_callbacks() -> void = 0;
     virtual auto add_resize_callback(std::function<void(std::uint32_t, std::uint32_t)>) -> std::uint64_t = 0;
     virtual auto remove_resize_callback(std::uint64_t) -> void = 0;
 };
