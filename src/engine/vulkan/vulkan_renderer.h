@@ -71,6 +71,7 @@ class VulkanRenderer
     auto shutdown() -> void;
 
     auto recreate_resources() -> bool;
+    auto needs_recreate() -> bool;
 
     auto set_clear_color(const Color &color) -> void;
 

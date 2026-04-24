@@ -101,6 +101,11 @@ auto VulkanRenderer::recreate_resources() -> bool
     return true;
 }
 
+auto VulkanRenderer::needs_recreate() -> bool
+{
+    return framebuffer_resized_;
+}
+
 auto VulkanRenderer::set_clear_color(const Color &color) -> void
 {
     clear_color_ = {color.r, color.g, color.b, color.a};
@@ -123,15 +128,13 @@ auto VulkanRenderer::render(const Scene &scene, const Camera &camera, ImDrawData
             end_frame_();
         }
         break;
+
         case RenderStatusCode::SkipMinimized:
-        {
-            return;
-        }
         case RenderStatusCode::RecreateRequested:
         {
-            recreate_resources();
             return;
         }
+
         case RenderStatusCode::Error:
         default:
         {
@@ -164,15 +167,7 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
             }
             if (vk_result == eErrorOutOfDateKHR)
             {
-                // true on successful recreate, false if minimized
-                if (recreate_resources())
-                {
-                    continue;
-                }
-                else
-                {
-                    return {RenderStatusCode::SkipMinimized, {}};
-                }
+                return {RenderStatusCode::RecreateRequested, {}};
             }
             throw arm::Exception("Unable to aquire swapchain image ({})", ::vk::to_string(vk_result));
         }
@@ -181,15 +176,7 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
             auto result = static_cast<::vk::Result>(e.code().value());
             if (result == ::vk::Result::eErrorOutOfDateKHR)
             {
-                // true on successful recreate, false if minimized
-                if (recreate_resources())
-                {
-                    continue;
-                }
-                else
-                {
-                    return {RenderStatusCode::SkipMinimized, {}};
-                }
+                return {RenderStatusCode::RecreateRequested, {}};
             }
             throw; // if anything other than OutOfDate, which shouldn't happen, don't bury it
         }
