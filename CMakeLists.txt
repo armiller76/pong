@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Pong VERSION 0.0.1)
+project(pong VERSION 0.0.1)
 include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -141,6 +141,7 @@ if(MSVC)
             /WX-
   )
 endif()
+
 add_subdirectory(third-party/gltf)
 add_subdirectory(third-party/stb_image)
 
