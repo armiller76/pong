@@ -1,6 +1,5 @@
 #include "exception.h"
 
-#include <cstdint>
 #include <format>
 
 namespace arm
