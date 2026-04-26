@@ -10,29 +10,6 @@
 namespace pong
 {
 
-static inline auto check_vk_result(VkResult r) -> void
-{
-    if (r == VK_SUCCESS)
-    {
-        return;
-    }
-    else
-    {
-        auto trace = std::stacktrace::current(2zu);
-        if (r > 0)
-        {
-            arm::log::warn(
-                "Vulkan non-fatal error: {}\nStacktrace:\n{}\nContinuing",
-                ::vk::to_string(static_cast<::vk::Result>(r)),
-                trace);
-        }
-        else
-        {
-            throw arm::Exception("Vulkan fatal error: {}Terminating", ::vk::to_string(static_cast<::vk::Result>(r)));
-        }
-    }
-}
-
 inline auto to_vk(ShaderStage s) -> ::vk::ShaderStageFlagBits
 {
     using enum ShaderStage;
