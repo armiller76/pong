@@ -2,8 +2,10 @@
 
 #include <expected>
 #include <format>
+#include <limits>
 #include <string>
 #include <utility>
+
 
 #include <vulkan/vulkan_raii.hpp>
 
@@ -11,6 +13,8 @@
 
 namespace pong
 {
+
+[[maybe_unused]] static constexpr auto INVALID_RESOURCE_ID = (std::numeric_limits<std::uint64_t>::max)() - 1;
 
 enum class ResultCode
 {
