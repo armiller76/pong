@@ -39,10 +39,7 @@ VulkanRenderer::VulkanRenderer(
     : max_frames_in_flight_{max_frames_in_flight}
     , device_{device}
     , surface_{surface}
-    , resource_manager_{}
-    , resource_loader_{device_, resource_manager_, "c:/dev/Pong/assets"sv}
     , swapchain_{device_, surface_}
-    , frame_command_context_{device_, max_frames_in_flight_}
     , view_proj_uniform_buffers_(
           [&]() -> std::vector<VulkanGpuBuffer>
           {
@@ -57,23 +54,26 @@ VulkanRenderer::VulkanRenderer(
               }
               return buffers;
           }())
-    , depth_buffer_{device_, swapchain_.extent()}
     , descriptor_pool_{device_, view_proj_uniform_buffers_, max_frames_in_flight_}
-    , pipeline_factory_{device_, resource_manager_}
-    , pipeline_resources_{pipeline_factory_.create_graphics_pipeline(swapchain_.format(), depth_buffer_.format())}
-    , descriptor_sets_{descriptor_pool_.allocate_per_frame_descriptor_sets(
-          pipeline_resources_.per_frame_descriptor_set_layout)}
+    , resource_manager_{}
+    , pipeline_manager_{device_, resource_manager_, descriptor_pool_, swapchain_.format()}
+    , resource_loader_{device_, resource_manager_, pipeline_manager_, "c:/dev/Pong/assets"sv}
+    , frame_command_context_{device_, max_frames_in_flight_}
+    , depth_buffer_{device_, swapchain_.extent()}
+    , per_frame_descriptor_sets_{descriptor_pool_.allocate_per_frame_descriptor_sets(
+          pipeline_manager_.get_per_frame_descriptor_set_layout())}
     , clear_color_{clear_color.r, clear_color.g, clear_color.b, clear_color.a}
 {
     arm::log::debug("VulkanRenderer constructor");
-    resource_manager_.set_pipeline_resources(pipeline_resources_);
     resource_manager_.set_descriptor_pool(descriptor_pool_);
+
+    pipeline_manager_.get_or_create_pipeline(pipeline_manager_.get_default_pipeline_key());
 }
 
 auto VulkanRenderer::shutdown() -> void
 {
     device_.native_handle().waitIdle();
-    descriptor_sets_.clear();
+    per_frame_descriptor_sets_.clear();
     resource_manager_.shutdown();
 }
 
@@ -91,7 +91,7 @@ auto VulkanRenderer::recreate_resources() -> bool
     depth_buffer_ = {device_, swapchain_.extent()};
 
     // TODO the renderer should keep a list of resize callbacks.
-    // can the window callback list be referenced? or should the window defer all resize callbacks directly to the
+    // can the Window callback list be referenced? or should the Window defer all resize callbacks directly to the
     // app/renderer?
     if (imgui_resize_callback)
     {
@@ -141,10 +141,6 @@ auto VulkanRenderer::render(const Scene &scene, const Camera &camera, ImDrawData
         {
             throw arm::Exception("render error");
         }
-    }
-    if (framebuffer_resized_)
-    {
-        recreate_resources();
     }
 }
 
@@ -210,7 +206,11 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
                                                 ? std::make_optional<MaterialHandle>(renderable.material_handle.value())
                                                 : std::nullopt;
                 draw_item.model = world_transform;
-                draw_item.sort_key = make_draw_sort_key_(0zu, draw_item.material_handle.value(), draw_item.mesh_handle);
+                // TODO: this can't always get default pipeline key
+                draw_item.sort_key = make_draw_sort_key_(
+                    pipeline_manager_.get_default_pipeline_key(),
+                    draw_item.material_handle.value(),
+                    draw_item.mesh_handle);
                 draw_items.push_back(std::move(draw_item));
             }
         }
@@ -224,6 +224,7 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
         }
     };
 
+    // TODO this will need a complete refactor once new pipeline is in place
     auto result = std::vector<DrawItem>();
     for (const auto &entity_index : scene.root_indices())
     {
@@ -250,7 +251,7 @@ auto VulkanRenderer::record_(const std::vector<DrawItem> &draw_items, const Came
     rendering_info.renderArea.offset = ::vk::Offset2D{0, 0};
     rendering_info.renderArea.extent = swapchain_.extent();
     rendering_info.layerCount = 1;
-    rendering_info.viewMask = 0;
+    rendering_info.viewMask = 0; // TODO magic-y number - must match pipeline creation create_rendering_info
     rendering_info.colorAttachmentCount = 1;
     rendering_info.pColorAttachments = &color_attachment_info;
     rendering_info.pDepthAttachment = &depth_attachment_info;
@@ -288,7 +289,10 @@ auto VulkanRenderer::record_(const std::vector<DrawItem> &draw_items, const Came
 
     // render
     command_buffer.beginRendering(rendering_info);
-    command_buffer.bindPipeline(::vk::PipelineBindPoint::eGraphics, pipeline_resources_.pipeline);
+
+    command_buffer.bindPipeline(
+        ::vk::PipelineBindPoint::eGraphics,
+        *pipeline_manager_.get_pipeline(pipeline_manager_.get_default_pipeline_key()).pipeline);
     command_buffer.setViewport(
         0,
         ::vk::Viewport{
@@ -300,7 +304,11 @@ auto VulkanRenderer::record_(const std::vector<DrawItem> &draw_items, const Came
             1.0f});
     command_buffer.setScissor(0, ::vk::Rect2D{::vk::Offset2D{0, 0}, swapchain_.extent()});
     command_buffer.bindDescriptorSets(
-        ::vk::PipelineBindPoint::eGraphics, pipeline_resources_.layout, 0, *descriptor_sets_.at(frame_index), nullptr);
+        ::vk::PipelineBindPoint::eGraphics,
+        *pipeline_manager_.get_pipeline_layout(),
+        0,
+        *per_frame_descriptor_sets_.at(frame_index),
+        nullptr);
 
     //    iterate draw items
     auto last_mesh = static_cast<const Mesh *>(nullptr);
@@ -318,7 +326,7 @@ auto VulkanRenderer::record_(const std::vector<DrawItem> &draw_items, const Came
 
         // update model matrix
         command_buffer.pushConstants<::glm::mat4>(
-            *pipeline_resources_.layout, ::vk::ShaderStageFlagBits::eVertex, 0u, draw_item.model);
+            *pipeline_manager_.get_pipeline_layout(), ::vk::ShaderStageFlagBits::eVertex, 0u, draw_item.model);
 
         // update material data
         if (draw_item.material_handle.has_value())
@@ -329,7 +337,7 @@ auto VulkanRenderer::record_(const std::vector<DrawItem> &draw_items, const Came
                 last_material = &draw_item_material;
                 command_buffer.bindDescriptorSets(
                     ::vk::PipelineBindPoint::eGraphics,
-                    pipeline_resources_.layout,
+                    *pipeline_manager_.get_pipeline_layout(),
                     1,
                     *draw_item_material.descriptor_set(),
                     nullptr);
@@ -370,7 +378,12 @@ auto VulkanRenderer::end_frame_() -> void
     submit_info.pSignalSemaphores = &*swapchain_.semaphores().at(current_swap_chain_image_index_);
 
     frame_command_context_.reset_fence();
-    device_.graphics_queue().submit(submit_info, *frame_command_context_.current_fence());
+    auto submit_result = device_.graphics_queue().submit(submit_info, *frame_command_context_.current_fence());
+    if (submit_result != ::vk::Result::eSuccess)
+    {
+        // TODO handle this more gracefully
+        throw arm::Exception("graphics queue submit failed");
+    }
 
     // TODO review this
     // bypassing raii here because Vulkan internally checks Result and asserts on OutOfDate error at present.
@@ -398,15 +411,16 @@ auto VulkanRenderer::end_frame_() -> void
     }
 
     frame_command_context_.advance_frame();
+    ++frame_counter_;
 }
 
 constexpr auto VulkanRenderer::make_draw_sort_key_(
-    std::uint64_t pipeline_id,
+    PipelineKey pipeline_id,
     MaterialHandle material_handle,
     MeshHandle mesh_handle,
     std::int32_t depth_bucket) -> DrawSortKey
 {
-    return {pipeline_id, material_handle, mesh_handle, depth_bucket};
+    return {pipeline_id.pack(), material_handle, mesh_handle, depth_bucket};
 }
 
 } // namespace pong

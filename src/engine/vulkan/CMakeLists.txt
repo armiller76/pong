@@ -8,8 +8,7 @@ target_sources(
           vulkan_gpu_image.cpp
           vulkan_immediate_command_context.cpp
           vulkan_instance.cpp
-          vulkan_pipeline_factory.cpp
-          vulkan_pipeline_manager.h
+          vulkan_pipeline_manager.cpp
           vulkan_renderer.cpp
           vulkan_surface.cpp
           vulkan_swapchain.cpp

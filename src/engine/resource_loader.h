@@ -9,13 +9,15 @@
 #include "engine/vulkan/vulkan_immediate_command_context.h"
 #include "gltf/fastgltf_primitives.h"
 #include "graphics/image_format.h"
-#include "resource_manager.h"
 
 namespace pong
 {
 
 class Entity;
 class Image;
+class VulkanPipelineManager;
+class ResourceManager;
+class Texture2D;
 class VulkanDevice;
 enum class ShaderStage;
 
@@ -25,18 +27,20 @@ class ResourceLoader
     ResourceLoader(
         const VulkanDevice &device,
         ResourceManager &resource_manager,
+        VulkanPipelineManager &pipeline_manager,
         std::filesystem::path absolute_path_to_assets);
 
     auto loadgltf(std::filesystem::path path) -> Scene;
 
     // Shader loading
-    auto load(std::string_view name, std::filesystem::path path, ShaderStage stage) -> ShaderHandle;
+    auto load(std::string_view name, std::filesystem::path path) -> ShaderHandle;
     // Texture loading
     auto load(std::string_view name, Image &image) -> Texture2DHandle;
 
   private:
     const VulkanDevice &device_;
     ResourceManager &resource_manager_;
+    VulkanPipelineManager &pipeline_manager_;
     std::filesystem::path absolute_path_to_assets_;
     VulkanImmediateCommandContext command_context_;
     std::optional<Texture2DHandle> fallback_texture_handle_;

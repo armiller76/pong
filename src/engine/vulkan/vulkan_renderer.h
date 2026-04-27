@@ -14,7 +14,8 @@
 #include "engine/vulkan/vulkan_descriptor_pool.h"
 #include "engine/vulkan/vulkan_frame_command_context.h"
 #include "engine/vulkan/vulkan_gpu_buffer.h"
-#include "engine/vulkan/vulkan_pipeline_factory.h"
+#include "engine/vulkan/vulkan_pipeline_manager.h"
+#include "engine/vulkan/vulkan_pipeline_types.h"
 #include "engine/vulkan/vulkan_swapchain.h"
 #include "graphics/color.h"
 #include "graphics/mesh.h"
@@ -90,23 +91,22 @@ class VulkanRenderer
 
     const VulkanDevice &device_;
     const VulkanSurface &surface_;
-    ResourceManager resource_manager_;
-    ResourceLoader resource_loader_;
     VulkanSwapchain swapchain_;
-    VulkanFrameCommandContext frame_command_context_;
     std::vector<VulkanGpuBuffer> view_proj_uniform_buffers_;
-    DepthBuffer depth_buffer_;
     VulkanDescriptorPool descriptor_pool_;
-    VulkanPipelineFactory pipeline_factory_;
-    VulkanPipelineResources pipeline_resources_;
-    std::vector<::vk::raii::DescriptorSet> descriptor_sets_;
+    ResourceManager resource_manager_;
+    VulkanPipelineManager pipeline_manager_;
+    ResourceLoader resource_loader_;
+    VulkanFrameCommandContext frame_command_context_;
+    DepthBuffer depth_buffer_;
+    std::vector<::vk::raii::DescriptorSet> per_frame_descriptor_sets_;
     ::vk::ClearColorValue clear_color_;
-
     std::uint32_t current_swap_chain_image_index_{0};
+    std::uint64_t frame_counter_{0};
     bool framebuffer_resized_ = false;
 
     static constexpr auto make_draw_sort_key_(
-        std::uint64_t pipeline_id,
+        PipelineKey pipeline_key,
         MaterialHandle material_handle,
         MeshHandle mesh_handle,
         std::int32_t depth_bucket = 0) -> DrawSortKey;

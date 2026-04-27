@@ -5,14 +5,6 @@
 namespace pong
 {
 
-struct VulkanPipelineResources
-{
-    ::vk::raii::PipelineLayout layout;
-    ::vk::raii::Pipeline pipeline;
-    ::vk::raii::DescriptorSetLayout per_frame_descriptor_set_layout;
-    ::vk::raii::DescriptorSetLayout per_material_descriptor_set_layout;
-}; // struct VulkanPipelineResources
-
 struct transition_info
 {
     ::vk::ImageLayout src_layout;

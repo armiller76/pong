@@ -15,12 +15,15 @@
 #include "engine/file.h"
 #include "engine/resource_manager.h"
 #include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_pipeline_manager.h"
 #include "gltf/fastgltf_wrapper.h"
 #include "graphics/image.h"
+#include "graphics/material.h"
 #include "graphics/shader.h"
 #include "graphics/texture2d.h"
 #include "graphics/utils.h"
 #include "utils/log.h"
+
 
 namespace pong
 {
@@ -29,9 +32,11 @@ using namespace std::literals;
 ResourceLoader::ResourceLoader(
     const VulkanDevice &device,
     ResourceManager &resource_manager,
+    VulkanPipelineManager &pipeline_manager,
     std::filesystem::path absolute_path_to_assets)
     : device_{device}
     , resource_manager_{resource_manager}
+    , pipeline_manager_{pipeline_manager}
     , absolute_path_to_assets_{absolute_path_to_assets}
     , command_context_{device_, "resource_loader_command_context"sv}
 {
@@ -44,14 +49,10 @@ ResourceLoader::ResourceLoader(
         std::make_optional(resource_manager_.insert<Texture2D>("fallback_1x1_white", std::move(fallback_texture)));
     arm::ensure(fallback_texture_handle_.has_value(), "failed to create fallback texture");
 
-    load(
-        "simple.vert"sv,
-        std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_vert.spv"),
-        pong::ShaderStage::Vertex);
-    load(
-        "simple.frag"sv,
-        std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"),
-        pong::ShaderStage::Fragment);
+    resource_manager_.default_vertex_shader() =
+        load("simple.vert"sv, std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_vert.spv"));
+    resource_manager_.default_fragment_shader() =
+        load("simple.frag"sv, std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"));
 }
 
 auto ResourceLoader::loadgltf(std::filesystem::path path) -> Scene
@@ -74,7 +75,7 @@ auto ResourceLoader::loadgltf(std::filesystem::path path) -> Scene
     return {std::move(entities), std::move(root_indices)};
 }
 
-auto ResourceLoader::load(std::string_view name, std::filesystem::path path, ShaderStage stage) -> ShaderHandle
+auto ResourceLoader::load(std::string_view name, std::filesystem::path path) -> ShaderHandle
 {
     auto file = File(path);
     auto bytes = file.data().size_bytes();
@@ -85,12 +86,7 @@ auto ResourceLoader::load(std::string_view name, std::filesystem::path path, Sha
     std::memcpy(words.data(), file.data().data(), bytes);
     arm::ensure(spirv_validate(words), "invalid shader {}", name);
 
-    auto shader = Shader{};
-    shader.name = name;
-    shader.stage = stage;
-    shader.spirv.assign_range(words);
-
-    return resource_manager_.insert<Shader>(name, std::move(shader));
+    return resource_manager_.insert<Shader>(name, {device_, name, words});
 }
 
 auto ResourceLoader::load(std::string_view name, Image &image) -> Texture2DHandle
@@ -173,7 +169,7 @@ auto ResourceLoader::process_loaded_node_(
                 auto material = Material{
                     device_,
                     loaded_material.name,
-                    resource_manager_.allocate_material_descriptor_set(),
+                    pipeline_manager_.allocate_material_descriptor_set(),
                     loaded_material.base_color_factor,
                     loaded_material.metallic_factor,
                     loaded_material.roughness_factor,

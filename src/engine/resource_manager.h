@@ -2,16 +2,17 @@
 
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 
 #include "core/resource_handles.h"
 #include "core/resource_traits.h"
 #include "engine/vulkan/vulkan_descriptor_pool.h"
-#include "engine/vulkan/vulkan_render_utils.h"
 #include "graphics/material.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
 #include "graphics/texture2d.h"
 #include "utils/error.h"
+#include "utils/hash.h"
 
 namespace pong
 {
@@ -23,7 +24,8 @@ class ResourceManager
   public:
     explicit ResourceManager()
         : descriptor_pool_{nullptr}
-        , pipeline_resources_{nullptr}
+        , default_vertex_shader_handle_{INVALID_RESOURCE_ID}
+        , default_fragment_shader_handle_{INVALID_RESOURCE_ID}
     {
         arm::log::debug("ResourceManager constructor");
     }
@@ -37,17 +39,6 @@ class ResourceManager
     auto shutdown() -> void
     {
         materials_.clear();
-    }
-
-    auto allocate_material_descriptor_set() -> ::vk::raii::DescriptorSet
-    {
-        return descriptor_pool_->allocate_material_descriptor_set(
-            pipeline_resources_->per_material_descriptor_set_layout);
-    }
-
-    auto set_pipeline_resources(VulkanPipelineResources &pipeline_resources) -> void
-    {
-        pipeline_resources_ = &pipeline_resources;
     }
 
     auto set_descriptor_pool(VulkanDescriptorPool &descriptor_pool) -> void
@@ -116,13 +107,34 @@ class ResourceManager
         }
     }
 
+    auto default_vertex_shader() -> ShaderHandle &
+    {
+        return default_vertex_shader_handle_;
+    }
+
+    auto default_vertex_shader() const -> ShaderHandle
+    {
+        return default_vertex_shader_handle_;
+    }
+
+    auto default_fragment_shader() -> ShaderHandle &
+    {
+        return default_fragment_shader_handle_;
+    }
+
+    auto default_fragment_shader() const -> ShaderHandle
+    {
+        return default_fragment_shader_handle_;
+    }
+
   private:
     VulkanDescriptorPool *descriptor_pool_;
-    VulkanPipelineResources *pipeline_resources_;
     std::unordered_map<ShaderHandle, Shader> shaders_;
     std::unordered_map<MeshHandle, Mesh> meshes_;
     std::unordered_map<Texture2DHandle, Texture2D> textures_;
     std::unordered_map<MaterialHandle, Material> materials_;
+    ShaderHandle default_vertex_shader_handle_;   // temporary - eventually we won't need these
+    ShaderHandle default_fragment_shader_handle_; // temporary - eventually we won't need these
 
     template <typename MapType>
     auto get_map_(this auto &&self) -> auto &&
@@ -155,15 +167,6 @@ class ResourceManager
         if (descriptor_pool_ != nullptr)
         {
             return descriptor_pool_;
-        }
-        return nullptr;
-    }
-
-    auto get_pipeline_resources_() const -> const VulkanPipelineResources *
-    {
-        if (pipeline_resources_ != nullptr)
-        {
-            return pipeline_resources_;
         }
         return nullptr;
     }
