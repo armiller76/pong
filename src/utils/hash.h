@@ -1,10 +1,15 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 #include <string_view>
 
-#include "engine/engine_error.h"
 #include "utils/exception.h"
+
+namespace
+{
+static constexpr auto INVALID_RESOURCE_ID = (std::numeric_limits<std::uint64_t>::max)() - 1;
+}
 
 namespace pong
 {
