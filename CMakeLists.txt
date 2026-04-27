@@ -26,6 +26,8 @@ if(MSVC)
 endif()
 
 add_compile_definitions(
+  NOMINMAX
+  WIN32_LEAN_AND_MEAN
   VK_USE_PLATFORM_WIN32_KHR
   VULKAN_HPP_NO_EXCEPTIONS
 )
