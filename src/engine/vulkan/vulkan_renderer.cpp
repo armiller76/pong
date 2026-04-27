@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -153,33 +154,37 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
     frame_command_context_.wait_for_fence();
     for (;;)
     {
-        try
-        {
-            auto [vk_result, swap_chain_image_index] = swapchain_.native_handle().acquireNextImage(
-                UINT64_MAX, frame_command_context_.current_image_available_semaphore(), VK_NULL_HANDLE);
+        // TODO review this
+        // bypassing raii here because Vulkan internally checks Result and asserts on OutOfDate error at acquire.
+        // we're handling OutOfDate errors, so we'll use the C API for this (and also for present) to avoid the internal
+        // check.
+        auto swapchain = static_cast<VkSwapchainKHR>(*swapchain_.native_handle());
+        auto semaphore = static_cast<VkSemaphore>(*frame_command_context_.current_image_available_semaphore());
 
-            using enum ::vk::Result;
-            if (vk_result == eSuccess || vk_result == eSuboptimalKHR)
-            {
-                current_swap_chain_image_index_ = swap_chain_image_index;
-                framebuffer_resized_ |= (vk_result == eSuboptimalKHR);
-                break;
-            }
-            if (vk_result == eErrorOutOfDateKHR)
-            {
-                return {RenderStatusCode::RecreateRequested, {}};
-            }
-            throw arm::Exception("Unable to aquire swapchain image ({})", ::vk::to_string(vk_result));
-        }
-        catch (const ::vk::SystemError &e)
+        auto next_image_info = VkAcquireNextImageInfoKHR{};
+        next_image_info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
+        next_image_info.pNext = NULL;
+        next_image_info.swapchain = swapchain;
+        next_image_info.timeout = UINT64_MAX;
+        next_image_info.semaphore = semaphore;
+        next_image_info.fence = NULL;
+        next_image_info.deviceMask = 1u;
+
+        auto swap_chain_image_index = std::uint32_t{};
+        auto vk_result = vkAcquireNextImage2KHR(*device_.native_handle(), &next_image_info, &swap_chain_image_index);
+
+        if (vk_result == VK_SUCCESS || vk_result == VK_SUBOPTIMAL_KHR)
         {
-            auto result = static_cast<::vk::Result>(e.code().value());
-            if (result == ::vk::Result::eErrorOutOfDateKHR)
-            {
-                return {RenderStatusCode::RecreateRequested, {}};
-            }
-            throw; // if anything other than OutOfDate, which shouldn't happen, don't bury it
+            current_swap_chain_image_index_ = swap_chain_image_index;
+            framebuffer_resized_ |= (vk_result == VK_SUBOPTIMAL_KHR);
+            break;
         }
+        if (vk_result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            return {RenderStatusCode::RecreateRequested, {}};
+        }
+        throw arm::Exception(
+            "Unable to aquire swapchain image ({})", ::vk::to_string(static_cast<::vk::Result>(vk_result)));
     }
 
     // we have a swapchain image at this point, though swapchain could be suboptimal. render anyway. this may change
@@ -367,31 +372,29 @@ auto VulkanRenderer::end_frame_() -> void
     frame_command_context_.reset_fence();
     device_.graphics_queue().submit(submit_info, *frame_command_context_.current_fence());
 
-    auto present_info = ::vk::PresentInfoKHR{};
+    // TODO review this
+    // bypassing raii here because Vulkan internally checks Result and asserts on OutOfDate error at present.
+    // we're handling OutOfDate errors, so we'll use the C API for this (and also for acquire) to avoid the internal
+    // check.
+    auto semaphore = static_cast<VkSemaphore>(*swapchain_.semaphores().at(current_swap_chain_image_index_));
+    auto swapchain = static_cast<VkSwapchainKHR>(*swapchain_.native_handle());
+    auto present_info = VkPresentInfoKHR{};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &*swapchain_.semaphores().at(current_swap_chain_image_index_);
+    present_info.pWaitSemaphores = &semaphore;
     present_info.swapchainCount = 1;
-    present_info.pSwapchains = &*swapchain_.native_handle();
+    present_info.pSwapchains = &swapchain;
     present_info.pImageIndices = &current_swap_chain_image_index_;
 
-    try
+    const auto present_result = vkQueuePresentKHR(device_.graphics_queue(), &present_info);
+    if (present_result == VK_ERROR_OUT_OF_DATE_KHR || present_result == VK_SUBOPTIMAL_KHR)
     {
-        const auto present_result = device_.present_queue().presentKHR(present_info);
-        if (present_result == ::vk::Result::eErrorOutOfDateKHR || present_result == ::vk::Result::eSuboptimalKHR)
+        framebuffer_resized_ = true;
+        if (present_result == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            framebuffer_resized_ = true;
-        }
-    }
-    catch (const ::vk::SystemError &e)
-    {
-        auto result = static_cast<::vk::Result>(e.code().value());
-        if (result == ::vk::Result::eErrorOutOfDateKHR)
-        {
-            framebuffer_resized_ = true;
             frame_command_context_.advance_frame();
             return;
         }
-        throw; // if anything other than OutOfDate, which shouldn't happen, don't bury it
     }
 
     frame_command_context_.advance_frame();

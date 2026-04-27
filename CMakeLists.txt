@@ -25,7 +25,10 @@ if(MSVC)
   )
 endif()
 
-add_compile_definitions(VK_USE_PLATFORM_WIN32_KHR)
+add_compile_definitions(
+  VK_USE_PLATFORM_WIN32_KHR
+  VULKAN_HPP_NO_EXCEPTIONS
+)
 
 find_package(
   Vulkan

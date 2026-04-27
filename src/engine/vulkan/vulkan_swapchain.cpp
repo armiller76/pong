@@ -2,14 +2,16 @@
 
 #include <cstdint>
 #include <format>
+#include <utility>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/engine_error.h"
+#include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_surface.h"
 #include "utils/exception.h"
 #include "utils/log.h"
-#include "vulkan_device.h"
-#include "vulkan_surface.h"
 
 namespace pong
 {
@@ -119,7 +121,12 @@ auto VulkanSwapchain::create_() -> void
     swapchain_create_info.presentMode = present_mode_;
     swapchain_create_info.clipped = VK_TRUE;
     swapchain_create_info.oldSwapchain = *swapchain_ != VK_NULL_HANDLE ? *swapchain_ : ::vk::SwapchainKHR{};
-    swapchain_ = ::vk::raii::SwapchainKHR(device_.native_handle(), swapchain_create_info);
+    auto swapchain_result = check_vk_expected(device_.native_handle().createSwapchainKHR(swapchain_create_info));
+    if (!swapchain_result)
+    {
+        throw arm::Exception("uanble to create swapchain");
+    }
+    swapchain_ = std::move(swapchain_result.value());
 
     // get our images from the swapchain and create image_views for each image
     images_ = swapchain_.getImages();
@@ -143,7 +150,12 @@ auto VulkanSwapchain::create_() -> void
         image_view_create_info.subresourceRange.baseArrayLayer = 0;
         image_view_create_info.subresourceRange.layerCount = 1;
 
-        image_views_.emplace_back(device_.native_handle(), image_view_create_info);
+        auto view_result = check_vk_expected(device_.native_handle().createImageView(image_view_create_info));
+        if (!view_result)
+        {
+            throw arm::Exception("unable to create image view");
+        }
+        image_views_.push_back(std::move(view_result.value()));
     }
 
 #ifndef NDEBUG
@@ -153,15 +165,20 @@ auto VulkanSwapchain::create_() -> void
 #endif
     for (std::size_t i = 0; i < images_.size(); ++i)
     {
-        render_finished_semaphores_.emplace_back(device_.native_handle(), ::vk::SemaphoreCreateInfo{});
+        auto semaphore_result = check_vk_expected(device_.native_handle().createSemaphore(::vk::SemaphoreCreateInfo{}));
+        if (!semaphore_result)
+        {
+            throw arm::Exception("unable to create semaphore");
+        }
 #ifndef NDEBUG
         debug_name_str = std::format("Render Finished Semaphore {}", i);
         debug_name_info.pObjectName = debug_name_str.c_str();
         debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
         debug_name_info.objectHandle =
-            reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*render_finished_semaphores_[i]));
+            reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*semaphore_result.value()));
         device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
 #endif
+        render_finished_semaphores_.push_back(std::move(semaphore_result.value()));
     }
 }
 

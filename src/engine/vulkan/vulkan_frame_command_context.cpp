@@ -3,13 +3,16 @@
 #include <cstdint>
 #include <format>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/engine_error.h"
 #include "engine/vulkan/vulkan_command_pool.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "utils/error.h"
+#include "utils/exception.h"
 
 namespace pong
 {
@@ -47,22 +50,35 @@ VulkanFrameCommandContext::VulkanFrameCommandContext(const VulkanDevice &device,
     fence_info.flags = ::vk::FenceCreateFlagBits::eSignaled;
     for (std::uint32_t i = 0; i < frames_in_flight_; ++i)
     {
-        in_flight_fences_.emplace_back(device_.native_handle(), fence_info);
-        image_available_semaphores_.emplace_back(device_.native_handle(), semaphore_info);
+        auto fence_result = check_vk_expected(device_.native_handle().createFence(fence_info));
+        if (!fence_result)
+        {
+            throw arm::Exception("unable to create fence");
+        }
+
+        auto semaphore_result = check_vk_expected(device_.native_handle().createSemaphore(semaphore_info));
+        if (!semaphore_result)
+        {
+            throw arm::Exception("unable to create semaphore");
+        }
+
 #ifndef NDEBUG
         debug_name_str = std::format("Fence {}", i);
         debug_name_info.pObjectName = debug_name_str.c_str();
         debug_name_info.objectType = ::vk::ObjectType::eFence;
-        debug_name_info.objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkFence>(*in_flight_fences_[i]));
+        debug_name_info.objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkFence>(*fence_result.value()));
         device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
 
         debug_name_str = std::format("Image Available Semaphore {}", i);
         debug_name_info.pObjectName = debug_name_str.c_str();
         debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
         debug_name_info.objectHandle =
-            reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*image_available_semaphores_[i]));
+            reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*semaphore_result.value()));
         device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
 #endif
+
+        in_flight_fences_.push_back(std::move(fence_result.value()));
+        image_available_semaphores_.push_back(std::move(semaphore_result.value()));
     }
 }
 
