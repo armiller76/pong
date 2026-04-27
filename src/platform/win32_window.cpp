@@ -4,6 +4,7 @@
 #include <string>
 #include <windows.h>
 
+#include "engine/engine_types.h"
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_surface.h"
 #include "graphics/color.h"
@@ -25,12 +26,12 @@ Win32Window::~Win32Window()
     ::UnregisterClassA(class_name_.c_str(), hinstance_);
 }
 
-Win32Window::Win32Window(std::string_view app_name, Rectangle window_rect, Color clear_color)
+Win32Window::Win32Window(const RenderContextInfo &render_context_info)
     : hinstance_{::GetModuleHandleA(0)}
     , should_close_{false}
-    , app_name_{app_name}
+    , app_name_{render_context_info.app_name}
     , class_name_{std::string(app_name_ + "WindowClass")}
-    , window_rect_{window_rect}
+    , window_rect_{render_context_info.window_rect}
 {
     arm::ensure(
         (window_rect_.extent.width != 0) && (window_rect_.extent.height != 0),
@@ -57,8 +58,8 @@ Win32Window::Win32Window(std::string_view app_name, Rectangle window_rect, Color
             WS_OVERLAPPEDWINDOW,
             window_rect_.offset.x,
             window_rect_.offset.y,
-            window_rect.extent.width,
-            window_rect.extent.height,
+            window_rect_.extent.width,
+            window_rect_.extent.height,
             0,
             0,
             hinstance_,
@@ -72,9 +73,9 @@ Win32Window::Win32Window(std::string_view app_name, Rectangle window_rect, Color
 
     clear_brush_ = {
         ::CreateSolidBrush(
-            RGB(Color::float_to_srgb_byte(clear_color.r),
-                Color::float_to_srgb_byte(clear_color.g),
-                Color::float_to_srgb_byte(clear_color.b))),
+            RGB(Color::float_to_srgb_byte(render_context_info.clear_color.r),
+                Color::float_to_srgb_byte(render_context_info.clear_color.g),
+                Color::float_to_srgb_byte(render_context_info.clear_color.b))),
         ::DeleteObject};
 
     ::ShowWindow(hwnd_, SW_SHOWNORMAL);

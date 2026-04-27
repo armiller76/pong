@@ -10,6 +10,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "engine/engine_error.h"
+#include "engine/engine_types.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
@@ -17,15 +18,9 @@
 namespace pong
 {
 
-VulkanInstance::VulkanInstance(
-    const ::vk::raii::Context &context,
-    std::string application_name,
-    std::string engine_name,
-    uint32_t major_version,
-    uint32_t minor_version,
-    uint32_t patch_version)
-    : application_name_{application_name}
-    , engine_name_{engine_name}
+VulkanInstance::VulkanInstance(const ::vk::raii::Context &context, const RenderContextInfo &render_context_info)
+    : application_name_{render_context_info.app_name}
+    , engine_name_{render_context_info.engine_name}
     , instance_{nullptr}
     , debug_messenger_{nullptr}
 {
@@ -75,7 +70,8 @@ VulkanInstance::VulkanInstance(
     vk_application_info.sType = ::vk::StructureType::eApplicationInfo;
     vk_application_info.pNext = nullptr;
     vk_application_info.pApplicationName = application_name_.c_str();
-    vk_application_info.applicationVersion = VK_MAKE_VERSION(major_version, minor_version, patch_version);
+    vk_application_info.applicationVersion = VK_MAKE_VERSION(
+        render_context_info.version.major, render_context_info.version.minor, render_context_info.version.patch);
     vk_application_info.pEngineName = engine_name_.c_str();
     vk_application_info.apiVersion = VK_API_VERSION_1_3;
 
