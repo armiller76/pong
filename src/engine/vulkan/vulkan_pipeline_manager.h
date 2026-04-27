@@ -20,9 +20,8 @@ class VulkanPipelineManager
   public:
     VulkanPipelineManager(
         const VulkanDevice &device,
-        ResourceManager &resource_manager,
         VulkanDescriptorPool &descriptor_pool,
-        ::vk::Format swapchain_format);
+        ResourceManager &resource_manager);
 
     auto get_pipeline(PipelineKey key) const -> const PipelineEntry &;
     auto get_or_create_pipeline(PipelineKey key) -> const PipelineEntry &;
@@ -32,6 +31,8 @@ class VulkanPipelineManager
     auto get_default_pipeline_key() const -> PipelineKey;
 
     auto allocate_material_descriptor_set() -> ::vk::raii::DescriptorSet;
+
+    auto set_color_attachment_format(::vk::Format format) -> void;
 
   private:
     const VulkanDevice &device_;

@@ -24,9 +24,8 @@ namespace pong
 
 VulkanPipelineManager::VulkanPipelineManager(
     const VulkanDevice &device,
-    ResourceManager &resource_manager,
     VulkanDescriptorPool &descriptor_pool,
-    ::vk::Format swapchain_format)
+    ResourceManager &resource_manager)
     : device_{device}
     , resource_manager_{resource_manager}
     , descriptor_pool_{descriptor_pool}
@@ -34,7 +33,6 @@ VulkanPipelineManager::VulkanPipelineManager(
     , per_material_set_1_layout_{create_per_material_descriptor_set_layout_()}
     , push_constant_ranges_{create_push_constant_ranges_()}
     , pipeline_layout_{create_layout_()}
-    , color_attachment_formats_{std::array<::vk::Format, 1>{swapchain_format}}
     , depth_format_{device_.choose_depth_format()}
     , stencil_format_{::vk::Format::eUndefined} // TODO magic number
 {
@@ -86,6 +84,21 @@ auto VulkanPipelineManager::get_default_pipeline_key() const -> PipelineKey
 auto VulkanPipelineManager::allocate_material_descriptor_set() -> ::vk::raii::DescriptorSet
 {
     return descriptor_pool_.allocate_material_descriptor_set(per_material_set_1_layout_);
+}
+
+auto VulkanPipelineManager::set_color_attachment_format(::vk::Format format) -> void
+{
+    if (format == ::vk::Format::eUndefined)
+    {
+        throw arm::Exception("invalid format");
+    }
+    if (!color_attachment_formats_.empty())
+    {
+        arm::log::error("max color attachment formats currently 1");
+    }
+    color_attachment_formats_ = std::array{
+        format,
+    };
 }
 
 auto VulkanPipelineManager::create_per_frame_descriptor_set_layout_() -> ::vk::raii::DescriptorSetLayout

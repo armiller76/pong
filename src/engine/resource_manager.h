@@ -6,7 +6,6 @@
 
 #include "core/resource_handles.h"
 #include "core/resource_traits.h"
-#include "engine/vulkan/vulkan_descriptor_pool.h"
 #include "graphics/material.h"
 #include "graphics/mesh.h"
 #include "graphics/shader.h"
@@ -23,8 +22,7 @@ class ResourceManager
 {
   public:
     explicit ResourceManager()
-        : descriptor_pool_{nullptr}
-        , default_vertex_shader_handle_{INVALID_RESOURCE_ID}
+        : default_vertex_shader_handle_{INVALID_RESOURCE_ID}
         , default_fragment_shader_handle_{INVALID_RESOURCE_ID}
     {
         arm::log::debug("ResourceManager constructor");
@@ -39,11 +37,6 @@ class ResourceManager
     auto shutdown() -> void
     {
         materials_.clear();
-    }
-
-    auto set_descriptor_pool(VulkanDescriptorPool &descriptor_pool) -> void
-    {
-        descriptor_pool_ = &descriptor_pool;
     }
 
     template <typename ResourceType>
@@ -128,7 +121,6 @@ class ResourceManager
     }
 
   private:
-    VulkanDescriptorPool *descriptor_pool_;
     std::unordered_map<ShaderHandle, Shader> shaders_;
     std::unordered_map<MeshHandle, Mesh> meshes_;
     std::unordered_map<Texture2DHandle, Texture2D> textures_;
@@ -160,15 +152,6 @@ class ResourceManager
             static_assert(sizeof(MapType) == 0, "unsupported resource type");
             std::unreachable();
         }
-    }
-
-    auto get_descriptor_pool_() const -> const VulkanDescriptorPool *
-    {
-        if (descriptor_pool_ != nullptr)
-        {
-            return descriptor_pool_;
-        }
-        return nullptr;
     }
 };
 

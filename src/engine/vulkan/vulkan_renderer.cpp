@@ -10,13 +10,15 @@
 #include "core/entity.h"
 #include "core/resource_handles.h"
 #include "core/scene.h"
+#include "engine/resource_loader.h"
 #include "engine/resource_manager.h"
 #include "engine/ubo.h"
 #include "engine/vulkan/vulkan_depth_buffer.h"
+#include "engine/vulkan/vulkan_descriptor_pool.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_gpu_buffer.h"
+#include "engine/vulkan/vulkan_pipeline_manager.h"
 #include "engine/vulkan/vulkan_render_utils.h"
-#include "engine/vulkan/vulkan_surface.h"
 #include "graphics/camera.h"
 #include "graphics/color.h"
 #include "graphics/model.h"
@@ -30,16 +32,23 @@ namespace pong
 
 using namespace std::literals;
 
+class VulkanSurface;
+
 // TODO update to use Sync2 objects
 VulkanRenderer::VulkanRenderer(
     const VulkanDevice &device,
     const VulkanSurface &surface,
+    const ResourceManager &resource_manager,
+    VulkanPipelineManager &pipeline_manager,
+    VulkanDescriptorPool &descriptor_pool,
     std::uint32_t max_frames_in_flight,
     const Color clear_color)
     : max_frames_in_flight_{max_frames_in_flight}
     , device_{device}
-    , surface_{surface}
-    , swapchain_{device_, surface_}
+    , resource_manager_{resource_manager}
+    , pipeline_manager_{pipeline_manager}
+    , descriptor_pool_{descriptor_pool}
+    , swapchain_{device_, surface}
     , view_proj_uniform_buffers_(
           [&]() -> std::vector<VulkanGpuBuffer>
           {
@@ -54,67 +63,52 @@ VulkanRenderer::VulkanRenderer(
               }
               return buffers;
           }())
-    , descriptor_pool_{device_, view_proj_uniform_buffers_, max_frames_in_flight_}
-    , resource_manager_{}
-    , pipeline_manager_{device_, resource_manager_, descriptor_pool_, swapchain_.format()}
-    , resource_loader_{device_, resource_manager_, pipeline_manager_, "c:/dev/Pong/assets"sv}
     , frame_command_context_{device_, max_frames_in_flight_}
     , depth_buffer_{device_, swapchain_.extent()}
-    , per_frame_descriptor_sets_{descriptor_pool_.allocate_per_frame_descriptor_sets(
-          pipeline_manager_.get_per_frame_descriptor_set_layout())}
+    , per_frame_descriptor_sets_{}
     , clear_color_{clear_color.r, clear_color.g, clear_color.b, clear_color.a}
 {
     arm::log::debug("VulkanRenderer constructor");
-    resource_manager_.set_descriptor_pool(descriptor_pool_);
-
-    pipeline_manager_.get_or_create_pipeline(pipeline_manager_.get_default_pipeline_key());
-}
-
-auto VulkanRenderer::shutdown() -> void
-{
-    device_.native_handle().waitIdle();
-    per_frame_descriptor_sets_.clear();
-    resource_manager_.shutdown();
+    per_frame_descriptor_sets_ = descriptor_pool_.allocate_per_frame_descriptor_sets(
+        pipeline_manager_.get_per_frame_descriptor_set_layout(), view_proj_uniform_buffers_);
 }
 
 // returns true if swapchain is recreated, false if minimized
-auto VulkanRenderer::recreate_resources() -> bool
+auto VulkanRenderer::recreate_resources() -> void
 {
-    auto current_caps = device_.physical_device().getSurfaceCapabilitiesKHR(surface_.native_handle());
-    if (current_caps.currentExtent.height == 0 || current_caps.currentExtent.width == 0)
-    {
-        return false;
-    }
-
-    device_.native_handle().waitIdle();
     swapchain_.recreate();
     depth_buffer_ = {device_, swapchain_.extent()};
-
-    // TODO the renderer should keep a list of resize callbacks.
-    // can the Window callback list be referenced? or should the Window defer all resize callbacks directly to the
-    // app/renderer?
-    if (imgui_resize_callback)
-    {
-        imgui_resize_callback();
-    }
-
-    framebuffer_resized_ = false;
-    return true;
+    needs_recreate_ = false;
 }
 
 auto VulkanRenderer::needs_recreate() -> bool
 {
-    return framebuffer_resized_;
+    return needs_recreate_;
+}
+
+auto VulkanRenderer::swapchain_image_count() const -> std::uint32_t
+{
+    return swapchain_.image_count();
+}
+
+auto VulkanRenderer::swapchain_image_index() const -> std::uint32_t
+{
+    return current_swap_chain_image_index_;
+}
+
+auto VulkanRenderer::swapchain_format() const -> ::vk::Format
+{
+    return swapchain_.format();
+}
+
+auto VulkanRenderer::descriptor_pool() -> VulkanDescriptorPool *
+{
+    return &descriptor_pool_;
 }
 
 auto VulkanRenderer::set_clear_color(const Color &color) -> void
 {
     clear_color_ = {color.r, color.g, color.b, color.a};
-}
-
-auto VulkanRenderer::load_scene(std::string_view filename) -> Scene
-{
-    return resource_loader_.loadgltf(filename);
 }
 
 auto VulkanRenderer::render(const Scene &scene, const Camera &camera, ImDrawData *imgui_draw_data) -> void
@@ -142,6 +136,11 @@ auto VulkanRenderer::render(const Scene &scene, const Camera &camera, ImDrawData
             throw arm::Exception("render error");
         }
     }
+}
+
+auto VulkanRenderer::shutdown() -> void
+{
+    per_frame_descriptor_sets_.clear();
 }
 
 auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
@@ -172,7 +171,7 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
         if (vk_result == VK_SUCCESS || vk_result == VK_SUBOPTIMAL_KHR)
         {
             current_swap_chain_image_index_ = swap_chain_image_index;
-            framebuffer_resized_ |= (vk_result == VK_SUBOPTIMAL_KHR);
+            needs_recreate_ |= (vk_result == VK_SUBOPTIMAL_KHR);
             break;
         }
         if (vk_result == VK_ERROR_OUT_OF_DATE_KHR)
@@ -402,7 +401,7 @@ auto VulkanRenderer::end_frame_() -> void
     const auto present_result = vkQueuePresentKHR(device_.graphics_queue(), &present_info);
     if (present_result == VK_ERROR_OUT_OF_DATE_KHR || present_result == VK_SUBOPTIMAL_KHR)
     {
-        framebuffer_resized_ = true;
+        needs_recreate_ = true;
         if (present_result == VK_ERROR_OUT_OF_DATE_KHR)
         {
             frame_command_context_.advance_frame();

@@ -10,18 +10,15 @@
 #include "engine/ubo.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_gpu_buffer.h"
+#include "engine/vulkan/vulkan_gpu_image.h"
 #include "utils/error.h"
 #include "utils/log.h"
 
 namespace pong
 {
 
-VulkanDescriptorPool::VulkanDescriptorPool(
-    const VulkanDevice &device,
-    const std::vector<VulkanGpuBuffer> &view_proj_uniform_buffers,
-    const std::uint32_t max_frames_in_flight)
+VulkanDescriptorPool::VulkanDescriptorPool(const VulkanDevice &device, const std::uint32_t max_frames_in_flight)
     : device_{device}
-    , view_proj_uniform_buffers_{view_proj_uniform_buffers}
     , frames_in_flight_{max_frames_in_flight}
     , pool_{create_pool_()}
 {
@@ -33,8 +30,9 @@ auto VulkanDescriptorPool::native_handle() const -> ::vk::DescriptorPool
     return *pool_;
 }
 
-auto VulkanDescriptorPool::allocate_per_frame_descriptor_sets(const ::vk::raii::DescriptorSetLayout &layout)
-    -> std::vector<vk::raii::DescriptorSet>
+auto VulkanDescriptorPool::allocate_per_frame_descriptor_sets(
+    const ::vk::raii::DescriptorSetLayout &layout,
+    std::vector<VulkanGpuBuffer> &view_proj_uniform_buffers) -> std::vector<vk::raii::DescriptorSet>
 {
     auto layout_array = std::vector(frames_in_flight_, *layout);
     auto descriptor_set_allocate_info = ::vk::DescriptorSetAllocateInfo{};
@@ -54,7 +52,7 @@ auto VulkanDescriptorPool::allocate_per_frame_descriptor_sets(const ::vk::raii::
     for (std::size_t i = 0; i < frames_in_flight_; ++i)
     {
         auto view_proj_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
-        view_proj_descriptor_buffer_info.buffer = view_proj_uniform_buffers_.at(i).native_handle();
+        view_proj_descriptor_buffer_info.buffer = view_proj_uniform_buffers.at(i).native_handle();
         view_proj_descriptor_buffer_info.offset = 0;
         view_proj_descriptor_buffer_info.range = sizeof(UBO_ViewProj);
 
