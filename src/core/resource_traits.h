@@ -8,7 +8,7 @@ namespace pong
 class Material;
 class Mesh;
 struct Model;
-struct Shader;
+class Shader;
 class Texture2D;
 
 template <typename T>
