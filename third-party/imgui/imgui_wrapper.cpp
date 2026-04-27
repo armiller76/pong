@@ -13,8 +13,6 @@
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_renderer.h"
-#include "engine/vulkan/vulkan_utils.h"
-#include "utils/error.h"
 
 namespace pong
 {
