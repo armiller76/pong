@@ -6,13 +6,10 @@
 
 #include "utils/exception.h"
 
-namespace
-{
-static constexpr auto INVALID_RESOURCE_ID = (std::numeric_limits<std::uint64_t>::max)() - 1;
-}
-
 namespace pong
 {
+
+static constexpr auto INVALID_RESOURCE_ID = (std::numeric_limits<std::uint64_t>::max)() - 1;
 
 constexpr auto fnv1a_mix(std::uint64_t hash, unsigned char byte) -> std::uint64_t
 {
