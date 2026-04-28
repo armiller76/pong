@@ -1,6 +1,8 @@
 #include "vulkan_renderer.h"
 
 #include <cstdint>
+#include <limits>
+#include <optional>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -81,7 +83,7 @@ auto VulkanRenderer::recreate_resources() -> void
     needs_recreate_ = false;
 }
 
-auto VulkanRenderer::needs_recreate() -> bool
+auto VulkanRenderer::needs_recreate() const -> bool
 {
     return needs_recreate_;
 }
@@ -207,9 +209,7 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
                 draw_item.model = world_transform;
                 // TODO: this can't always get default pipeline key
                 draw_item.sort_key = make_draw_sort_key_(
-                    pipeline_manager_.get_default_pipeline_key(),
-                    draw_item.material_handle.value(),
-                    draw_item.mesh_handle);
+                    pipeline_manager_.get_default_pipeline_key(), draw_item.material_handle, draw_item.mesh_handle);
                 draw_items.push_back(std::move(draw_item));
             }
         }
@@ -415,11 +415,16 @@ auto VulkanRenderer::end_frame_() -> void
 
 constexpr auto VulkanRenderer::make_draw_sort_key_(
     PipelineKey pipeline_id,
-    MaterialHandle material_handle,
+    std::optional<MaterialHandle> material_handle,
     MeshHandle mesh_handle,
     std::int32_t depth_bucket) -> DrawSortKey
 {
-    return {pipeline_id.pack(), material_handle, mesh_handle, depth_bucket};
+    constexpr auto no_material = MaterialHandle{std::numeric_limits<std::uint64_t>::max() - 1zu};
+    if (material_handle.has_value())
+    {
+        return {pipeline_id.pack(), material_handle.value(), mesh_handle, depth_bucket};
+    }
+    return {pipeline_id.pack(), no_material, mesh_handle, depth_bucket};
 }
 
 } // namespace pong

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <tuple>
 #include <vector>
 
@@ -71,7 +72,7 @@ class VulkanRenderer
     VulkanRenderer &operator=(VulkanRenderer &&) = delete;
 
     auto recreate_resources() -> void;
-    auto needs_recreate() -> bool;
+    auto needs_recreate() const -> bool;
 
     auto swapchain_image_count() const -> std::uint32_t;
     auto swapchain_image_index() const -> std::uint32_t;
@@ -108,7 +109,7 @@ class VulkanRenderer
 
     static constexpr auto make_draw_sort_key_(
         PipelineKey pipeline_key,
-        MaterialHandle material_handle,
+        std::optional<MaterialHandle> material_handle,
         MeshHandle mesh_handle,
         std::int32_t depth_bucket = 0) -> DrawSortKey;
 };
