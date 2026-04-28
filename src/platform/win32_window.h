@@ -7,8 +7,8 @@
 
 #include <windows.h>
 
+#include "engine/engine_types.h"
 #include "engine/vulkan/vulkan_window.h"
-#include "graphics/color.h"
 #include "math/rectangle.h"
 #include "utils/auto_release.h"
 
@@ -29,10 +29,7 @@ class Win32Window : public VulkanWindow
   public:
     ~Win32Window() override;
 
-    Win32Window(
-        std::string_view application_name,
-        Rectangle window_rect,
-        Color clear_color = {0.42f, 0.42f, 0.42f, 1.0f});
+    Win32Window(const RenderContextInfo &render_context_info);
 
     auto process_events() -> void override;
     auto handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;

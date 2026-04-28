@@ -5,12 +5,9 @@
 #include <vulkan/vulkan_raii.hpp>
 #include <windows.h>
 
-#include "imgui.h"
-#include "imgui_impl_vulkan.h"
-#include "imgui_impl_win32.h"
-
-#include "engine/vulkan/vulkan_utils.h"
-#include "utils/error.h"
+#include "imgui.h"             // IWYU pragma: keep
+#include "imgui_impl_vulkan.h" // IWYU pragma: keep
+#include "imgui_impl_win32.h"  // IWYU pragma: keep
 
 namespace pong
 {
@@ -24,7 +21,12 @@ class ImguiWrapper
 
 {
   public:
-    ImguiWrapper(HWND hwnd, VulkanRenderer &renderer, const VulkanInstance &instance, std::string_view project_root);
+    ImguiWrapper(
+        HWND hwnd,
+        const VulkanInstance &instance,
+        const VulkanDevice &device,
+        VulkanRenderer &renderer,
+        std::string_view project_root);
     ~ImguiWrapper();
 
     ImguiWrapper(const ImguiWrapper &) = delete;
@@ -36,7 +38,7 @@ class ImguiWrapper
     auto init_windows() -> void;
     auto init_vulkan() -> void;
     auto shutdown() -> void;
-    void framebuffer_resize_callback();
+    auto recreate() -> void;
 
     auto begin_frame() -> void;
     auto render() -> void;
@@ -47,8 +49,9 @@ class ImguiWrapper
   private:
     ImGuiIO *io;
     HWND windows_handle_;
-    VulkanRenderer &vk_renderer_;
-    const VulkanInstance &vk_instance_;
+    const VulkanInstance &instance_;
+    const VulkanDevice &device_;
+    VulkanRenderer &renderer_;
     ImDrawData *draw_data_;
     std::string ini_file_;
 };

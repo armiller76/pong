@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(Pong VERSION 0.0.1)
+project(pong VERSION 0.0.1)
 include(FetchContent)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -25,7 +25,12 @@ if(MSVC)
   )
 endif()
 
-add_compile_definitions(VK_USE_PLATFORM_WIN32_KHR)
+add_compile_definitions(
+  NOMINMAX
+  WIN32_LEAN_AND_MEAN
+  VK_USE_PLATFORM_WIN32_KHR
+  VULKAN_HPP_NO_EXCEPTIONS
+)
 
 find_package(
   Vulkan
@@ -141,6 +146,7 @@ if(MSVC)
             /WX-
   )
 endif()
+
 add_subdirectory(third-party/gltf)
 add_subdirectory(third-party/stb_image)
 

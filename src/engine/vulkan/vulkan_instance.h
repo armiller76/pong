@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include "engine/engine_types.h"
 #include <string>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -11,13 +11,7 @@ namespace pong
 class VulkanInstance
 {
   public:
-    VulkanInstance(
-        const ::vk::raii::Context &context,
-        std::string application_name,
-        std::string engine_name,
-        uint32_t major_version,
-        uint32_t minor_version,
-        uint32_t patch_version);
+    VulkanInstance(const ::vk::raii::Context &context, const RenderContextInfo &render_context_info);
 
     auto native_handle() const -> const ::vk::raii::Instance &;
 

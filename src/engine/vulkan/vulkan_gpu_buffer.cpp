@@ -1,11 +1,14 @@
 #include "vulkan_gpu_buffer.h"
 
 #include <cstring>
+#include <utility>
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/engine_error.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "utils/error.h"
+#include "utils/exception.h"
 #include "utils/log.h"
 
 namespace pong
@@ -25,7 +28,12 @@ VulkanGpuBuffer::VulkanGpuBuffer(
               buffer_info.size = size;
               buffer_info.usage = usage;
               buffer_info.sharingMode = ::vk::SharingMode::eExclusive;
-              return device_->native_handle().createBuffer(buffer_info);
+              auto buffer_result = check_vk_expected(device_->native_handle().createBuffer(buffer_info));
+              if (!buffer_result)
+              {
+                  throw arm::Exception("unable to create gpu buffer");
+              }
+              return std::move(buffer_result.value());
           }())
     , memory_(
           [&]() -> ::vk::raii::DeviceMemory
@@ -34,9 +42,13 @@ VulkanGpuBuffer::VulkanGpuBuffer(
               auto memory_info = ::vk::MemoryAllocateInfo{};
               memory_info.allocationSize = memory_requirements.size;
               memory_info.memoryTypeIndex = device_->find_memory_type_index(memory_requirements, memory_flags);
-              auto memory = device_->native_handle().allocateMemory(memory_info);
-              buffer_.bindMemory(*memory, 0);
-              return memory;
+              auto memory_result = check_vk_expected(device_->native_handle().allocateMemory(memory_info));
+              if (!memory_result)
+              {
+                  throw arm::Exception("unable to allocate buffer memory");
+              }
+              buffer_.bindMemory(*memory_result.value(), 0);
+              return std::move(memory_result.value());
           }())
     , memory_flags_{memory_flags}
 {

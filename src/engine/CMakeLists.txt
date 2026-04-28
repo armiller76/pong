@@ -8,6 +8,7 @@ add_subdirectory(vulkan)
 target_sources(
   engine
   PRIVATE file.cpp
+          render_context.cpp
           resource_loader.cpp
 )
 

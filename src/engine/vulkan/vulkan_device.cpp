@@ -4,10 +4,12 @@
 #include <cstdint>
 #include <set>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/engine_error.h"
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_surface.h"
 #include "utils/error.h"
@@ -39,11 +41,16 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
         ::vk::KHRSynchronization2ExtensionName,
         ::vk::KHRDynamicRenderingExtensionName};
 
-    const auto available_devices = instance.native_handle().enumeratePhysicalDevices();
-    arm::ensure(!available_devices.empty(), "No available graphics devices");
+    auto available_device_result = check_vk_expected(instance.native_handle().enumeratePhysicalDevices());
+    if (!available_device_result)
+    {
+        throw arm::Exception("unable to enumerate physical devices");
+    }
+
+    arm::ensure(!available_device_result.value().empty(), "No available graphics devices");
 
     auto device_infos = std::vector<VulkanDeviceInfo>();
-    for (const auto &physical_device : available_devices)
+    for (const auto &physical_device : available_device_result.value())
     {
         auto vulkan_device_info = VulkanDeviceInfo{*physical_device, 0, UINT32_MAX, UINT32_MAX, false, false, false};
 
@@ -168,9 +175,27 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
         device_create_info.pNext = &feature_sync2;
     }
 
-    device_ = vk::raii::Device(physical_device_, device_create_info);
-    graphics_queue_ = device_.getQueue(graphics_queue_family_index_, 0);
-    present_queue_ = device_.getQueue(present_queue_family_index_, 0);
+    auto device_result = check_vk_expected(physical_device_.createDevice(device_create_info));
+    if (!device_result)
+    {
+        throw arm::Exception("unable to create Vulkan device");
+    }
+    device_ = std::move(device_result.value());
+
+    auto graphics_queue_result = check_vk_expected(device_.getQueue(graphics_queue_family_index_, 0));
+    if (!graphics_queue_result)
+    {
+        throw arm::Exception("uanble to get graphics queue from device");
+    }
+    graphics_queue_ = std::move(graphics_queue_result.value());
+
+    auto present_queue_result = check_vk_expected(device_.getQueue(present_queue_family_index_, 0));
+    if (!present_queue_result)
+    {
+        throw arm::Exception("unable to get present queue from device");
+    }
+    present_queue_ = std::move(present_queue_result.value());
+
     supports_api13_ = device_infos[0].supports_api13;
     supports_dynamic_rendering_ = device_infos[0].supports_dynamic_rendering;
     supports_sync2_ = device_infos[0].supports_sync2;
@@ -259,19 +284,28 @@ auto VulkanDevice::choose_depth_format() const -> ::vk::Format
 auto VulkanDevice::allocate_image(::vk::ImageCreateInfo &info, ::vk::MemoryPropertyFlags flags) const
     -> std::pair<::vk::raii::Image, ::vk::raii::DeviceMemory>
 {
-    auto image = ::vk::raii::Image(device_, info);
+    auto image_result = check_vk_expected(device_.createImage(info));
+    if (!image_result)
+    {
+        throw arm::Exception("unable to allocate image");
+    }
 
-    auto memory_index = find_memory_type_index(image.getMemoryRequirements(), flags);
+    auto memory_index = find_memory_type_index(image_result.value().getMemoryRequirements(), flags);
     auto memory_allocate_info = ::vk::MemoryAllocateInfo{};
     memory_allocate_info.sType = ::vk::StructureType::eMemoryAllocateInfo;
     memory_allocate_info.pNext = nullptr;
-    memory_allocate_info.allocationSize = image.getMemoryRequirements().size;
+    memory_allocate_info.allocationSize = image_result.value().getMemoryRequirements().size;
     memory_allocate_info.memoryTypeIndex = memory_index;
-    auto image_memory = ::vk::raii::DeviceMemory(device_, memory_allocate_info);
 
-    image.bindMemory(image_memory, 0);
+    auto image_memory_result = check_vk_expected(device_.allocateMemory(memory_allocate_info));
+    if (!image_memory_result)
+    {
+        throw arm::Exception("unable to allocate image memory");
+    }
 
-    return {std::move(image), std::move(image_memory)};
+    image_result.value().bindMemory(image_memory_result.value(), 0);
+
+    return {std::move(image_result.value()), std::move(image_memory_result.value())};
 }
 
 auto VulkanDevice::score_device_(

@@ -7,19 +7,23 @@
 #include <utility>
 #include <vector>
 
+#include <spirv-tools/libspirv.h>
+
 #include "stb_image/stb_image.h"
 
 #include "core/entity.h"
 #include "core/resource_handles.h"
 #include "core/scene.h"
+#include "engine/engine_error.h"
 #include "engine/file.h"
 #include "engine/resource_manager.h"
 #include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_pipeline_manager.h"
 #include "gltf/fastgltf_wrapper.h"
 #include "graphics/image.h"
 #include "graphics/shader.h"
 #include "graphics/texture2d.h"
-#include "graphics/utils.h"
+#include "utils/exception.h"
 #include "utils/log.h"
 
 namespace pong
@@ -29,29 +33,15 @@ using namespace std::literals;
 ResourceLoader::ResourceLoader(
     const VulkanDevice &device,
     ResourceManager &resource_manager,
+    VulkanPipelineManager &pipeline_manager,
     std::filesystem::path absolute_path_to_assets)
     : device_{device}
     , resource_manager_{resource_manager}
+    , pipeline_manager_{pipeline_manager}
     , absolute_path_to_assets_{absolute_path_to_assets}
     , command_context_{device_, "resource_loader_command_context"sv}
 {
     arm::log::debug("ResourceLoader constructor");
-    constexpr auto white = std::array<std::uint8_t, 4>{255u, 255u, 255u, 255u};
-    auto image = Image{"white_1x1", Extent2D{1u, 1u}, ImageFormat::RGBA8, white};
-    auto fallback_texture = Texture2D(image, device_);
-    fallback_texture.upload_pixels(command_context_, image);
-    fallback_texture_handle_ =
-        std::make_optional(resource_manager_.insert<Texture2D>("fallback_1x1_white", std::move(fallback_texture)));
-    arm::ensure(fallback_texture_handle_.has_value(), "failed to create fallback texture");
-
-    load(
-        "simple.vert"sv,
-        std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_vert.spv"),
-        pong::ShaderStage::Vertex);
-    load(
-        "simple.frag"sv,
-        std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"),
-        pong::ShaderStage::Fragment);
 }
 
 auto ResourceLoader::loadgltf(std::filesystem::path path) -> Scene
@@ -74,7 +64,7 @@ auto ResourceLoader::loadgltf(std::filesystem::path path) -> Scene
     return {std::move(entities), std::move(root_indices)};
 }
 
-auto ResourceLoader::load(std::string_view name, std::filesystem::path path, ShaderStage stage) -> ShaderHandle
+auto ResourceLoader::load(std::string_view name, std::filesystem::path path) -> ShaderHandle
 {
     auto file = File(path);
     auto bytes = file.data().size_bytes();
@@ -83,14 +73,9 @@ auto ResourceLoader::load(std::string_view name, std::filesystem::path path, Sha
     auto words = std::vector<std::uint32_t>();
     words.resize(bytes / sizeof(std::uint32_t));
     std::memcpy(words.data(), file.data().data(), bytes);
-    arm::ensure(spirv_validate(words), "invalid shader {}", name);
+    arm::ensure(spirv_validate_(words), "invalid shader {}", name);
 
-    auto shader = Shader{};
-    shader.name = name;
-    shader.stage = stage;
-    shader.spirv.assign_range(words);
-
-    return resource_manager_.insert<Shader>(name, std::move(shader));
+    return resource_manager_.insert<Shader>(name, {device_, name, words});
 }
 
 auto ResourceLoader::load(std::string_view name, Image &image) -> Texture2DHandle
@@ -99,6 +84,22 @@ auto ResourceLoader::load(std::string_view name, Image &image) -> Texture2DHandl
     texture.upload_pixels(command_context_, image);
 
     return resource_manager_.insert<Texture2D>(name, std::move(texture));
+}
+
+auto ResourceLoader::set_fallback_texture(Texture2DHandle handle) -> void
+{
+    if (handle == Texture2DHandle{INVALID_RESOURCE_ID})
+    {
+        throw arm::Exception("invalid handle for fallback texture");
+    }
+    if (fallback_texture_handle_ != Texture2DHandle{INVALID_RESOURCE_ID})
+    {
+        arm::log::error("tried to reset resource loader's fallback texture, ignoring");
+    }
+    else
+    {
+        fallback_texture_handle_ = handle;
+    }
 }
 
 auto ResourceLoader::get_or_fallback_(std::optional<Texture2DHandle> texture_handle) -> Texture2D &
@@ -110,7 +111,7 @@ auto ResourceLoader::get_or_fallback_(std::optional<Texture2DHandle> texture_han
             return resource_manager_.get<Texture2D>(texture_handle.value());
         }
     }
-    return resource_manager_.get<Texture2D>(fallback_texture_handle_.value());
+    return resource_manager_.get<Texture2D>(fallback_texture_handle_);
 }
 
 auto ResourceLoader::upload_texture_(const LoadedAsset &asset, std::size_t texture_index, ImageFormat format)
@@ -173,7 +174,7 @@ auto ResourceLoader::process_loaded_node_(
                 auto material = Material{
                     device_,
                     loaded_material.name,
-                    resource_manager_.allocate_material_descriptor_set(),
+                    pipeline_manager_.allocate_material_descriptor_set(),
                     loaded_material.base_color_factor,
                     loaded_material.metallic_factor,
                     loaded_material.roughness_factor,
@@ -304,6 +305,27 @@ auto ResourceLoader::process_loaded_node_(
     auto result = EntityIndex{entities.size()};
     entities.push_back(std::move(entity));
     return result;
+}
+
+auto ResourceLoader::spirv_validate_(std::span<const std::uint32_t> words) -> bool
+{
+    if (words.size() < 5)
+        return false; // automatically not valid;
+
+    const auto context = spvContextCreate(spv_target_env::SPV_ENV_VULKAN_1_3);
+    auto diagnostic = spv_diagnostic{};
+    auto binary = spv_const_binary_t{.code = words.data(), .wordCount = words.size()};
+    auto validate_result = spvValidate(context, &binary, &diagnostic);
+    if (validate_result)
+    {
+        if (diagnostic)
+        {
+            arm::log::info("message from spirv-tools spvValidate: {}", diagnostic->error);
+            spvDiagnosticDestroy(diagnostic);
+        }
+    }
+    spvContextDestroy(context);
+    return validate_result == SPV_SUCCESS;
 }
 
 } // namespace pong

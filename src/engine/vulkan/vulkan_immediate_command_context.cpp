@@ -1,13 +1,14 @@
 #include "vulkan_immediate_command_context.h"
 
 #include <string_view>
+#include <utility>
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/vulkan/vulkan_command_pool.h"
+#include "engine/vulkan/vulkan_device.h"
 #include "utils/error.h"
 #include "utils/log.h"
-#include "vulkan_command_pool.h"
-#include "vulkan_device.h"
 
 
 namespace pong
@@ -18,7 +19,15 @@ VulkanImmediateCommandContext::VulkanImmediateCommandContext(const VulkanDevice 
     : device_{device}
     , pool_{create_command_pool(device_, command_context_type::Immediate, name)}
     , buffer_{std::move(create_command_buffers(device_, name, 1u, *pool_).at(0))}
-    , fence_{[&]() { return ::vk::raii::Fence(device_.native_handle(), ::vk::FenceCreateInfo{}); }()}
+    , fence_{[&]()
+             {
+                 auto fence_result = check_vk_expected(device_.native_handle().createFence(::vk::FenceCreateInfo{}));
+                 if (!fence_result)
+                 {
+                     throw arm::Exception("unable to create fence");
+                 }
+                 return std::move(fence_result.value());
+             }()}
 
 {
     arm::log::debug("VulkanImmediateCommandContext constructor");

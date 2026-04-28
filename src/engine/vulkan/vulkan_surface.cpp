@@ -1,16 +1,29 @@
 #include "vulkan_surface.h"
 
+#include <utility>
+
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/engine_error.h"
+#include "engine/vulkan/vulkan_instance.h"
 #include "platform/win32_window.h"
+#include "utils/exception.h"
 #include "utils/log.h"
-#include "vulkan_instance.h"
 
 namespace pong
 {
 
 VulkanSurface::VulkanSurface(const VulkanInstance &vk_instance, const Win32WindowHandles &handles)
-    : surface_(vk_instance.native_handle(), ::vk::Win32SurfaceCreateInfoKHR({}, handles.instance, handles.window))
+    : surface_{[&]
+               {
+                   auto surface_result = check_vk_expected(vk_instance.native_handle().createWin32SurfaceKHR(
+                       ::vk::Win32SurfaceCreateInfoKHR{{}, handles.instance, handles.window}));
+                   if (!surface_result)
+                   {
+                       throw arm::Exception("unable to create Vulkan surface");
+                   }
+                   return std::move(surface_result.value());
+               }()}
 {
     arm::log::debug("VulkanSurface constructor");
 }

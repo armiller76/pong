@@ -1,15 +1,17 @@
 #include "vulkan_gpu_image.h"
 
 #include <cstddef>
+#include <utility>
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/engine_error.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_gpu_buffer.h"
 #include "engine/vulkan/vulkan_immediate_command_context.h"
 #include "engine/vulkan/vulkan_render_utils.h"
-#include "engine/vulkan/vulkan_utils.h"
 #include "graphics/image.h"
+#include "utils/exception.h"
 #include "utils/log.h"
 
 namespace pong
@@ -64,7 +66,12 @@ VulkanGpuImage::VulkanGpuImage(const VulkanDevice &device, ::vk::Extent2D extent
     view_create_info.subresourceRange.levelCount = 1u;
     view_create_info.subresourceRange.baseArrayLayer = 0u;
     view_create_info.subresourceRange.layerCount = 1u;
-    view_ = ::vk::raii::ImageView(device_->native_handle(), view_create_info);
+    auto view_result = check_vk_expected(device_->native_handle().createImageView(view_create_info));
+    if (!view_result)
+    {
+        throw arm::Exception("uanble to create imageview");
+    }
+    view_ = std::move(view_result.value());
 
     auto sampler_create_info = ::vk::SamplerCreateInfo{};
     sampler_create_info.sType = ::vk::StructureType::eSamplerCreateInfo;
@@ -85,7 +92,12 @@ VulkanGpuImage::VulkanGpuImage(const VulkanDevice &device, ::vk::Extent2D extent
     sampler_create_info.maxLod = 0.0f;
     sampler_create_info.borderColor = ::vk::BorderColor::eIntOpaqueBlack;
     sampler_create_info.unnormalizedCoordinates = ::vk::False;
-    sampler_ = ::vk::raii::Sampler(device_->native_handle(), sampler_create_info);
+    auto sampler_result = check_vk_expected(device_->native_handle().createSampler(sampler_create_info));
+    if (!sampler_result)
+    {
+        throw arm::Exception("unable to create image sampler");
+    }
+    sampler_ = std::move(sampler_result.value());
 }
 
 auto VulkanGpuImage::image() const -> ::vk::Image
@@ -184,8 +196,11 @@ auto VulkanGpuImage::upload(VulkanImmediateCommandContext &command_context, cons
     submit_info.signalSemaphoreInfoCount = 0u;
     submit_info.pSignalSemaphoreInfos = nullptr;
 
-    auto result = device_->graphics_queue().submit2(1u, &submit_info, command_context.fence());
-    check_vk_result(static_cast<VkResult>(result));
+    auto result = check_vk_result(device_->graphics_queue().submit2(1u, &submit_info, command_context.fence()));
+    if (result.code != ResultCode::Ok)
+    {
+        throw arm::Exception("[{}] {}", result.code, result.message);
+    }
     command_context.wait_for_fence();
 }
 

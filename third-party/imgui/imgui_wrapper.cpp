@@ -1,6 +1,5 @@
 #include "imgui_wrapper.h"
 
-#include <functional>
 #include <string_view>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -10,19 +9,18 @@
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_win32.h"
 
-#include "engine/vulkan/vulkan_device.h"
+#include "engine/engine_error.h"
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_renderer.h"
-#include "engine/vulkan/vulkan_utils.h"
-#include "utils/error.h"
 
 namespace pong
 {
 
 ImguiWrapper::ImguiWrapper(
     HWND hwnd,
-    VulkanRenderer &renderer,
     const VulkanInstance &instance,
+    const VulkanDevice &device,
+    VulkanRenderer &renderer,
     std::string_view project_root)
     : io{[]()
          {
@@ -31,11 +29,11 @@ ImguiWrapper::ImguiWrapper(
              return &::ImGui::GetIO();
          }()}
     , windows_handle_{hwnd}
-    , vk_renderer_{renderer}
-    , vk_instance_{instance}
+    , instance_{instance}
+    , device_{device}
+    , renderer_{renderer}
     , ini_file_{std::string(std::string(project_root) + "/third-party/imgui/imgui.ini")}
 {
-    vk_renderer_.set_imgui_resize_callback_([this]() { this->framebuffer_resize_callback(); });
     io->IniFilename = ini_file_.c_str();
     io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
@@ -62,24 +60,27 @@ auto ImguiWrapper::init_vulkan() -> void
 {
     auto init_info = ImGui_ImplVulkan_InitInfo{};
     init_info.ApiVersion = VK_API_VERSION_1_3;
-    init_info.Instance = *vk_instance_.native_handle();
-    init_info.PhysicalDevice = *vk_renderer_.device_.physical_device();
-    init_info.Device = *vk_renderer_.device_.native_handle();
-    init_info.QueueFamily = vk_renderer_.device_.graphics_queue_family_index();
-    init_info.Queue = vk_renderer_.device_.graphics_queue();
+    init_info.Instance = *instance_.native_handle();
+    init_info.PhysicalDevice = *device_.physical_device();
+    init_info.Device = *device_.native_handle();
+    init_info.QueueFamily = device_.graphics_queue_family_index();
+    init_info.Queue = device_.graphics_queue();
     // init_info.DescriptorPool = vk_renderer_.descriptor_pool_.native_handle();
     init_info.DescriptorPoolSize = 32; // == 0 -> use DescriptorPool; != 0 -> imgui creates its own
-    init_info.MinImageCount = vk_renderer_.swapchain_.image_count();
-    init_info.ImageCount = vk_renderer_.swapchain_.image_count();
+    init_info.MinImageCount = renderer_.swapchain_image_count();
+    init_info.ImageCount = renderer_.swapchain_image_count();
 
     // TODO if you implement a pipeline cache, set this
     //  init_info.PipelineCache = ;
 
     // set up dynamic rendering
+    auto color_attachment_formats = std::array{
+        renderer_.swapchain_format(),
+    };
     auto pipeline_rendering_create_info = ::vk::PipelineRenderingCreateInfo{};
     pipeline_rendering_create_info.sType = ::vk::StructureType::ePipelineRenderingCreateInfoKHR;
-    pipeline_rendering_create_info.colorAttachmentCount = 1;
-    pipeline_rendering_create_info.pColorAttachmentFormats = &vk_renderer_.swapchain_.format();
+    pipeline_rendering_create_info.colorAttachmentCount = static_cast<std::uint32_t>(color_attachment_formats.size());
+    pipeline_rendering_create_info.pColorAttachmentFormats = color_attachment_formats.data();
     auto pipeline_info = ImGui_ImplVulkan_PipelineInfo{};
     pipeline_info.PipelineRenderingCreateInfo = pipeline_rendering_create_info;
     init_info.PipelineInfoMain = pipeline_info;
@@ -94,14 +95,15 @@ auto ImguiWrapper::init_vulkan() -> void
 
 auto ImguiWrapper::shutdown() -> void
 {
-    vk_renderer_.device_.native_handle().waitIdle();
-    vk_renderer_.set_imgui_resize_callback_(nullptr);
-    ::ImGui_ImplVulkan_Shutdown();
-    ::ImGui_ImplWin32_Shutdown();
-    ::ImGui::DestroyContext();
+    if (::ImGui::GetCurrentContext() != nullptr)
+    {
+        ::ImGui_ImplVulkan_Shutdown();
+        ::ImGui_ImplWin32_Shutdown();
+        ::ImGui::DestroyContext();
+    }
 }
 
-void ImguiWrapper::framebuffer_resize_callback()
+auto ImguiWrapper::recreate() -> void
 {
     ::ImGui_ImplVulkan_Shutdown();
     init_vulkan();
