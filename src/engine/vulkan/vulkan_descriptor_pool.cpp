@@ -32,7 +32,8 @@ auto VulkanDescriptorPool::native_handle() const -> ::vk::DescriptorPool
 
 auto VulkanDescriptorPool::allocate_per_frame_descriptor_sets(
     const ::vk::raii::DescriptorSetLayout &layout,
-    std::vector<VulkanGpuBuffer> &view_proj_uniform_buffers) -> std::vector<vk::raii::DescriptorSet>
+    std::vector<VulkanGpuBuffer> &view_proj_uniform_buffers,
+    std::vector<VulkanGpuBuffer> &light_uniform_buffers) -> std::vector<vk::raii::DescriptorSet>
 {
     auto layout_array = std::vector(frames_in_flight_, *layout);
     auto descriptor_set_allocate_info = ::vk::DescriptorSetAllocateInfo{};
@@ -68,8 +69,26 @@ auto VulkanDescriptorPool::allocate_per_frame_descriptor_sets(
         view_proj_write_descriptor_set.pBufferInfo = &view_proj_descriptor_buffer_info;
         view_proj_write_descriptor_set.pTexelBufferView = nullptr;
 
+        auto light_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
+        light_descriptor_buffer_info.buffer = light_uniform_buffers.at(i).native_handle();
+        light_descriptor_buffer_info.offset = 0;
+        light_descriptor_buffer_info.range = sizeof(UBO_Lighting);
+
+        auto light_write_descriptor_set = ::vk::WriteDescriptorSet{};
+        light_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
+        light_write_descriptor_set.pNext = nullptr;
+        light_write_descriptor_set.dstSet = descriptor_set_result.value().at(i);
+        light_write_descriptor_set.dstBinding = 1;
+        light_write_descriptor_set.dstArrayElement = 0;
+        light_write_descriptor_set.descriptorCount = 1;
+        light_write_descriptor_set.descriptorType = ::vk::DescriptorType::eUniformBuffer;
+        light_write_descriptor_set.pImageInfo = nullptr;
+        light_write_descriptor_set.pBufferInfo = &light_descriptor_buffer_info;
+        light_write_descriptor_set.pTexelBufferView = nullptr;
+
         auto descriptors = std::array{
             view_proj_write_descriptor_set,
+            light_write_descriptor_set,
         };
 
         device_.native_handle().updateDescriptorSets(descriptors, {});
@@ -100,6 +119,7 @@ auto VulkanDescriptorPool::allocate_material_descriptor_set(const ::vk::raii::De
 auto VulkanDescriptorPool::create_pool_() -> ::vk::raii::DescriptorPool
 {
     // TODO MAX_MATERIALS is a magic number!
+    // IMPORTANT: set counts in header
     const auto ubo_count = PER_FRAME_UBO_COUNT * frames_in_flight_ + MATERIAL_UBO_COUNT * MAX_MATERIALS;
     const auto sampler_count = MAX_MATERIALS * SAMPLERS_PER_MATERIAL;
 

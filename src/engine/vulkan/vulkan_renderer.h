@@ -99,6 +99,7 @@ class VulkanRenderer
     VulkanDescriptorPool &descriptor_pool_;
     VulkanSwapchain swapchain_;
     std::vector<VulkanGpuBuffer> view_proj_uniform_buffers_;
+    std::vector<VulkanGpuBuffer> light_uniform_buffers_;
     VulkanFrameCommandContext frame_command_context_;
     DepthBuffer depth_buffer_;
     std::vector<::vk::raii::DescriptorSet> per_frame_descriptor_sets_;
@@ -106,6 +107,8 @@ class VulkanRenderer
     std::uint32_t current_swap_chain_image_index_{0};
     std::uint64_t frame_counter_{0}; // TODO use this
     bool needs_recreate_ = false;
+
+    auto init_() -> void;
 
     static constexpr auto make_draw_sort_key_(
         PipelineKey pipeline_key,

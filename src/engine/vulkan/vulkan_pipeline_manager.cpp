@@ -112,8 +112,17 @@ auto VulkanPipelineManager::create_per_frame_descriptor_set_layout_() -> ::vk::r
     view_proj_ubo_layout_binding.pImmutableSamplers = nullptr;
 
     // ---- SET 0 ---- //
+    auto light_ubo_layout_binding = ::vk::DescriptorSetLayoutBinding{};
+    light_ubo_layout_binding.binding = 1u;
+    light_ubo_layout_binding.descriptorType = ::vk::DescriptorType::eUniformBuffer;
+    light_ubo_layout_binding.descriptorCount = 1u;
+    light_ubo_layout_binding.stageFlags = ::vk::ShaderStageFlagBits::eFragment;
+    light_ubo_layout_binding.pImmutableSamplers = nullptr;
+
+    // ---- SET 0 ---- //
     auto per_frame_layout_bindings = std::vector{
         view_proj_ubo_layout_binding,
+        light_ubo_layout_binding,
     };
 
     // ---- SET 0 ---- //

@@ -26,7 +26,8 @@ class VulkanDescriptorPool
 
     auto allocate_per_frame_descriptor_sets(
         const ::vk::raii::DescriptorSetLayout &layout,
-        std::vector<VulkanGpuBuffer> &view_proj_uniform_buffers) -> std::vector<vk::raii::DescriptorSet>;
+        std::vector<VulkanGpuBuffer> &view_proj_uniform_buffers,
+        std::vector<VulkanGpuBuffer> &light_uniform_buffers) -> std::vector<vk::raii::DescriptorSet>;
     auto allocate_material_descriptor_set(const ::vk::raii::DescriptorSetLayout &layout) -> vk::raii::DescriptorSet;
 
   private:
@@ -38,7 +39,7 @@ class VulkanDescriptorPool
 
     static const std::uint32_t MAX_MATERIALS = 100u;
     static const std::uint32_t SAMPLERS_PER_MATERIAL = 3u; // base, metal/rough, normal,
-    static const std::uint32_t PER_FRAME_UBO_COUNT = 1u;   // view/proj data,
+    static const std::uint32_t PER_FRAME_UBO_COUNT = 2u;   // view/proj data, light data
     static const std::uint32_t MATERIAL_UBO_COUNT = 1u;    // one material factor,
 };
 

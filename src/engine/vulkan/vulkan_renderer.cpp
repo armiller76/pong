@@ -51,28 +51,15 @@ VulkanRenderer::VulkanRenderer(
     , pipeline_manager_{pipeline_manager}
     , descriptor_pool_{descriptor_pool}
     , swapchain_{device_, surface}
-    , view_proj_uniform_buffers_(
-          [&]() -> std::vector<VulkanGpuBuffer>
-          {
-              auto buffers = std::vector<VulkanGpuBuffer>();
-              for (std::size_t i = 0; i < max_frames_in_flight; ++i)
-              {
-                  buffers.push_back(
-                      {device_,
-                       ::vk::DeviceSize{sizeof(UBO_ViewProj)},
-                       ::vk::BufferUsageFlagBits::eUniformBuffer,
-                       ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible});
-              }
-              return buffers;
-          }())
+    , view_proj_uniform_buffers_{}
+    , light_uniform_buffers_{}
     , frame_command_context_{device_, max_frames_in_flight_}
     , depth_buffer_{device_, swapchain_.extent()}
     , per_frame_descriptor_sets_{}
     , clear_color_{clear_color.r, clear_color.g, clear_color.b, clear_color.a}
 {
     arm::log::debug("VulkanRenderer constructor");
-    per_frame_descriptor_sets_ = descriptor_pool_.allocate_per_frame_descriptor_sets(
-        pipeline_manager_.get_per_frame_descriptor_set_layout(), view_proj_uniform_buffers_);
+    init_();
 }
 
 // returns true if swapchain is recreated, false if minimized
@@ -267,6 +254,10 @@ auto VulkanRenderer::record_(const std::vector<DrawItem> &draw_items, const Came
     temp_view_proj.proj[1][1] *= -1.0f;
     view_proj_uniform_buffers_[frame_index].upload(&temp_view_proj, sizeof(UBO_ViewProj));
 
+    auto temp_light =
+        UBO_Lighting{.direction_intensity = {0.0f, 0.0f, 0.0f, 0.0f}, .color_strength = {0.95f, 0.97f, 1.0f, 0.06f}};
+    light_uniform_buffers_[frame_index].upload(&temp_light, sizeof(UBO_Lighting));
+
     // start command buffer
     auto &command_buffer = frame_command_context_.current_command_buffer();
     const auto command_buffer_begin_info =
@@ -411,6 +402,26 @@ auto VulkanRenderer::end_frame_() -> void
 
     frame_command_context_.advance_frame();
     ++frame_counter_;
+}
+
+auto VulkanRenderer::init_() -> void
+{
+    for (std::size_t i = 0; i < max_frames_in_flight_; ++i)
+    {
+        view_proj_uniform_buffers_.push_back(
+            {device_,
+             ::vk::DeviceSize{sizeof(UBO_ViewProj)},
+             ::vk::BufferUsageFlagBits::eUniformBuffer,
+             ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible});
+        light_uniform_buffers_.push_back(
+            {device_,
+             ::vk::DeviceSize{sizeof(UBO_Lighting)},
+             ::vk::BufferUsageFlagBits::eUniformBuffer,
+             ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible});
+    }
+
+    per_frame_descriptor_sets_ = descriptor_pool_.allocate_per_frame_descriptor_sets(
+        pipeline_manager_.get_per_frame_descriptor_set_layout(), view_proj_uniform_buffers_, light_uniform_buffers_);
 }
 
 constexpr auto VulkanRenderer::make_draw_sort_key_(
