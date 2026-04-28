@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -41,6 +42,9 @@ class RenderContext
     [[maybe_unused]] Version version_;
     Win32Window &win32_window_;
 
+    std::chrono::steady_clock::time_point last_window_recreate_time_;
+    bool was_resize_pending_;
+
     ::vk::raii::Context vulkan_context_;
 
     VulkanInstance vulkan_instance_;
@@ -58,7 +62,7 @@ class RenderContext
     auto recreate_resources_() -> bool;
     auto init_() -> void;
 
-    std::function<void()> debug_renderer_resize_callback_;
+    std::function<void(void)> debug_renderer_resize_callback_;
 }; // class RenderContext
 
 } // namespace pong

@@ -3,6 +3,7 @@
 #include <array>
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <string>
 
 #include "engine/engine_types.h"
@@ -30,6 +31,8 @@ RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32
     , engine_name_{render_context_info.engine_name}
     , version_{render_context_info.version}
     , win32_window_{win32_window}
+    , last_window_recreate_time_{std::chrono::steady_clock::now()}
+    , was_resize_pending_{false}
     , vulkan_context_{}
     , vulkan_instance_{vulkan_context_, render_context_info}
     , vulkan_surface_{win32_window_.create_vulkan_surface(vulkan_instance_)}
@@ -63,24 +66,24 @@ auto RenderContext::load_scene(std::string_view filename) -> Scene
 auto RenderContext::update_and_render(Scene &scene, Camera &camera) -> void
 {
     auto now = std::chrono::steady_clock::now();
-    static auto last_window_recreate_time = now;
+    last_window_recreate_time_ = now;
 
-    static auto was_resize_pending = false;
-    auto recreate = false;
+    was_resize_pending_ = false;
+    auto should_recreate = false;
 
     if (!win32_window_.is_minimized())
     {
         if (vulkan_renderer_.needs_recreate())
         {
-            recreate = true;
+            should_recreate = true;
         }
-        else if (was_resize_pending && !win32_window_.resize_pending())
+        else if (was_resize_pending_ && !win32_window_.resize_pending())
         {
-            recreate = true;
+            should_recreate = true;
         }
-        else if (win32_window_.resize_pending() && now - last_window_recreate_time >= 50ms) // TODO Magic number
+        else if (win32_window_.resize_pending() && now - last_window_recreate_time_ >= 50ms) // TODO Magic number
         {
-            recreate = true;
+            should_recreate = true;
         }
     }
     else
@@ -89,18 +92,19 @@ auto RenderContext::update_and_render(Scene &scene, Camera &camera) -> void
         return;
     }
 
-    was_resize_pending = win32_window_.resize_pending();
+    was_resize_pending_ = win32_window_.resize_pending();
 
-    if (recreate)
+    if (should_recreate)
     {
         recreate_resources_();
         debug_renderer_.recreate();
-        last_window_recreate_time = now;
+        last_window_recreate_time_ = now;
     }
 
     debug_renderer_.begin_frame();
     debug_renderer_.render(); // calls ImGui::EndFrame() -- don't call manually
 
+    // TODO debug code - rotate around y
     scene.entities().at(scene.root_indices().at(0).value).rotate_by({0.0f, 0.0001f, 0.0f});
 
     vulkan_renderer_.render(scene, camera, debug_renderer_.get_draw_data());
@@ -151,6 +155,8 @@ auto RenderContext::init_() -> void
         resource_loader_.load("simple.vert"sv, std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_vert.spv"));
     resource_manager_.default_fragment_shader() =
         resource_loader_.load("simple.frag"sv, std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"));
+
+    debug_renderer_resize_callback_ = [this] { debug_renderer_.recreate(); };
 }
 
 } // namespace pong
