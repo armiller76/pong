@@ -42,10 +42,7 @@ ImguiWrapper::ImguiWrapper(
 
 ImguiWrapper::~ImguiWrapper()
 {
-    if (::ImGui::GetCurrentContext() != nullptr)
-    {
-        shutdown();
-    }
+    shutdown();
 }
 
 auto ImguiWrapper::startup() -> void
@@ -98,9 +95,12 @@ auto ImguiWrapper::init_vulkan() -> void
 
 auto ImguiWrapper::shutdown() -> void
 {
-    ::ImGui_ImplVulkan_Shutdown();
-    ::ImGui_ImplWin32_Shutdown();
-    ::ImGui::DestroyContext();
+    if (::ImGui::GetCurrentContext() != nullptr)
+    {
+        ::ImGui_ImplVulkan_Shutdown();
+        ::ImGui_ImplWin32_Shutdown();
+        ::ImGui::DestroyContext();
+    }
 }
 
 auto ImguiWrapper::recreate() -> void
