@@ -13,7 +13,9 @@ struct Vertex
     ::glm::vec4 color;
     ::glm::vec3 normal;
     ::glm::vec2 uv;
+    ::glm::vec4 tangent;
 
+    auto operator==(const Vertex &other) const -> bool = default;
 
 }; // struct Vertex
 

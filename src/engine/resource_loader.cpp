@@ -14,15 +14,16 @@
 #include "core/entity.h"
 #include "core/resource_handles.h"
 #include "core/scene.h"
-#include "engine/engine_error.h"
 #include "engine/file.h"
 #include "engine/resource_manager.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_pipeline_manager.h"
 #include "gltf/fastgltf_wrapper.h"
 #include "graphics/image.h"
+#include "graphics/mesh_view.h"
 #include "graphics/shader.h"
 #include "graphics/texture2d.h"
+#include "mikktspace/mikktspace_impl.h"
 #include "utils/exception.h"
 #include "utils/log.h"
 
@@ -47,7 +48,7 @@ ResourceLoader::ResourceLoader(
 auto ResourceLoader::loadgltf(std::filesystem::path path) -> Scene
 {
     auto gltf = FastGLTFWrapper();
-    const auto loaded_asset = gltf.load(path);
+    auto loaded_asset = gltf.load(path);
 
     // const auto scene_count = loaded_asset.scenes.size();
     const auto default_scene_index = loaded_asset.default_scene_index.value_or(0);
@@ -61,6 +62,7 @@ auto ResourceLoader::loadgltf(std::filesystem::path path) -> Scene
         const auto &node = loaded_asset.nodes[default_scene.root_node_indices[i]];
         root_indices.push_back(process_loaded_node_(loaded_asset, node, entities));
     }
+
     return {std::move(entities), std::move(root_indices)};
 }
 
@@ -144,7 +146,7 @@ auto ResourceLoader::upload_texture_(const LoadedAsset &asset, std::size_t textu
 }
 
 auto ResourceLoader::process_loaded_node_(
-    const LoadedAsset &loaded_asset,
+    LoadedAsset &loaded_asset,
     const LoadedNode &node,
     std::vector<Entity> &entities) -> EntityIndex
 {
@@ -159,12 +161,59 @@ auto ResourceLoader::process_loaded_node_(
         auto model = Model{};
         model.name = loaded_asset.meshes[mesh_index].name;
 
-        const auto &primitives = loaded_asset.meshes[mesh_index].primitives;
+        auto &primitives = loaded_asset.meshes[mesh_index].primitives;
         for (auto i = 0zu; i < primitives.size(); ++i)
         {
+            // before storing the mesh data in our primitives, calculate tangents and rebuild vertex/index vectors
+            // using MikkTSpace
+            auto mikk_view = MeshViewMikk{
+                {primitives[i].vertices.data(), primitives[i].vertices.size()},
+                {primitives[i].indices.data(), primitives[i].indices.size()},
+                {}};
+            mikk_view.tangents.resize(mikk_view.indices.size());
+            calculate_tangents(mikk_view);
+
+            // reconstruct vertex and index buffers to duplicate any vertices with identical
+            // position, color, normal, and uv, but unique tangent, before storing in Mesh
+            auto &old_vertices = mikk_view.vertices;
+            auto &old_indices = mikk_view.indices;
+            auto &tangents = mikk_view.tangents;
+            auto new_vertices = std::vector<Vertex>();
+            auto new_indices = std::vector<std::uint32_t>();
+            auto map = std::unordered_map<Vertex, std::uint32_t>();
+
+            for (std::size_t i = 0; i < old_indices.size(); ++i)
+            {
+                auto vertex_index = old_indices[i];
+                auto new_vertex = Vertex{
+                    old_vertices[vertex_index].position,
+                    old_vertices[vertex_index].color,
+                    old_vertices[vertex_index].normal,
+                    old_vertices[vertex_index].uv,
+                    tangents[i]};
+
+                auto found_in_map = map.find(new_vertex);
+                if (found_in_map != map.end())
+                {
+                    // vertex already in map, which means it's also already in new_vertices
+                    // all we need to do is push its index to the new index vector
+                    new_indices.push_back(found_in_map->second);
+                }
+                else
+                {
+                    // vertex not in map, which means it's unique. add to all things.
+                    // the new index will be the current size of the vertex vector
+                    auto new_index = new_vertices.size();
+                    new_vertices.push_back(new_vertex);
+                    // insert vertex into map for future iterations
+                    map.emplace(new_vertex, new_index);
+                    // stick the new index in the index vector too.
+                    new_indices.push_back(new_index);
+                }
+            }
+
             auto name = std::format("{}_{}", model.name, i);
-            auto mesh_handle =
-                resource_manager_.insert<Mesh>(name, {device_, name, primitives[i].vertices, primitives[i].indices});
+            auto mesh_handle = resource_manager_.insert<Mesh>(name, {device_, name, new_vertices, new_indices});
             arm::log::debug("    added mesh {} {:x}", name, mesh_handle.value);
 
             auto renderable = Renderable{};

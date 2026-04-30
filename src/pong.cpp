@@ -24,7 +24,7 @@ int main()
             .app_name = "Pong"sv,
             .engine_name = "NotAnEngine"sv,
             .frames_in_flight = 2u,
-            .clear_color = {0.42f, 0.42f, 0.42f, 1.04},
+            .clear_color = {0.005f, 0.005f, 0.005f, 1.0f},
             .window_rect = {.offset{100u, 100u}, .extent{800u, 600u}},
             .version = {.major = APP_VERSION_MAJOR, .minor = APP_VERSION_MINOR, .patch = APP_VERSION_PATCH}};
 
