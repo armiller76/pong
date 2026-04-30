@@ -42,7 +42,7 @@ class VulkanPipelineManager
     ::vk::raii::DescriptorSetLayout per_material_set_1_layout_; // set 1 = samplers, model ubo
     std::array<::vk::PushConstantRange, 1> push_constant_ranges_;
     ::vk::raii::PipelineLayout pipeline_layout_;
-    std::array<::vk::Format, 1> color_attachment_formats_;
+    std::array<::vk::Format, 1> color_attachment_formats_{::vk::Format::eUndefined};
     ::vk::Format depth_format_;
     ::vk::Format stencil_format_;
     std::unordered_map<PipelineKey, PipelineEntry> pipeline_entries_;

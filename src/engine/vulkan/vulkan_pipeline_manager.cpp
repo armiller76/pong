@@ -92,9 +92,9 @@ auto VulkanPipelineManager::set_color_attachment_format(::vk::Format format) -> 
     {
         throw arm::Exception("invalid format");
     }
-    if (!color_attachment_formats_.empty())
+    if (!color_attachment_formats_.empty() && color_attachment_formats_[0] != ::vk::Format::eUndefined)
     {
-        arm::log::error("max color attachment formats currently 1");
+        arm::log::error("max color attachment formats currently 1, overwriting");
     }
     color_attachment_formats_ = std::array{
         format,
