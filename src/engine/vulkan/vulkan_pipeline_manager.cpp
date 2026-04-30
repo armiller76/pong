@@ -19,6 +19,57 @@
 #include "utils/exception.h"
 #include "utils/log.h"
 
+namespace
+{
+
+constexpr auto get_vertex_input_binding_description() -> ::vk::VertexInputBindingDescription
+{
+    auto result = ::vk::VertexInputBindingDescription{};
+    result.binding = 0;
+    result.stride = sizeof(pong::Vertex);
+    result.inputRate = ::vk::VertexInputRate::eVertex;
+    return result;
+}
+
+constexpr auto get_vertex_input_attribute_descriptions() -> std::vector<::vk::VertexInputAttributeDescription>
+{
+    auto position_entry = ::vk::VertexInputAttributeDescription{};
+    position_entry.location = 0;
+    position_entry.binding = 0;
+    position_entry.format = ::vk::Format::eR32G32B32Sfloat;
+    position_entry.offset = offsetof(pong::Vertex, position);
+    auto color_entry = ::vk::VertexInputAttributeDescription{};
+    color_entry.location = 1;
+    color_entry.binding = 0;
+    color_entry.format = ::vk::Format::eR32G32B32Sfloat;
+    color_entry.offset = offsetof(pong::Vertex, color);
+    auto normal_entry = ::vk::VertexInputAttributeDescription{};
+    normal_entry.location = 2;
+    normal_entry.binding = 0;
+    normal_entry.format = ::vk::Format::eR32G32B32Sfloat;
+    normal_entry.offset = offsetof(pong::Vertex, normal);
+    auto texture_coordinate_entry = ::vk::VertexInputAttributeDescription{};
+    texture_coordinate_entry.location = 3;
+    texture_coordinate_entry.binding = 0;
+    texture_coordinate_entry.format = ::vk::Format::eR32G32Sfloat;
+    texture_coordinate_entry.offset = offsetof(pong::Vertex, uv);
+    auto tangent_entry = ::vk::VertexInputAttributeDescription{};
+    tangent_entry.location = 4;
+    tangent_entry.binding = 0;
+    tangent_entry.format = ::vk::Format::eR32G32B32A32Sfloat;
+    tangent_entry.offset = offsetof(pong::Vertex, tangent);
+
+    return std::vector{
+        position_entry,
+        color_entry,
+        normal_entry,
+        texture_coordinate_entry,
+        tangent_entry,
+    };
+}
+
+} // anonymous namespace
+
 namespace pong
 {
 
@@ -275,8 +326,8 @@ auto VulkanPipelineManager::create_pipeline_(
         fragment_stage_create_info,
     };
 
-    auto vertex_input_binding_description = Vertex::vertex_input_binding_description();
-    auto vertex_input_attribute_descriptions = Vertex::vertex_input_attribute_descriptions();
+    auto vertex_input_binding_description = get_vertex_input_binding_description();
+    auto vertex_input_attribute_descriptions = get_vertex_input_attribute_descriptions();
     auto vertex_input_state_create_info = ::vk::PipelineVertexInputStateCreateInfo{};
     vertex_input_state_create_info.sType = ::vk::StructureType::ePipelineVertexInputStateCreateInfo;
     vertex_input_state_create_info.pNext = nullptr;

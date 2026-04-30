@@ -2,8 +2,6 @@
 
 #include <cstddef>
 
-#include <vulkan/vulkan_raii.hpp>
-
 #include "glm_wrapper.h" // IWYU pragma: keep
 
 namespace pong
@@ -16,45 +14,27 @@ struct Vertex
     ::glm::vec3 normal;
     ::glm::vec2 uv;
 
-    static constexpr auto vertex_input_binding_description() -> ::vk::VertexInputBindingDescription
-    {
-        auto result = ::vk::VertexInputBindingDescription{};
-        result.binding = 0;
-        result.stride = sizeof(Vertex);
-        result.inputRate = ::vk::VertexInputRate::eVertex;
-        return result;
-    }
 
-    static constexpr auto vertex_input_attribute_descriptions() -> std::vector<::vk::VertexInputAttributeDescription>
-    {
-        auto position_entry = ::vk::VertexInputAttributeDescription{};
-        position_entry.location = 0;
-        position_entry.binding = 0;
-        position_entry.format = ::vk::Format::eR32G32B32Sfloat;
-        position_entry.offset = offsetof(Vertex, position);
-        auto color_entry = ::vk::VertexInputAttributeDescription{};
-        color_entry.location = 1;
-        color_entry.binding = 0;
-        color_entry.format = ::vk::Format::eR32G32B32Sfloat;
-        color_entry.offset = offsetof(Vertex, color);
-        auto normal_entry = ::vk::VertexInputAttributeDescription{};
-        normal_entry.location = 2;
-        normal_entry.binding = 0;
-        normal_entry.format = ::vk::Format::eR32G32B32Sfloat;
-        normal_entry.offset = offsetof(Vertex, normal);
-        auto texture_coordinate_entry = ::vk::VertexInputAttributeDescription{};
-        texture_coordinate_entry.location = 3;
-        texture_coordinate_entry.binding = 0;
-        texture_coordinate_entry.format = ::vk::Format::eR32G32Sfloat;
-        texture_coordinate_entry.offset = offsetof(Vertex, uv);
-
-        return std::vector{
-            position_entry,
-            color_entry,
-            normal_entry,
-            texture_coordinate_entry,
-        };
-    }
 }; // struct Vertex
 
 } // namespace pong
+
+template <>
+struct std::hash<pong::Vertex>
+{
+    auto operator()(const pong::Vertex &v) const noexcept -> std::size_t
+    {
+        auto result = std::size_t{42};
+        const auto hash_combine = [&result](const std::size_t value)
+        {
+            // boost-style mix to preserve entropy from each field hash
+            result ^= value + static_cast<std::size_t>(0x9e3779b97f4a7c15ull) + (result << 6u) + (result >> 2u);
+        };
+        hash_combine(std::hash<::glm::vec3>{}(v.position));
+        hash_combine(std::hash<::glm::vec4>{}(v.color));
+        hash_combine(std::hash<::glm::vec3>{}(v.normal));
+        hash_combine(std::hash<::glm::vec2>{}(v.uv));
+        hash_combine(std::hash<::glm::vec4>{}(v.tangent));
+        return result;
+    }
+};
