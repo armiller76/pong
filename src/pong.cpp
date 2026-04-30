@@ -33,11 +33,14 @@ int main()
         auto render_context = pong::RenderContext(render_context_info, win32_window);
 
         auto main_camera = pong::Camera();
-        main_camera.set_position({0.0f, 2.0f, 10.0f});
+        main_camera.set_position({0.0f, 6.0f, 10.0f});
         main_camera.set_view_target({0.0f, 0.0f, 0.0f});
 
-        auto scene = render_context.load_scene("assets/gltf/CesiumMilkTruck/CesiumMilkTruck.glb");
-        // auto scene = vk_renderer.load_scene("assets/gltf/BoomBox/BoomBox.glb");
+        auto scene = render_context.load_scene("assets/gltf/DamagedHelmet/DamagedHelmet.glb");
+        scene.entities().at(scene.root_indices().at(0).value).scale_by({2.0f, 2.0f, 2.0f});
+
+        // auto scene = render_context.load_scene("assets/gltf/CesiumMilkTruck/CesiumMilkTruck.glb");
+        //  auto scene = vk_renderer.load_scene("assets/gltf/BoomBox/BoomBox.glb");
 
         while (!win32_window.should_close())
         {

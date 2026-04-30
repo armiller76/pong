@@ -29,5 +29,9 @@ target_link_libraries(
 
 if(ENABLE_SPIRV_VALIDATION)
   target_link_libraries(engine PUBLIC spv_tools)
-  target_compile_definitions(engine PUBLIC PONG_ENABLE_SPIRV_VALIDATION=1)
+  target_compile_definitions(
+    engine
+    PUBLIC MAX_DIR_LIGHTS=${PONG_MAX_DIR_LIGHTS}
+           PONG_ENABLE_SPIRV_VALIDATION=1
+  )
 endif()
