@@ -41,12 +41,6 @@ target_link_libraries(
 target_include_directories(
   pong
   PUBLIC ${Vulkan_INCLUDE_DIRS}
-         ${CMAKE_CURRENT_SOURCE_DIR}
-         ${CMAKE_CURRENT_SOURCE_DIR}/core
-         ${CMAKE_CURRENT_SOURCE_DIR}/engine
-         ${CMAKE_CURRENT_SOURCE_DIR}/engine/vulkan
-         ${CMAKE_CURRENT_SOURCE_DIR}/graphics
-         ${CMAKE_CURRENT_SOURCE_DIR}/platform
-         ${CMAKE_CURRENT_SOURCE_DIR}/utils
+         ${PROJECT_SOURCE_DIR}/src
          ${PROJECT_SOURCE_DIR}/third-party
 )
