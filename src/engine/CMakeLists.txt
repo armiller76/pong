@@ -23,7 +23,8 @@ target_link_libraries(
   engine
   PUBLIC glm::glm
          imgui
-         stb_image
+  PRIVATE mikktspace
+          stb_image
 )
 
 if(ENABLE_SPIRV_VALIDATION)

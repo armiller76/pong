@@ -34,6 +34,7 @@ add_executable(
   hash_tests.cpp
   image_texture_resource_api_tests.cpp
   pipeline_types_tests.cpp
+  tangent_generation_tests.cpp
   transform_tests.cpp
   window_tests.cpp
 )
