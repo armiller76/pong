@@ -35,7 +35,7 @@ RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32
     , was_resize_pending_{false}
     , vulkan_context_{}
     , vulkan_instance_{vulkan_context_, render_context_info}
-    , vulkan_surface_{win32_window_.create_vulkan_surface(vulkan_instance_)}
+    , vulkan_surface_{vulkan_instance_, win32_window_.win32_handles()}
     , vulkan_device_{vulkan_instance_, vulkan_surface_}
     , vulkan_descriptor_pool_{vulkan_device_, 2u} // TODO magic number (frames in flight)
     , resource_manager_{}

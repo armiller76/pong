@@ -4,11 +4,10 @@
 #include <string>
 #include <windows.h>
 
-#include "engine/engine_types.h"
-#include "engine/vulkan/vulkan_instance.h"
-#include "engine/vulkan/vulkan_surface.h"
-#include "graphics/color.h"
 #include "imgui.h"
+
+#include "engine/engine_types.h"
+#include "graphics/color.h"
 #include "math/rectangle.h"
 #include "utils/error.h"
 #include "utils/exception.h"
@@ -28,7 +27,6 @@ Win32Window::~Win32Window()
 
 Win32Window::Win32Window(const RenderContextInfo &render_context_info)
     : hinstance_{::GetModuleHandleA(0)}
-    , should_close_{false}
     , app_name_{render_context_info.app_name}
     , class_name_{std::string(app_name_ + "WindowClass")}
     , window_rect_{render_context_info.window_rect}
@@ -117,6 +115,7 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
             return 1;
         }
         break;
+
         case WM_ENTERSIZEMOVE:
         {
             resize_pending_ = true;
@@ -180,17 +179,12 @@ auto Win32Window::should_close() const -> bool
     return should_close_;
 }
 
-auto Win32Window::win32_handles() const -> Win32WindowHandles
+auto Win32Window::win32_handles() const -> const Win32WindowHandles
 {
     return {hwnd_, hinstance_};
 }
 
-auto Win32Window::create_vulkan_surface(const VulkanInstance &instance) const -> VulkanSurface
-{
-    return VulkanSurface{instance, win32_handles()};
-}
-
-auto Win32Window::fire_close_callbacks() -> void
+auto Win32Window::fire_close_callbacks() const -> void
 {
     for (const auto &[id, callback] : close_callbacks_)
     {
@@ -214,7 +208,7 @@ auto Win32Window::remove_close_callback(std::uint64_t callback_handle) -> void
     close_callbacks_.erase(callback_handle);
 }
 
-auto Win32Window::fire_resize_callbacks() -> void
+auto Win32Window::fire_resize_callbacks() const -> void
 {
     for (const auto &[id, callback] : resize_callbacks_)
     {
@@ -239,12 +233,12 @@ auto Win32Window::remove_resize_callback(std::uint64_t callback_handle) -> void
     resize_callbacks_.erase(callback_handle);
 }
 
-auto Win32Window::resize_pending() -> bool
+auto Win32Window::resize_pending() const -> bool
 {
     return resize_pending_;
 }
 
-auto Win32Window::is_minimized() -> bool
+auto Win32Window::is_minimized() const -> bool
 {
     return is_minimized_;
 }

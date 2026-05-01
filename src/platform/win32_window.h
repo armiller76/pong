@@ -8,7 +8,6 @@
 #include <windows.h>
 
 #include "engine/engine_types.h"
-#include "engine/vulkan/vulkan_window.h"
 #include "math/rectangle.h"
 #include "utils/auto_release.h"
 
@@ -24,34 +23,32 @@ struct Win32WindowHandles
 class VulkanInstance;
 class VulkanSurface;
 
-class Win32Window : public VulkanWindow
+class Win32Window
 {
   public:
-    ~Win32Window() override;
+    ~Win32Window();
 
     Win32Window(const RenderContextInfo &render_context_info);
 
-    auto process_events() -> void override;
+    auto process_events() -> void;
     auto handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
-    auto extent() const -> const Extent2D override;
-    auto set_title(std::string_view title) -> void override;
+    auto extent() const -> const Extent2D;
+    auto set_title(std::string_view title) -> void;
 
-    auto should_close() const -> bool override;
-    auto win32_handles() const -> Win32WindowHandles;
+    auto should_close() const -> bool;
+    auto win32_handles() const -> const Win32WindowHandles;
 
-    auto create_vulkan_surface(const VulkanInstance &instance) const -> VulkanSurface override;
+    auto fire_close_callbacks() const -> void;
+    auto add_close_callback(std::function<void()> close_callback) -> std::uint64_t;
+    auto remove_close_callback(std::uint64_t callback_id) -> void;
 
-    auto fire_close_callbacks() -> void override;
-    auto add_close_callback(std::function<void()> close_callback) -> std::uint64_t override;
-    auto remove_close_callback(std::uint64_t callback_id) -> void override;
+    auto fire_resize_callbacks() const -> void;
+    auto add_resize_callback(std::function<void(std::uint32_t, std::uint32_t)> resize_callback) -> std::uint64_t;
+    auto remove_resize_callback(std::uint64_t callback_id) -> void;
 
-    auto fire_resize_callbacks() -> void override;
-    auto add_resize_callback(std::function<void(std::uint32_t, std::uint32_t)> resize_callback)
-        -> std::uint64_t override;
-    auto remove_resize_callback(std::uint64_t callback_id) -> void override;
-    auto resize_pending() -> bool;
-    auto is_minimized() -> bool;
+    auto resize_pending() const -> bool;
+    auto is_minimized() const -> bool;
 
   private:
     HINSTANCE hinstance_;
