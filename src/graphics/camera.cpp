@@ -1,5 +1,6 @@
 #include "camera.h"
 
+#include "glm/ext/vector_float3.hpp"
 #include "glm_wrapper.h"
 #include "math/utils.h"
 
@@ -38,6 +39,11 @@ auto Camera::set_position(::glm::vec3 position) -> void
     auto offset = position - eye_;
     eye_ = position;
     center_ += offset;
+}
+
+auto Camera::get_position() const -> const ::glm::vec3
+{
+    return eye_;
 }
 
 auto Camera::set_view_target(::glm::vec3 target) -> void

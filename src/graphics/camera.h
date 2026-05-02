@@ -19,6 +19,7 @@ class Camera
 
     auto translate(::glm::vec3 offset) -> void;
     auto set_position(::glm::vec3 position) -> void;
+    auto get_position() const -> const ::glm::vec3;
 
     auto set_view_target(::glm::vec3 target) -> void;
     auto get_view_matrix() const -> ::glm::mat4;
