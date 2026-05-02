@@ -10,8 +10,10 @@
 #include <fastgltf/core.hpp>
 #include <fastgltf/tools.hpp>
 
+#include "fastgltf/types.hpp"
 #include "fastgltf_glm_utils.h"
 #include "fastgltf_primitives.h"
+#include "graphics/types.h"
 #include "graphics/vertex.h"
 #include "utils/error.h"
 
@@ -106,6 +108,7 @@ auto FastGLTFWrapper::load(std::filesystem::path path) -> LoadedAsset
     extract_materials_(gltf_asset.get(), loaded_asset);
     extract_meshes_(gltf_asset.get(), loaded_asset);
     extract_textures_(gltf_asset.get(), loaded_asset);
+    extract_samplers_(gltf_asset.get(), loaded_asset);
 
     // note: image extraction assumes .GLB format! no external URIs just yet
     extract_images_(gltf_asset.get(), loaded_asset);
@@ -329,12 +332,72 @@ auto FastGLTFWrapper::extract_samplers_(::fastgltf::Asset &asset, LoadedAsset &l
         {
             auto loaded_sampler = LoadedSampler{};
 
-            loaded_sampler.mag_filter = sampler.magFilter.has_value()
-                                            ? to_pong<MagFilterMode>(sampler.magFilter.value())
-                                            : loaded_sampler.mag_filter;
-            loaded_sampler.min_filter = sampler.minFilter.has_value()
-                                            ? to_pong<MinFilterMode>(sampler.minFilter.value())
-                                            : loaded_sampler.min_filter;
+            if (sampler.minFilter.has_value())
+            {
+                switch (sampler.minFilter.value())
+                {
+                    case ::fastgltf::Filter::Linear:
+                    {
+                        loaded_sampler.min_filter = FilterMode::Linear;
+                        loaded_sampler.samples_mips = false;
+                        loaded_sampler.mip_map_mode = MipMapMode::Linear;
+                    }
+                    break;
+                    case ::fastgltf::Filter::Nearest:
+                    {
+                        loaded_sampler.min_filter = FilterMode::Nearest;
+                        loaded_sampler.samples_mips = false;
+                        loaded_sampler.mip_map_mode = MipMapMode::Linear;
+                    }
+                    break;
+                    case ::fastgltf::Filter::LinearMipMapLinear:
+                    {
+                        loaded_sampler.min_filter = FilterMode::Linear;
+                        loaded_sampler.samples_mips = true;
+                        loaded_sampler.mip_map_mode = MipMapMode::Linear;
+                    }
+                    break;
+                    case ::fastgltf::Filter::LinearMipMapNearest:
+                    {
+                        loaded_sampler.min_filter = FilterMode::Linear;
+                        loaded_sampler.samples_mips = true;
+                        loaded_sampler.mip_map_mode = MipMapMode::Nearest;
+                    }
+                    break;
+                    case ::fastgltf::Filter::NearestMipMapLinear:
+                    {
+                        loaded_sampler.min_filter = FilterMode::Nearest;
+                        loaded_sampler.samples_mips = true;
+                        loaded_sampler.mip_map_mode = MipMapMode::Linear;
+                    }
+                    break;
+                    case ::fastgltf::Filter::NearestMipMapNearest:
+                    {
+                        loaded_sampler.min_filter = FilterMode::Nearest;
+                        loaded_sampler.samples_mips = true;
+                        loaded_sampler.mip_map_mode = MipMapMode::Nearest;
+                    }
+                    break;
+                }
+            }
+
+            if (sampler.magFilter.has_value())
+            {
+                switch (sampler.magFilter.value())
+                {
+                    case ::fastgltf::Filter::Linear:
+                    {
+                        loaded_sampler.mag_filter = FilterMode::Linear;
+                    }
+                    break;
+                    case ::fastgltf::Filter::Nearest:
+                    {
+                        loaded_sampler.mag_filter = FilterMode::Nearest;
+                    }
+                    break;
+                }
+            }
+
             loaded_sampler.wrap_u = to_pong(sampler.wrapS);
             loaded_sampler.wrap_v = to_pong(sampler.wrapT);
             loaded_asset.samplers.push_back(loaded_sampler);

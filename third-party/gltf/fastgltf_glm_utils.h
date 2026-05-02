@@ -67,35 +67,6 @@ constexpr auto inline to_pong(::fastgltf::AlphaMode alpha_mode) -> AlphaMode
     }
 }
 
-template <typename T>
-auto inline to_pong(::fastgltf::Filter filter) -> T
-{
-    if constexpr (std::is_same_v<T, MagFilterMode>)
-    {
-        switch (filter)
-        {
-            using enum ::fastgltf::Filter;
-            case Nearest: return T::Nearest;
-            case Linear: return T::Linear;
-            default: throw arm::Exception("unknown FilterMode");
-        }
-    }
-    else
-    {
-        switch (filter)
-        {
-            using enum ::fastgltf::Filter;
-            case Nearest: return T::Nearest;
-            case Linear: return T::Linear;
-            case NearestMipMapNearest: return T::NearestMipmapNearest;
-            case NearestMipMapLinear: return T::NearestMipmapLinear;
-            case LinearMipMapNearest: return T::LinearMipmapNearest;
-            case LinearMipMapLinear: return T::LinearMipmapLinear;
-            default: throw arm::Exception("unknown FilterMode");
-        }
-    }
-}
-
 constexpr auto inline to_pong(::fastgltf::Wrap wrap) -> WrapMode
 {
     switch (wrap)
