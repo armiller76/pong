@@ -12,6 +12,7 @@
 #include "engine/engine_error.h"
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_surface.h"
+#include "graphics/types.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 
@@ -205,6 +206,24 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
         supports_api13_ ? ">= 1.3" : "< 1.3",
         supports_dynamic_rendering_ ? "Supported" : "Not Supported",
         supports_sync2_ ? "Supported" : "Not Supported");
+
+    fallback_sampler_key_ = SamplerKey{
+        .mag_filter_mode = FilterMode::Linear,
+        .min_filter_mode = FilterMode::Linear,
+        .mip_map_mode = MipMapMode::Linear,
+        .u_wrap = WrapMode::Repeat,
+        .v_wrap = WrapMode::Repeat,
+        .w_wrap = WrapMode::Repeat,
+        .enable_anisotropy = false,
+        .max_anisotropy = 0.0f,
+        .enable_compare = false,
+        .compare_op = CompareOp::Never,
+        .min_lod = 0.0f,
+        .max_lod = 0.0f,
+        .mip_lod_bias = 0.0f,
+        .enable_border_color = false,
+        .unnormalized_coordinates = false,
+    };
 }
 
 auto VulkanDevice::native_handle() const -> const ::vk::raii::Device &
@@ -306,6 +325,52 @@ auto VulkanDevice::allocate_image(::vk::ImageCreateInfo &info, ::vk::MemoryPrope
     image_result.value().bindMemory(image_memory_result.value(), 0);
 
     return {std::move(image_result.value()), std::move(image_memory_result.value())};
+}
+
+auto VulkanDevice::get_sampler(const SamplerKey &key) -> ::vk::Sampler
+{
+    auto result = samplers_.find(key);
+    if (result != samplers_.end())
+    {
+        return *result->second;
+    }
+    else
+    {
+        auto create_info = ::vk::SamplerCreateInfo{};
+        create_info.sType = ::vk::StructureType::eSamplerCreateInfo;
+        create_info.pNext = nullptr;
+        create_info.flags = {};
+        create_info.magFilter = to_vk(key.mag_filter_mode);
+        create_info.minFilter = to_vk(key.min_filter_mode);
+        create_info.mipmapMode = to_vk(key.mip_map_mode);
+        create_info.addressModeU = to_vk(key.u_wrap);
+        create_info.addressModeV = to_vk(key.v_wrap);
+        create_info.addressModeW = to_vk(key.w_wrap);
+        create_info.mipLodBias = key.mip_lod_bias;
+        create_info.anisotropyEnable = key.enable_anisotropy ? ::vk::True : ::vk::False;
+        create_info.maxAnisotropy = key.max_anisotropy;
+        create_info.compareEnable = key.enable_compare ? ::vk::True : ::vk::False;
+        create_info.compareOp = to_vk(key.compare_op);
+        create_info.minLod = key.min_lod;
+        create_info.maxLod = key.max_lod;
+        create_info.borderColor = ::vk::BorderColor::eFloatTransparentBlack;
+        create_info.unnormalizedCoordinates = key.unnormalized_coordinates ? ::vk::True : ::vk::False;
+        auto sampler_result = check_vk_expected(device_.createSampler(create_info));
+        if (!sampler_result)
+        {
+            throw arm::Exception("unable to create sampler");
+        }
+        else
+        {
+            auto [result, inserted] = samplers_.emplace(key, std::move(sampler_result.value()));
+            return *result->second;
+        }
+    }
+}
+
+auto VulkanDevice::get_default_sampler_key() const -> const SamplerKey
+{
+    return fallback_sampler_key_;
 }
 
 auto VulkanDevice::score_device_(

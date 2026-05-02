@@ -1,9 +1,12 @@
 #pragma once
 
 #include <cstdint>
+#include <unordered_map>
 #include <utility>
 
 #include <vulkan/vulkan_raii.hpp>
+
+#include "graphics/sampler.h"
 
 namespace pong
 {
@@ -43,6 +46,9 @@ class VulkanDevice
     auto allocate_image(::vk::ImageCreateInfo &info, ::vk::MemoryPropertyFlags flags) const
         -> std::pair<::vk::raii::Image, ::vk::raii::DeviceMemory>;
 
+    auto get_sampler(const SamplerKey &key) -> ::vk::Sampler;
+    auto get_default_sampler_key() const -> const SamplerKey;
+
   private:
     ::vk::raii::PhysicalDevice physical_device_;
     ::vk::raii::Device device_;
@@ -50,6 +56,9 @@ class VulkanDevice
     std::uint32_t present_queue_family_index_;
     ::vk::Queue graphics_queue_;
     ::vk::Queue present_queue_;
+    std::unordered_map<SamplerKey, ::vk::raii::Sampler> samplers_;
+    SamplerKey fallback_sampler_key_;
+
     bool supports_api13_;
     bool supports_dynamic_rendering_;
     bool supports_sync2_;
