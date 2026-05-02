@@ -32,7 +32,7 @@ class RenderContext
 
     auto load_scene(std::string_view filename) -> Scene;
 
-    auto update_and_render(Scene &scene, Camera &camera) -> void; // or return a frame counter / diagnostic?
+    auto update_and_render(Scene &scene) -> void; // or return a frame counter / diagnostic?
 
     auto shutdown() -> void;
 

@@ -1,7 +1,6 @@
 #include "scene.h"
 
 #include <cstdint>
-#include <ranges>
 #include <utility>
 #include <vector>
 
@@ -17,6 +16,7 @@ namespace pong
 Scene::Scene(std::vector<Entity> entities, std::vector<EntityIndex> root_indices)
     : entities_{std::move(entities)}
     , root_indices_{std::move(root_indices)}
+    , frame_camera_{{0.0f, 3.0f, 15.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 1.0f}, ::glm::radians(33.0f), 0.1f, 100.f}
 {
     arm::log::debug("Scene constructor: {} entities, {} roots", entities_.size(), root_indices_.size());
 }
@@ -162,6 +162,11 @@ auto Scene::light_ubo() const -> UBO_Lighting
     result.light_counts.x = directional_count;
 
     return result;
+}
+
+auto Scene::frame_camera_ubo(const float aspect) const -> UBO_Camera
+{
+    return frame_camera_.camera_ubo(aspect);
 }
 
 } // namespace pong

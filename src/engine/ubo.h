@@ -5,18 +5,18 @@
 namespace pong
 {
 
-struct UBO_ViewProj
+struct UBO_Camera
 {
     alignas(16)::glm::mat4 view;
     alignas(16)::glm::mat4 proj;
     alignas(16)::glm::vec4 camera; // .xyz = position, .w = unused/pad
 };
 
-static_assert(sizeof(UBO_ViewProj) == 64 * 2 + 16, "ubo is incorrect size");
-static_assert(alignof(UBO_ViewProj) == 16, "ubo is misaligned");
-static_assert(offsetof(UBO_ViewProj, view) == 0, "offset is incorrect");
-static_assert(offsetof(UBO_ViewProj, proj) == 64, "offset is incorrect");
-static_assert(offsetof(UBO_ViewProj, camera) == 128, "offset is incorrect");
+static_assert(sizeof(UBO_Camera) == 64 * 2 + 16, "ubo is incorrect size");
+static_assert(alignof(UBO_Camera) == 16, "ubo is misaligned");
+static_assert(offsetof(UBO_Camera, view) == 0, "offset is incorrect");
+static_assert(offsetof(UBO_Camera, proj) == 64, "offset is incorrect");
+static_assert(offsetof(UBO_Camera, camera) == 128, "offset is incorrect");
 
 struct DirectionalLightData
 {

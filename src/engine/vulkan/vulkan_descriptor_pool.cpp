@@ -55,7 +55,7 @@ auto VulkanDescriptorPool::allocate_per_frame_descriptor_sets(
         auto view_proj_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
         view_proj_descriptor_buffer_info.buffer = view_proj_uniform_buffers.at(i).native_handle();
         view_proj_descriptor_buffer_info.offset = 0;
-        view_proj_descriptor_buffer_info.range = sizeof(UBO_ViewProj);
+        view_proj_descriptor_buffer_info.range = sizeof(UBO_Camera);
 
         auto view_proj_write_descriptor_set = ::vk::WriteDescriptorSet{};
         view_proj_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
