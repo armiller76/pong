@@ -1,6 +1,6 @@
 
 Lighting v1
-    One directional light.
+    Directional lights.
     Light color, intensity, direction.
     Shading uses normal plus material factors.
     Goal is visual correctness and controllable results.

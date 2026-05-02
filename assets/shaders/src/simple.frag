@@ -20,7 +20,7 @@ layout(std140, set = 0, binding = 1) uniform Light
 {
     vec4 ambient_color_strength; // ambient
     uvec4 light_counts;          // .x = directional, .y = point, .z = spot, .w = unused/pad
-    Directional directionals[8]; // TODO magic number // directional
+    Directional directionals[MAX_DIR_LIGHTS];
 }
 ubo_light;
 
