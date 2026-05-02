@@ -52,6 +52,33 @@ enum class ShaderFeature : std::uint32_t
     AlphaTest = 1 << 1,
 };
 
+constexpr auto operator|(ShaderFeature a, ShaderFeature b) noexcept -> ShaderFeature
+{
+    return static_cast<ShaderFeature>(std::to_underlying(a) | std::to_underlying(b));
+}
+
+constexpr auto operator&(ShaderFeature a, ShaderFeature b) noexcept -> ShaderFeature
+{
+    return static_cast<ShaderFeature>(std::to_underlying(a) & std::to_underlying(b));
+}
+
+constexpr auto operator|=(ShaderFeature &a, ShaderFeature b) noexcept -> ShaderFeature
+{
+    a = a | b;
+    return a;
+}
+
+constexpr auto any(ShaderFeature a) noexcept -> bool
+{
+    return std::to_underlying(a) != 0;
+}
+
+// usage: bits = full bitfield, bit = bit to check
+constexpr auto has(ShaderFeature bits, ShaderFeature bit) noexcept -> bool
+{
+    return any(bits & bit);
+}
+
 struct PipelineKey
 {
     PassType pass_type;            // 8 bits
@@ -98,33 +125,6 @@ struct VulkanPipelineResources
     ::vk::raii::DescriptorSetLayout per_frame_descriptor_set_layout;
     ::vk::raii::DescriptorSetLayout per_material_descriptor_set_layout;
 }; // struct VulkanPipelineResources
-
-constexpr auto operator|(ShaderFeature a, ShaderFeature b) noexcept -> ShaderFeature
-{
-    return static_cast<ShaderFeature>(std::to_underlying(a) | std::to_underlying(b));
-}
-
-constexpr auto operator&(ShaderFeature a, ShaderFeature b) noexcept -> ShaderFeature
-{
-    return static_cast<ShaderFeature>(std::to_underlying(a) & std::to_underlying(b));
-}
-
-constexpr auto operator|=(ShaderFeature &a, ShaderFeature b) noexcept -> ShaderFeature
-{
-    a = a | b;
-    return a;
-}
-
-constexpr auto any(ShaderFeature a) noexcept -> bool
-{
-    return std::to_underlying(a) != 0;
-}
-
-// usage: bits = full bitfield, bit = bit to check
-constexpr auto has(ShaderFeature bits, ShaderFeature bit) noexcept -> bool
-{
-    return any(bits & bit);
-}
 
 constexpr auto to_string(PassType pass_type) -> std::string
 {
