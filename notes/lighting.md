@@ -47,80 +47,91 @@ Plan descriptor and buffer ownership early
     Clear update point each frame.
     This prevents descriptor churn when light count grows.
 
+---
 
-*Core Idea*
-Descriptor and buffer ownership should follow lifetime and update frequency, not convenience.
-If you align ownership this way early, lighting and future features (shadows, more lights, post-process) stay additive instead of forcing rewrites.
+Normal Mapping Implementation Checklist (step #1 for v1 quality pass)
 
-*Mental Model*
-    Think in 4 buckets:
-        Static: created once, rarely changed.
-        Per-scene or per-level: changes when scene content changes.
-        Per-frame: changes every frame.
-        Per-draw: changes for each object draw.
-        Each bucket should have its own descriptor/buffer strategy.
+Why first:
+    Biggest visual improvement with moderate complexity.
+    Unlocks proper surface detail without adding geometry.
+    Paves way for PBR later (specular, roughness require normal).
 
-*Recommended Ownership Split*
-        Material/system assets own static resources.
-        Renderer owns per-frame resources.
-        Scene/CPU model owns logical light data.
-        Upload path maps scene data into renderer-owned GPU frame buffers.
-    That separation keeps gameplay/editor concerns away from Vulkan lifetime hazards.
+CPU Load-Time (Mesh data)
+    [X] Add tangent field to Vertex struct in src/graphics/vertex.h
+        - vec3 tangent + float handedness in vec4 format
+        - Update vertex input binding/attribute descriptions
+        - Vertex layout now: position, color, normal, uv, tangent
+    
+    [X] Compute tangents in mesh loader (resource_loader or glTF parse path)
+        - For each triangle, compute per-triangle T and B from position + UV edges
+        - Accumulate per-vertex T/B (smooth across faces)
+        - Orthonormalize: T = normalize(T - dot(N, T) * N)
+        - Compute handedness: tangent.w = sign(dot(cross(N, T), B))
+        - Store final vec4 tangent in vertex buffer
+    
+    [X] Verify tangent generation does not crash on degenerate UVs
+        - Check determinant > epsilon before division
+        - Fall back to reasonable default if needed (e.g., (1,0,0,1))
 
-*Descriptor Ownership Strategy*
+GPU Vertex Shader (src/assets/shaders/src/simple.vert)
+    [X] Add tangent input layout(location = N) in vec4 in_tangent
+    
+    [X] Transform normal to world space (using normal matrix if needed)
+        - world_normal = normalize(normal_matrix * in_normal)
+    
+    [X] Transform tangent to world space
+        - world_tangent = normalize(normal_matrix * in_tangent.xyz)
+    
+    [X] Compute bitangent in shader
+        - world_bitangent = cross(world_normal, world_tangent) * in_tangent.w
+    
+    [X] Output to fragment stage
+        - Pass world_normal, world_tangent, world_bitangent to fragment
+        - Or pass as 3 separate layout(location = N) out vec3
 
-    Material descriptor sets:
-        Long-lived.
-        Allocated once when material is loaded.
-        Should survive swapchain recreation.
-    Frame/global descriptor sets:
-        Owned by renderer.
-        One per frame-in-flight.
-        Updated every frame with camera + lighting globals.
-    Per-draw descriptor sets:
-        Avoid if possible for now.
-        Prefer push constants or indexing into per-frame buffers.
-    Big principle: avoid descriptor allocation/writes in the inner draw loop.
+GPU Fragment Shader (src/assets/shaders/src/simple.frag)
+    [X] Add normal map sampler input
+        - layout(set = 1, binding = 2) uniform sampler2D normal_sampler; (already exists)
+    
+    [X] Sample and decode normal map
+        - vec3 sampled_normal = texture(normal_sampler, in_uv).rgb
+        - sampled_normal = normalize(sampled_normal * 2.0 - 1.0)  // [0,1] -> [-1,1]
+    
+    [X] Assemble TBN matrix
+        - mat3 TBN = mat3(in_tangent, in_bitangent, in_normal)
+    
+    [X] Transform sampled normal to world space
+        - vec3 world_normal = normalize(TBN * sampled_normal)
+    
+    [X] Use world_normal for lighting instead of in_normal
+        - Replace existing in_normal use with world_normal in any lighting calc
 
-*Buffer Ownership Strategy*
+Validation
+    [ ] Shaders compile without errors
+    [ ] App runs with at least one mesh loaded
+    [ ] Rotate mesh; confirm surface highlights move correctly
+    [ ] No black/flat surface (indicates TBN sign flip or misalignment)
+    [ ] Specular or bump detail visible (indicates normal map is being read)
+    [ ] No seams/discontinuities that weren't in the original model (TBN orthogonalization might need tuning)
 
-    Static GPU buffers:
-        Material constants that almost never change.
-    Per-frame dynamic buffers:
-        Camera, light arrays, frame globals.
-        Double/triple buffered by frame-in-flight.
-    Transient upload/staging buffers:
-        Short-lived transfer helpers.
-        Optional ring-buffer pattern for dynamic data later.
-    Big principle: write only to the current frame’s region, never to data possibly in-flight.
+Debugging tips
+    [ ] Visualize world_normal as RGB to inspect TBN correctness
+        - out_color = vec4(normalize(world_normal) * 0.5 + 0.5, 1.0)
+        - Should show smooth gradient, not noisy or flipped
+    
+    [ ] Check tangent.w sign in vertex output
+        - out_color = vec4(vec3(in_tangent.w), 1.0)  // should be 1 or -1 (appear white or black)
+    
+    [ ] Disable normal map temporarily, use flat normal
+        - vec3 world_normal = normalize(in_normal)
+        - If this looks correct, bug is in normal map path
+    
+    [ ] Inspect mesh tangents in debugger
+        - Verify tangent is not (0,0,0)
+        - Verify tangent is reasonably orthogonal to normal
 
-*How This Helps Lighting Specifically*
-    For Lighting v1:
-        One per-frame global lighting buffer is enough.
-        Directional light data goes there with camera data.
-        Material set remains material-only (textures/factors).
-    For future lighting:
-        Adding point/spot lights becomes “grow global light buffer,” not “redesign material descriptors.”
-        Adding shadows becomes “add more global resources,” not “touch every material.”
-
-*Swapchain Recreate Boundary*
-    Define this now:
-        Swapchain-dependent objects can be recreated often.
-        Material descriptors and static material buffers should not be touched during resize/minimize.
-        Frame-global resources may resize or rebind as needed, but ownership stays renderer-local.
-    If this boundary is blurred, resize bugs and descriptor churn come back.
-
-*Common Mistakes to Avoid*
-    Per-material data in per-frame buffers without frame separation.
-    Per-draw descriptor allocation/update.
-    Letting window/event layer trigger low-level descriptor work directly.
-    Coupling swapchain lifetime to asset lifetime.
-    Manual freeing in one subsystem while RAII also owns the same object.
-
-*Practical “Is This Correct?” Check*
-When adding any new buffer/descriptor, ask:
-    Who owns it logically?
-    What is its lifetime bucket?
-    How often is it updated?
-    Is it swapchain-dependent?
-    Is it safe with N frames in flight?
+Next steps after validation
+    1. Add Blinn-Phong specular using the corrected normal
+    2. Tune material roughness/metallic impact on specular
+    3. Add hemisphere ambient or improve current ambient model
+    4. Consider tone mapping and gamma correction
