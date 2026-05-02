@@ -6,7 +6,6 @@
 #include "engine/engine_types.h"
 #include "engine/render_context.h"
 #include "engine/vulkan/vulkan_renderer.h"
-#include "graphics/camera.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"
 #include "utils/log.h"
@@ -32,10 +31,6 @@ int main()
         auto win32_window = pong::Win32Window(render_context_info);
         auto render_context = pong::RenderContext(render_context_info, win32_window);
 
-        auto main_camera = pong::Camera();
-        main_camera.set_position({0.0f, 6.0f, 10.0f});
-        main_camera.set_view_target({0.0f, 0.0f, 0.0f});
-
         auto scene = render_context.load_scene("assets/gltf/DamagedHelmet/DamagedHelmet.glb");
         scene.entities().at(scene.root_indices().at(0).value).scale_by({2.0f, 2.0f, 2.0f});
         scene.add_directional_light({{-0.5f, -1.0f, -0.3f, 1.5f}, {1.0f, 0.95f, 0.8f, 0.0f}});
@@ -58,7 +53,7 @@ int main()
             // rotation = ::glm::rotate(rotation, angle_y, {0, 1, 0});
             // rotation = ::glm::rotate(rotation, angle_z, {0, 0, 1});
 
-            render_context.update_and_render(scene, main_camera);
+            render_context.update_and_render(scene);
         }
         render_context.shutdown();
         return EXIT_SUCCESS;
