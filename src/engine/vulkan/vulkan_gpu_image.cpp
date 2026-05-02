@@ -17,14 +17,18 @@
 namespace pong
 {
 
-VulkanGpuImage::VulkanGpuImage(const VulkanDevice &device, ::vk::Extent2D extent, ::vk::Format format)
+VulkanGpuImage::VulkanGpuImage(
+    const VulkanDevice &device,
+    ::vk::Extent2D extent,
+    ::vk::Sampler sampler,
+    ::vk::Format format)
     : device_{&device}
     , extent_{extent}
     , format_{format}
     , image_{nullptr}
     , memory_{nullptr}
     , view_{nullptr}
-    , sampler_{nullptr}
+    , sampler_{sampler}
 {
     arm::log::debug("VulkanGpuImage Constructor");
 
@@ -72,32 +76,6 @@ VulkanGpuImage::VulkanGpuImage(const VulkanDevice &device, ::vk::Extent2D extent
         throw arm::Exception("uanble to create imageview");
     }
     view_ = std::move(view_result.value());
-
-    auto sampler_create_info = ::vk::SamplerCreateInfo{};
-    sampler_create_info.sType = ::vk::StructureType::eSamplerCreateInfo;
-    sampler_create_info.pNext = nullptr;
-    sampler_create_info.flags = {};
-    sampler_create_info.magFilter = ::vk::Filter::eLinear;
-    sampler_create_info.minFilter = ::vk::Filter::eLinear;
-    sampler_create_info.mipmapMode = ::vk::SamplerMipmapMode::eLinear;
-    sampler_create_info.addressModeU = ::vk::SamplerAddressMode::eClampToEdge;
-    sampler_create_info.addressModeV = ::vk::SamplerAddressMode::eClampToEdge;
-    sampler_create_info.addressModeW = ::vk::SamplerAddressMode::eClampToEdge;
-    sampler_create_info.mipLodBias = 0.0f;
-    sampler_create_info.anisotropyEnable = ::vk::False;
-    sampler_create_info.maxAnisotropy = 1.0f;
-    sampler_create_info.compareEnable = ::vk::False;
-    sampler_create_info.compareOp = ::vk::CompareOp::eNever;
-    sampler_create_info.minLod = 0.0f;
-    sampler_create_info.maxLod = 0.0f;
-    sampler_create_info.borderColor = ::vk::BorderColor::eIntOpaqueBlack;
-    sampler_create_info.unnormalizedCoordinates = ::vk::False;
-    auto sampler_result = check_vk_expected(device_->native_handle().createSampler(sampler_create_info));
-    if (!sampler_result)
-    {
-        throw arm::Exception("unable to create image sampler");
-    }
-    sampler_ = std::move(sampler_result.value());
 }
 
 auto VulkanGpuImage::image() const -> ::vk::Image
@@ -112,7 +90,7 @@ auto VulkanGpuImage::image_view() const -> ::vk::ImageView
 
 auto VulkanGpuImage::sampler() const -> ::vk::Sampler
 {
-    return *sampler_;
+    return sampler_;
 }
 
 auto VulkanGpuImage::extent() const -> ::vk::Extent2D

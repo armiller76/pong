@@ -1,13 +1,11 @@
 #pragma once
 
-#include <memory>
 #include <string_view>
 
 #include <vulkan/vulkan_raii.hpp>
 
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_gpu_image.h"
-#include "texture2d_impl_vulkan.h"
 
 namespace pong
 {
@@ -18,7 +16,7 @@ class VulkanImmediateCommandContext;
 class Texture2D
 {
   public:
-    Texture2D(Image &image, const VulkanDevice &device);
+    Texture2D(VulkanDevice &device, Image &image, const SamplerKey &sampler_key);
     ~Texture2D() = default;
 
     Texture2D(const Texture2D &) = delete;
@@ -29,6 +27,7 @@ class Texture2D
     auto name() const -> std::string_view;
     auto width() const -> std::uint32_t;
     auto height() const -> std::uint32_t;
+    auto image() const -> ::vk::Image;
     auto image_view() const -> ::vk::ImageView;
     auto sampler() const -> ::vk::Sampler;
 
@@ -36,7 +35,11 @@ class Texture2D
     auto upload_pixels(VulkanImmediateCommandContext &command_context, const Image &image) -> void;
 
   private:
-    std::unique_ptr<Texture2DImpl_Vulkan> impl_;
+    std::string name_;
+    ::vk::Extent2D extent_;
+    ::vk::Sampler sampler_;
+    VulkanGpuImage image_;
+
     // TODO consider an is_ready or is_uploaded bool to track if actual texture image has been uploaded to GPU
 
 }; // class Texture

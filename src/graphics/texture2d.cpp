@@ -1,7 +1,6 @@
 #include "texture2d.h"
 
 #include <cstdint>
-#include <memory>
 #include <string_view>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -9,51 +8,51 @@
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_utils.h"
 #include "image.h"
-#include "texture2d_impl_vulkan.h"
 
 namespace pong
 {
 
-// vulkan specific constructor overload
-Texture2D::Texture2D(Image &image, const VulkanDevice &device)
+Texture2D::Texture2D(VulkanDevice &device, Image &image, const SamplerKey &sampler_key)
+    : name_{image.name()}
+    , extent_{to_vk(image.extent())}
+    , sampler_{device.get_sampler(sampler_key)}
+    , image_{device, extent_, sampler_, to_vk(image.format())}
 {
-    impl_ = std::make_unique<Texture2DImpl_Vulkan>(device, image.name(), to_vk(image.extent()), to_vk(image.format()));
 }
-
-// other specific constructor overload
-// Texture2D::Texture2D(std::string_view name, Extent2D extent, ImageFormat format, const OtherAPIDevice &device)
-//{
-//    impl_ = std::make_unique<Texture2DImpl_OtherAPI>(device, name, to_otherAPI(extent), to_otherAPI(format));
-//}
 
 auto Texture2D::name() const -> std::string_view
 {
-    return impl_->name();
+    return name_;
 }
 
 auto Texture2D::width() const -> std::uint32_t
 {
-    return impl_->width();
+    return extent_.width;
 }
 
 auto Texture2D::height() const -> std::uint32_t
 {
-    return impl_->height();
+    return extent_.height;
+}
+
+auto Texture2D::image() const -> ::vk::Image
+{
+    return image_.image();
 }
 
 auto Texture2D::image_view() const -> ::vk::ImageView
 {
-    return impl_->image_view();
+    return image_.image_view();
 }
 
 auto Texture2D::sampler() const -> ::vk::Sampler
 {
-    return impl_->sampler();
+    return image_.sampler();
 }
 
 auto Texture2D::upload_pixels(VulkanImmediateCommandContext &command_context, const Image &image) -> void
 {
-    impl_->upload(command_context, image);
+    image_.upload(command_context, image);
 }
 
 } // namespace pong

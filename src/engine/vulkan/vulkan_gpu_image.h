@@ -12,7 +12,7 @@ class VulkanImmediateCommandContext;
 class VulkanGpuImage
 {
   public:
-    VulkanGpuImage(const VulkanDevice &device, ::vk::Extent2D extent, ::vk::Format format);
+    VulkanGpuImage(const VulkanDevice &device, ::vk::Extent2D extent, ::vk::Sampler sampler, ::vk::Format format);
     ~VulkanGpuImage() = default;
 
     // movable but non-copyable
@@ -36,7 +36,7 @@ class VulkanGpuImage
     ::vk::raii::Image image_;
     ::vk::raii::DeviceMemory memory_;
     ::vk::raii::ImageView view_;
-    ::vk::raii::Sampler sampler_;
+    ::vk::Sampler sampler_;
 
 }; // class VulkanGpuImage
 

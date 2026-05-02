@@ -12,9 +12,7 @@
 #include "engine/vulkan/vulkan_utils.h"
 #include "graphics/image.h"
 #include "graphics/texture2d.h"
-#include "graphics/texture2d_impl_vulkan.h"
 #include "utils/exception.h"
-#include "utils/hash.h"
 
 namespace pong
 {
@@ -23,11 +21,9 @@ namespace
 {
 
 using UploadGpuImageSignature = void (VulkanGpuImage::*)(VulkanImmediateCommandContext &, const Image &);
-using UploadTextureImplSignature = void (Texture2DImpl_Vulkan::*)(VulkanImmediateCommandContext &, const Image &);
 using UploadTextureSignature = void (Texture2D::*)(VulkanImmediateCommandContext &, const Image &);
 
 static_assert(std::is_same_v<decltype(&VulkanGpuImage::upload), UploadGpuImageSignature>);
-static_assert(std::is_same_v<decltype(&Texture2DImpl_Vulkan::upload), UploadTextureImplSignature>);
 static_assert(std::is_same_v<decltype(&Texture2D::upload_pixels), UploadTextureSignature>);
 
 } // namespace
@@ -165,11 +161,6 @@ TEST(ApiContracts, TypeOwnershipAndMoveSemantics)
     EXPECT_FALSE((std::is_copy_assignable_v<Texture2D>));
     EXPECT_TRUE((std::is_move_constructible_v<Texture2D>));
     EXPECT_TRUE((std::is_move_assignable_v<Texture2D>));
-
-    EXPECT_FALSE((std::is_copy_constructible_v<Texture2DImpl_Vulkan>));
-    EXPECT_FALSE((std::is_copy_assignable_v<Texture2DImpl_Vulkan>));
-    EXPECT_TRUE((std::is_move_constructible_v<Texture2DImpl_Vulkan>));
-    EXPECT_TRUE((std::is_move_assignable_v<Texture2DImpl_Vulkan>));
 
     EXPECT_FALSE((std::is_copy_constructible_v<VulkanGpuImage>));
     EXPECT_FALSE((std::is_copy_assignable_v<VulkanGpuImage>));
