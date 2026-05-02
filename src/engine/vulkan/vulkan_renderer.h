@@ -86,11 +86,6 @@ class VulkanRenderer
     auto shutdown() -> void;
 
   private:
-    auto prepare_frame_(const Scene &scene) -> RenderStatus;
-    auto record_(const std::vector<DrawItem> &draw_items, const Camera &camera, ImDrawData *imgui_draw_data = nullptr)
-        -> void;
-    auto end_frame_() -> void;
-
     std::uint32_t max_frames_in_flight_;
 
     const VulkanDevice &device_;
@@ -108,7 +103,16 @@ class VulkanRenderer
     std::uint64_t frame_counter_{0}; // TODO use this
     bool needs_recreate_ = false;
 
+  private:
     auto init_() -> void;
+
+    auto prepare_frame_(const Scene &scene) -> RenderStatus;
+    auto record_(
+        const Scene &scene,
+        const std::vector<DrawItem> &draw_items,
+        const Camera &camera,
+        ImDrawData *imgui_draw_data = nullptr) -> void;
+    auto end_frame_() -> void;
 
     static constexpr auto make_draw_sort_key_(
         PipelineKey pipeline_key,

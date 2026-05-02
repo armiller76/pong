@@ -108,7 +108,7 @@ auto VulkanRenderer::render(const Scene &scene, const Camera &camera, ImDrawData
     {
         case RenderStatusCode::ReadyToRecord:
         {
-            record_(render_status.draw_items, camera, imgui_draw_data);
+            record_(scene, render_status.draw_items, camera, imgui_draw_data);
             end_frame_();
         }
         break;
@@ -221,8 +221,11 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
     return {RenderStatusCode::ReadyToRecord, std::move(result)};
 }
 
-auto VulkanRenderer::record_(const std::vector<DrawItem> &draw_items, const Camera &camera, ImDrawData *imgui_draw_data)
-    -> void
+auto VulkanRenderer::record_(
+    const Scene &scene,
+    const std::vector<DrawItem> &draw_items,
+    const Camera &camera,
+    ImDrawData *imgui_draw_data) -> void
 {
     const auto frame_index = frame_command_context_.current_frame_index();
 
@@ -253,15 +256,12 @@ auto VulkanRenderer::record_(const std::vector<DrawItem> &draw_items, const Came
             100.0f),
         .camera = {camera.get_position(), 0.0f}};
     temp_view_proj.proj[1][1] *= -1.0f;
+
     view_proj_uniform_buffers_[frame_index].upload(&temp_view_proj, sizeof(UBO_ViewProj));
 
-    auto temp_light = UBO_Lighting{
-        .ambient_color_strength = {0.95f, 0.97f, 1.0f, 0.10f}, .light_counts = {3u, 0u, 0u, 0u}, .directional = {}};
-    temp_light.directional[0] = {
-        .direction_intensity = {-0.5f, -1.0f, -0.3f, 1.5f}, .color = {1.0f, 0.95f, 0.8f, 0.0f}};
-    temp_light.directional[1] = {.direction_intensity = {0.6f, -0.5f, 0.4f, 0.4f}, .color = {0.6f, 0.7f, 1.0f, 0.0f}};
-    temp_light.directional[2] = {.direction_intensity = {0.1f, -0.3f, 1.0f, 0.6f}, .color = {0.9f, 0.9f, 1.0f, 0.0f}};
-    light_uniform_buffers_[frame_index].upload(&temp_light, sizeof(UBO_Lighting));
+    // upload lighting data
+    auto lights = scene.light_ubo();
+    light_uniform_buffers_[frame_index].upload(&lights, sizeof(UBO_Lighting));
 
     // start command buffer
     auto &command_buffer = frame_command_context_.current_command_buffer();
