@@ -18,25 +18,25 @@ static_assert(offsetof(UBO_ViewProj, view) == 0, "offset is incorrect");
 static_assert(offsetof(UBO_ViewProj, proj) == 64, "offset is incorrect");
 static_assert(offsetof(UBO_ViewProj, camera) == 128, "offset is incorrect");
 
-struct GpuDirectionalLight
+struct DirectionalLightData
 {
     alignas(16)::glm::vec4 direction_intensity; // .xyz = direction, .w = intensity
     alignas(16)::glm::vec4 color;               // .xyz = color, .w = unused/pad
 };
 
-static_assert(sizeof(GpuDirectionalLight) == 16 * 2, "ubo is incorrect size");
-static_assert(alignof(GpuDirectionalLight) == 16, "ubo is misaligned");
-static_assert(offsetof(GpuDirectionalLight, direction_intensity) == 0, "offset is incorrect");
-static_assert(offsetof(GpuDirectionalLight, color) == 16, "offset is incorrect");
+static_assert(sizeof(DirectionalLightData) == 16 * 2, "ubo is incorrect size");
+static_assert(alignof(DirectionalLightData) == 16, "ubo is misaligned");
+static_assert(offsetof(DirectionalLightData, direction_intensity) == 0, "offset is incorrect");
+static_assert(offsetof(DirectionalLightData, color) == 16, "offset is incorrect");
 
 struct UBO_Lighting
 {
     alignas(16)::glm::vec4 ambient_color_strength; // .xyz = color, .w = strength
     alignas(16)::glm::uvec4 light_counts;          // .x = direction, .y = point, .z = spot, .w = unused/pad
-    GpuDirectionalLight directional[MAX_DIR_LIGHTS];
+    DirectionalLightData directional[MAX_DIR_LIGHTS];
 };
 
-static_assert(sizeof(UBO_Lighting) == 16 * 2 + MAX_DIR_LIGHTS * sizeof(GpuDirectionalLight), "ubo is incorrect size");
+static_assert(sizeof(UBO_Lighting) == 16 * 2 + MAX_DIR_LIGHTS * sizeof(DirectionalLightData), "ubo is incorrect size");
 static_assert(alignof(UBO_Lighting) == 16, "ubo is misaligned");
 static_assert(offsetof(UBO_Lighting, ambient_color_strength) == 0, "offset is incorrect");
 static_assert(offsetof(UBO_Lighting, light_counts) == 16, "offset is incorrect");

@@ -51,6 +51,13 @@ struct EntityIndex
     auto operator<=>(const EntityIndex &other) const -> auto = default;
 };
 
+struct LightHandle
+{
+    std::uint32_t value;
+    std::uint32_t version = 0u;
+    auto operator==(const LightHandle &handle) const -> bool = default;
+};
+
 } // namespace pong
 
 template <>

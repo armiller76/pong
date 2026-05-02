@@ -6,8 +6,9 @@
 #include <utility>
 #include <vector>
 
+#include <glm/fwd.hpp>
+
 #include "core/resource_handles.h"
-#include "graphics/glm_wrapper.h" //IWYU pragma: keep
 #include "graphics/model.h"
 #include "math/transform.h"
 #include "math/utils.h"

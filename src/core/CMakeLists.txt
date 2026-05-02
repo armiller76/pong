@@ -9,6 +9,8 @@ target_sources(
           scene.cpp
 )
 
+target_compile_definitions(core PUBLIC MAX_DIR_LIGHTS=${PONG_MAX_DIR_LIGHTS})
+
 # target_link_libraries(core PUBLIC )
 target_include_directories(
   core
