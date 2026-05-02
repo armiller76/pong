@@ -15,13 +15,15 @@ struct Color
     float b;
     float a;
 
-    Color(float r, float g, float b, float a)
+    Color(float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f)
     {
         this->r = std::clamp(r, 0.0f, 1.0f);
         this->g = std::clamp(g, 0.0f, 1.0f);
         this->b = std::clamp(b, 0.0f, 1.0f);
         this->a = std::clamp(a, 0.0f, 1.0f);
     }
+
+    constexpr auto operator==(const Color &other) const -> bool = default;
 
     static constexpr auto float_to_byte(float f) -> std::uint8_t
     {
@@ -54,3 +56,23 @@ inline auto to_string(const Color &color) -> std::string
 }
 
 } // namespace pong
+
+template <>
+struct std::hash<pong::Color>
+{
+    auto operator()(const pong::Color &c) const noexcept -> std::size_t
+    {
+        auto result = std::size_t{42};
+        const auto hash_combine = [&result](const std::size_t value)
+        {
+            // boost-style mix to preserve entropy from each field hash
+            result ^= value + static_cast<std::size_t>(0x9e3779b97f4a7c15ull) + (result << 6u) + (result >> 2u);
+        };
+        hash_combine(std::hash<float>{}(c.r));
+        hash_combine(std::hash<float>{}(c.g));
+        hash_combine(std::hash<float>{}(c.b));
+        hash_combine(std::hash<float>{}(c.a));
+
+        return result;
+    }
+};
