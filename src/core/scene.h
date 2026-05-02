@@ -7,6 +7,7 @@
 #include "core/entity.h"
 #include "core/resource_handles.h"
 #include "engine/ubo.h"
+#include "graphics/camera.h"
 #include "graphics/color.h"
 #include "resource_handles.h"
 
@@ -27,7 +28,7 @@ class Scene
     auto entities() const -> const std::vector<Entity> &;
     auto root_indices() const -> const std::vector<EntityIndex> &;
 
-    auto get_ambient_color() const -> const Color;
+    auto get_ambient_color() const -> Color;
     auto get_ambient_strength() const -> float;
 
     auto set_ambient_color(Color color) -> void;
@@ -36,7 +37,11 @@ class Scene
     auto get_directional_light(LightHandle handle) -> DirectionalLightData &;
     auto add_directional_light(DirectionalLightData light) -> LightHandle;
     auto remove_directional_light(LightHandle handle) -> void;
+
+    auto frame_camera() -> Camera &;
+
     auto light_ubo() const -> UBO_Lighting;
+    auto frame_camera_ubo(const float aspect) const -> UBO_Camera;
 
   private:
     // entities
@@ -51,6 +56,7 @@ class Scene
     std::vector<std::uint32_t> directional_free_list_;
     std::vector<std::uint32_t> directional_versions_;
 
+    Camera frame_camera_;
 }; // class Scene
 
 } // namespace pong

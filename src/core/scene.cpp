@@ -1,13 +1,13 @@
 #include "scene.h"
 
 #include <cstdint>
-#include <ranges>
 #include <utility>
 #include <vector>
 
 #include "core/entity.h"
 #include "core/resource_handles.h"
 #include "engine/ubo.h"
+#include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
 
@@ -17,6 +17,7 @@ namespace pong
 Scene::Scene(std::vector<Entity> entities, std::vector<EntityIndex> root_indices)
     : entities_{std::move(entities)}
     , root_indices_{std::move(root_indices)}
+    , frame_camera_{{0.0f, 3.0f, 15.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, ::glm::radians(33.0f), 0.1f, 100.f}
 {
     arm::log::debug("Scene constructor: {} entities, {} roots", entities_.size(), root_indices_.size());
 }
@@ -51,7 +52,7 @@ auto Scene::root_indices() const -> const std::vector<EntityIndex> &
     return root_indices_;
 }
 
-auto Scene::get_ambient_color() const -> const Color
+auto Scene::get_ambient_color() const -> Color
 {
     return ambient_color_;
 }
@@ -109,10 +110,7 @@ auto Scene::add_directional_light(DirectionalLightData light) -> LightHandle
         version = directional_versions_[index];
     }
     auto [handle_result, inserted] = directional_lights_.emplace(index, light);
-    if (!inserted)
-    {
-        // duplicate already in map?!
-    }
+    arm::ensure(inserted, "internal map error");
     return {handle_result->first, version};
 }
 
@@ -140,6 +138,11 @@ auto Scene::remove_directional_light(LightHandle handle) -> void
     }
 }
 
+auto Scene::frame_camera() -> Camera &
+{
+    return frame_camera_;
+}
+
 auto Scene::light_ubo() const -> UBO_Lighting
 {
     auto result = UBO_Lighting{
@@ -148,7 +151,7 @@ auto Scene::light_ubo() const -> UBO_Lighting
         .directional = {},
     };
 
-    auto directional_count = 0u;
+    auto directional_count = std::uint32_t{};
     for (const auto &[key, value] : directional_lights_)
     {
         if (directional_count == MAX_DIR_LIGHTS)
@@ -162,6 +165,11 @@ auto Scene::light_ubo() const -> UBO_Lighting
     result.light_counts.x = directional_count;
 
     return result;
+}
+
+auto Scene::frame_camera_ubo(const float aspect) const -> UBO_Camera
+{
+    return frame_camera_.camera_ubo(aspect);
 }
 
 } // namespace pong

@@ -63,7 +63,7 @@ auto RenderContext::load_scene(std::string_view filename) -> Scene
     return resource_loader_.loadgltf(filename);
 }
 
-auto RenderContext::update_and_render(Scene &scene, Camera &camera) -> void
+auto RenderContext::update_and_render(Scene &scene) -> void
 {
     auto now = std::chrono::steady_clock::now();
     last_window_recreate_time_ = now;
@@ -107,7 +107,7 @@ auto RenderContext::update_and_render(Scene &scene, Camera &camera) -> void
     // TODO debug code - rotate around y
     scene.entities().at(scene.root_indices().at(0).value).rotate_by({0.0f, 0.0001f, 0.0f});
 
-    vulkan_renderer_.render(scene, camera, debug_renderer_.get_draw_data());
+    vulkan_renderer_.render(scene, debug_renderer_.get_draw_data());
 }
 
 auto RenderContext::shutdown() -> void

@@ -81,7 +81,7 @@ class VulkanRenderer
     auto descriptor_pool() -> VulkanDescriptorPool *;
     auto set_clear_color(const Color &color) -> void;
 
-    auto render(const Scene &scene, const Camera &camera, ImDrawData *imgui_draw_data) -> void;
+    auto render(const Scene &scene, ImDrawData *imgui_draw_data) -> void;
 
     auto shutdown() -> void;
 
@@ -93,7 +93,7 @@ class VulkanRenderer
     VulkanPipelineManager &pipeline_manager_;
     VulkanDescriptorPool &descriptor_pool_;
     VulkanSwapchain swapchain_;
-    std::vector<VulkanGpuBuffer> view_proj_uniform_buffers_;
+    std::vector<VulkanGpuBuffer> camera_uniform_buffers_;
     std::vector<VulkanGpuBuffer> light_uniform_buffers_;
     VulkanFrameCommandContext frame_command_context_;
     DepthBuffer depth_buffer_;
@@ -107,11 +107,8 @@ class VulkanRenderer
     auto init_() -> void;
 
     auto prepare_frame_(const Scene &scene) -> RenderStatus;
-    auto record_(
-        const Scene &scene,
-        const std::vector<DrawItem> &draw_items,
-        const Camera &camera,
-        ImDrawData *imgui_draw_data = nullptr) -> void;
+    auto record_(const Scene &scene, const std::vector<DrawItem> &draw_items, ImDrawData *imgui_draw_data = nullptr)
+        -> void;
     auto end_frame_() -> void;
 
     static constexpr auto make_draw_sort_key_(

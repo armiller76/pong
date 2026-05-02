@@ -21,7 +21,6 @@
 #include "engine/vulkan/vulkan_gpu_buffer.h"
 #include "engine/vulkan/vulkan_pipeline_manager.h"
 #include "engine/vulkan/vulkan_render_utils.h"
-#include "graphics/camera.h"
 #include "graphics/color.h"
 #include "graphics/model.h"
 #include "graphics/renderable.h"
@@ -51,7 +50,7 @@ VulkanRenderer::VulkanRenderer(
     , pipeline_manager_{pipeline_manager}
     , descriptor_pool_{descriptor_pool}
     , swapchain_{device_, surface}
-    , view_proj_uniform_buffers_{}
+    , camera_uniform_buffers_{}
     , light_uniform_buffers_{}
     , frame_command_context_{device_, max_frames_in_flight_}
     , depth_buffer_{device_, swapchain_.extent()}
@@ -100,7 +99,7 @@ auto VulkanRenderer::set_clear_color(const Color &color) -> void
     clear_color_ = {color.r, color.g, color.b, color.a};
 }
 
-auto VulkanRenderer::render(const Scene &scene, const Camera &camera, ImDrawData *imgui_draw_data) -> void
+auto VulkanRenderer::render(const Scene &scene, ImDrawData *imgui_draw_data) -> void
 {
     auto render_status = prepare_frame_(scene);
 
@@ -108,7 +107,7 @@ auto VulkanRenderer::render(const Scene &scene, const Camera &camera, ImDrawData
     {
         case RenderStatusCode::ReadyToRecord:
         {
-            record_(scene, render_status.draw_items, camera, imgui_draw_data);
+            record_(scene, render_status.draw_items, imgui_draw_data);
             end_frame_();
         }
         break;
@@ -221,11 +220,8 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
     return {RenderStatusCode::ReadyToRecord, std::move(result)};
 }
 
-auto VulkanRenderer::record_(
-    const Scene &scene,
-    const std::vector<DrawItem> &draw_items,
-    const Camera &camera,
-    ImDrawData *imgui_draw_data) -> void
+auto VulkanRenderer::record_(const Scene &scene, const std::vector<DrawItem> &draw_items, ImDrawData *imgui_draw_data)
+    -> void
 {
     const auto frame_index = frame_command_context_.current_frame_index();
 
@@ -246,18 +242,10 @@ auto VulkanRenderer::record_(
     rendering_info.pDepthAttachment = &depth_attachment_info;
     rendering_info.pStencilAttachment = nullptr;
 
-    // update view/projection matrix data into UBO
-    auto temp_view_proj = UBO_ViewProj{
-        .view = camera.get_view_matrix(),
-        .proj = ::glm::perspective(
-            ::glm::radians(45.0f),
-            static_cast<float>(swapchain_.extent().width) / swapchain_.extent().height,
-            0.1f,
-            100.0f),
-        .camera = {camera.get_position(), 0.0f}};
-    temp_view_proj.proj[1][1] *= -1.0f;
-
-    view_proj_uniform_buffers_[frame_index].upload(&temp_view_proj, sizeof(UBO_ViewProj));
+    // upload camera/view data
+    const auto aspect = static_cast<float>(swapchain_.extent().width) / swapchain_.extent().height;
+    auto camera = scene.frame_camera_ubo(aspect);
+    camera_uniform_buffers_[frame_index].upload(&camera, sizeof(UBO_Camera));
 
     // upload lighting data
     auto lights = scene.light_ubo();
@@ -413,9 +401,9 @@ auto VulkanRenderer::init_() -> void
 {
     for (std::size_t i = 0; i < max_frames_in_flight_; ++i)
     {
-        view_proj_uniform_buffers_.push_back(
+        camera_uniform_buffers_.push_back(
             {device_,
-             ::vk::DeviceSize{sizeof(UBO_ViewProj)},
+             ::vk::DeviceSize{sizeof(UBO_Camera)},
              ::vk::BufferUsageFlagBits::eUniformBuffer,
              ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible});
         light_uniform_buffers_.push_back(
@@ -426,7 +414,7 @@ auto VulkanRenderer::init_() -> void
     }
 
     per_frame_descriptor_sets_ = descriptor_pool_.allocate_per_frame_descriptor_sets(
-        pipeline_manager_.get_per_frame_descriptor_set_layout(), view_proj_uniform_buffers_, light_uniform_buffers_);
+        pipeline_manager_.get_per_frame_descriptor_set_layout(), camera_uniform_buffers_, light_uniform_buffers_);
 }
 
 constexpr auto VulkanRenderer::make_draw_sort_key_(
