@@ -21,6 +21,7 @@
 #include "gltf/fastgltf_wrapper.h"
 #include "graphics/image.h"
 #include "graphics/mesh_view.h"
+#include "graphics/sampler.h"
 #include "graphics/shader.h"
 #include "graphics/texture2d.h"
 #include "mikktspace/mikktspace_impl.h"
@@ -32,7 +33,7 @@ namespace pong
 using namespace std::literals;
 
 ResourceLoader::ResourceLoader(
-    const VulkanDevice &device,
+    VulkanDevice &device,
     ResourceManager &resource_manager,
     VulkanPipelineManager &pipeline_manager,
     std::filesystem::path absolute_path_to_assets)
@@ -82,7 +83,7 @@ auto ResourceLoader::load(std::string_view name, std::filesystem::path path) -> 
 
 auto ResourceLoader::load(std::string_view name, Image &image) -> Texture2DHandle
 {
-    auto texture = Texture2D{image, device_};
+    auto texture = Texture2D{device_, image, device_.get_default_sampler_key()};
     texture.upload_pixels(command_context_, image);
 
     return resource_manager_.insert<Texture2D>(name, std::move(texture));
@@ -121,6 +122,19 @@ auto ResourceLoader::upload_texture_(const LoadedAsset &asset, std::size_t textu
 {
     auto &loaded_texture = asset.textures[texture_index];
     auto &loaded_image = asset.images[loaded_texture.image_index];
+
+    auto sampler_key = device_.get_default_sampler_key();
+    if (loaded_texture.sampler_index.has_value())
+    {
+        auto &loaded_sampler = asset.samplers[loaded_texture.sampler_index.value()];
+        sampler_key.min_filter_mode = loaded_sampler.min_filter;
+        sampler_key.mag_filter_mode = loaded_sampler.mag_filter;
+        sampler_key.mip_map_mode = loaded_sampler.mip_map_mode;
+        sampler_key.u_wrap = loaded_sampler.wrap_u;
+        sampler_key.v_wrap = loaded_sampler.wrap_v;
+        sampler_key.max_lod = loaded_sampler.samples_mips ? 1000.0f : 0.0f;
+    }
+
     auto &data = loaded_image.data;
     auto width = int{};
     auto height = int{};
@@ -136,7 +150,7 @@ auto ResourceLoader::upload_texture_(const LoadedAsset &asset, std::size_t textu
     auto image =
         Image{loaded_image.name, extent, format, {pixels, static_cast<std::size_t>(width) * height * STBI_rgb_alpha}};
 
-    auto texture = Texture2D(image, device_);
+    auto texture = Texture2D(device_, image, sampler_key);
     texture.upload_pixels(command_context_, image);
 
     auto result = resource_manager_.insert<Texture2D>(loaded_image.name, std::move(texture));
@@ -254,7 +268,7 @@ auto ResourceLoader::process_loaded_node_(
                 auto base_write_descriptor_set = ::vk::WriteDescriptorSet{};
                 base_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
                 base_write_descriptor_set.pNext = nullptr;
-                base_write_descriptor_set.dstSet = material.descriptor_set();
+                base_write_descriptor_set.dstSet = *material.descriptor_set();
                 base_write_descriptor_set.dstBinding = 0;
                 base_write_descriptor_set.dstArrayElement = 0;
                 base_write_descriptor_set.descriptorCount = 1;
@@ -273,7 +287,7 @@ auto ResourceLoader::process_loaded_node_(
                 auto metal_write_descriptor_set = ::vk::WriteDescriptorSet{};
                 metal_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
                 metal_write_descriptor_set.pNext = nullptr;
-                metal_write_descriptor_set.dstSet = material.descriptor_set();
+                metal_write_descriptor_set.dstSet = *material.descriptor_set();
                 metal_write_descriptor_set.dstBinding = 1;
                 metal_write_descriptor_set.dstArrayElement = 0;
                 metal_write_descriptor_set.descriptorCount = 1;
@@ -292,7 +306,7 @@ auto ResourceLoader::process_loaded_node_(
                 auto normal_write_descriptor_set = ::vk::WriteDescriptorSet{};
                 normal_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
                 normal_write_descriptor_set.pNext = nullptr;
-                normal_write_descriptor_set.dstSet = material.descriptor_set();
+                normal_write_descriptor_set.dstSet = *material.descriptor_set();
                 normal_write_descriptor_set.dstBinding = 2;
                 normal_write_descriptor_set.dstArrayElement = 0;
                 normal_write_descriptor_set.descriptorCount = 1;
@@ -309,7 +323,7 @@ auto ResourceLoader::process_loaded_node_(
                 auto material_write_descriptor_set = ::vk::WriteDescriptorSet{};
                 material_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
                 material_write_descriptor_set.pNext = nullptr;
-                material_write_descriptor_set.dstSet = material.descriptor_set();
+                material_write_descriptor_set.dstSet = *material.descriptor_set();
                 material_write_descriptor_set.dstBinding = 3;
                 material_write_descriptor_set.dstArrayElement = 0;
                 material_write_descriptor_set.descriptorCount = 1;

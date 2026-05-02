@@ -8,7 +8,6 @@
 
 #include "core/resource_handles.h"
 #include "core/scene.h"
-#include "engine/engine_error.h"
 #include "engine/vulkan/vulkan_immediate_command_context.h"
 #include "gltf/fastgltf_primitives.h"
 #include "graphics/image_format.h"
@@ -28,7 +27,7 @@ class ResourceLoader
 {
   public:
     ResourceLoader(
-        const VulkanDevice &device,
+        VulkanDevice &device,
         ResourceManager &resource_manager,
         VulkanPipelineManager &pipeline_manager,
         std::filesystem::path absolute_path_to_assets);
@@ -43,7 +42,7 @@ class ResourceLoader
     auto set_fallback_texture(Texture2DHandle handle) -> void;
 
   private:
-    const VulkanDevice &device_;
+    VulkanDevice &device_;
     ResourceManager &resource_manager_;
     VulkanPipelineManager &pipeline_manager_;
     std::filesystem::path absolute_path_to_assets_;
