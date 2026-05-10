@@ -6,7 +6,10 @@
 
 #include "imgui.h"
 
+#include "core/key.h"
 #include "engine/engine_types.h"
+#include "engine/input_state.h"
+#include "event/key_event.h"
 #include "graphics/color.h"
 #include "math/rectangle.h"
 #include "utils/error.h"
@@ -25,8 +28,9 @@ Win32Window::~Win32Window()
     ::UnregisterClassA(class_name_.c_str(), hinstance_);
 }
 
-Win32Window::Win32Window(const RenderContextInfo &render_context_info)
+Win32Window::Win32Window(const RenderContextInfo &render_context_info, InputState &input_state)
     : hinstance_{::GetModuleHandleA(0)}
+    , input_state{input_state}
     , app_name_{render_context_info.app_name}
     , class_name_{std::string(app_name_ + "WindowClass")}
     , window_rect_{render_context_info.window_rect}
@@ -103,8 +107,26 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
         return true;
     }
 
+    // TODO handle focus loss (notify InputState to clear all key-down status)
     switch (msg)
     {
+        case WM_KEYDOWN:
+        {
+            auto key = static_cast<Key>(wParam);
+            input_state.events().emplace(KeyEvent{key, KeyPosition::Down});
+            input_state.dirty_keys().insert(key);
+            return 0;
+        }
+        break;
+        case WM_KEYUP:
+        {
+            auto key = static_cast<Key>(wParam);
+            input_state.events().emplace(KeyEvent{key, KeyPosition::Up});
+            input_state.dirty_keys().insert(key);
+            return 0;
+        }
+        break;
+
         case WM_ERASEBKGND:
         {
             auto hdc = HDC(wParam);
@@ -119,12 +141,7 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
         case WM_ENTERSIZEMOVE:
         {
             resize_pending_ = true;
-            return ERROR_SUCCESS;
-        }
-        case WM_EXITSIZEMOVE:
-        {
-            resize_pending_ = false;
-            return ERROR_SUCCESS;
+            return 0;
         }
         case WM_SIZE:
         {
@@ -139,7 +156,12 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
                 is_minimized_ = true;
             }
 
-            return ERROR_SUCCESS;
+            return 0;
+        }
+        case WM_EXITSIZEMOVE:
+        {
+            resize_pending_ = false;
+            return 0;
         }
 
         case WM_CLOSE:
@@ -147,14 +169,14 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
             should_close_ = true;
             fire_close_callbacks();
             ::PostQuitMessage(0);
-            return ERROR_SUCCESS;
+            return 0;
         }
 
         case WM_DESTROY:
         {
             should_close_ = true;
             ::PostQuitMessage(0);
-            return ERROR_SUCCESS;
+            return 0;
         }
 
         default:

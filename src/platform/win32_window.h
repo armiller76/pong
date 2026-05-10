@@ -20,6 +20,7 @@ struct Win32WindowHandles
     const HINSTANCE instance;
 };
 
+class InputState;
 class VulkanInstance;
 class VulkanSurface;
 
@@ -28,7 +29,7 @@ class Win32Window
   public:
     ~Win32Window();
 
-    Win32Window(const RenderContextInfo &render_context_info);
+    Win32Window(const RenderContextInfo &render_context_info, InputState &input_state);
 
     auto process_events() -> void;
     auto handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
@@ -52,6 +53,7 @@ class Win32Window
 
   private:
     HINSTANCE hinstance_;
+    InputState &input_state;
 
     bool should_close_ = false;
     bool resize_pending_ = false;
