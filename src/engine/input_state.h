@@ -17,7 +17,7 @@ class Camera;
 class InputState
 {
   public:
-    struct KeyState
+    struct ButtonState
     {
         bool is_down_this_frame;
         bool was_pressed_this_frame;
@@ -27,7 +27,6 @@ class InputState
 
     struct MouseState
     {
-        using ButtonState = KeyState;
         ButtonState l_button_state;
         ButtonState m_button_state;
         ButtonState r_button_state;
@@ -54,11 +53,13 @@ class InputState
 
   private:
     std::queue<Event> events_;
-    std::array<KeyState, all_keys.size()> keyboard_state_;
+    std::array<ButtonState, all_keys.size()> keyboard_state_;
     std::unordered_set<Key> dirty_keys_;
     MouseState mouse_state_;
 
-    auto reset_state_(KeyState &state) -> void;
+    auto reset_button_state_(ButtonState &state) -> void;
+
+    auto update_button_state_(ButtonState &state, bool down) -> void;
 
 }; // class InputState
 
