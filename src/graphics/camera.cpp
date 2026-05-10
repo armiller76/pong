@@ -1,6 +1,6 @@
 #include "camera.h"
 
-#include "glm/ext/vector_float3.hpp"
+#include "glm/geometric.hpp"
 #include "glm_wrapper.h" // IWYU pragma: keep
 #include "math/utils.h"
 
@@ -8,34 +8,35 @@ namespace pong
 {
 
 Camera::Camera(
-    const ::glm::vec3 eye,
-    const ::glm::vec3 look_at,
-    const ::glm::vec3 up,
-    const float fov,
-    const float near_plane,
-    const float far_plane)
-    : eye_{eye}
-    , center_{look_at}
-    , up_{up}
-    , fov_{fov}
-    , near_plane_{near_plane}
-    , far_plane_{far_plane}
+    const ::glm::vec3 position,
+    const ::glm::vec3 look_at_point,
+    const ::glm::vec3 up_direction,
+    const float vertical_fov_radians,
+    const float near_clip,
+    const float far_clip)
+    : position_{position}
+    , look_at_point_{look_at_point}
+    , up_direction_{up_direction}
+    , vertical_fov_radians_{vertical_fov_radians}
+    , near_clip_{near_clip}
+    , far_clip_{far_clip}
 {
     arm::log::debug("Camera constructor");
 
-    validate_();
+    validate_and_rebuild_axes_();
 }
 
-auto Camera::translate(const ::glm::vec3 offset) -> void
+auto Camera::translate_by(const ::glm::vec3 delta_world) -> void
 {
-    if (!all_finite(offset))
+    if (!all_finite(delta_world))
     {
         arm::log::warn("camera: translate offset component infinite, dropping");
         return;
     }
 
-    eye_ += offset;
-    center_ += offset;
+    position_ += delta_world;
+    look_at_point_ += delta_world;
+    validate_and_rebuild_axes_();
 }
 
 auto Camera::set_position(const ::glm::vec3 position) -> void
@@ -46,73 +47,106 @@ auto Camera::set_position(const ::glm::vec3 position) -> void
         return;
     }
 
-    auto offset = position - eye_;
-    eye_ = position;
-    center_ += offset;
+    const auto offset = position - position_;
+    position_ = position;
+    look_at_point_ += offset;
+    validate_and_rebuild_axes_();
 }
 
 auto Camera::get_position() const -> const ::glm::vec3
 {
-    return eye_;
+    return position_;
 }
 
-auto Camera::set_view_target(const ::glm::vec3 target) -> void
+auto Camera::get_right_direction() const -> const ::glm::vec3
 {
-    if (!all_finite(target))
+    return right_direction_;
+}
+
+auto Camera::get_forward_direction() const -> const ::glm::vec3
+{
+    return forward_direction_;
+}
+
+auto Camera::set_look_at_point(const ::glm::vec3 look_at_point) -> void
+{
+    if (!all_finite(look_at_point))
     {
-        arm::log::warn("camera: set_view_target target component infinite, dropping");
+        arm::log::warn("camera: set_look_at_point invalid, dropping");
         return;
     }
 
-    center_ = target;
-    validate_();
+    look_at_point_ = look_at_point;
+    validate_and_rebuild_axes_();
+}
+
+auto Camera::get_look_at_point() const -> const ::glm::vec3
+{
+    return look_at_point_;
 }
 
 auto Camera::get_view_matrix() const -> ::glm::mat4
 {
-    return ::glm::lookAt(eye_, center_, up_);
+    return ::glm::lookAt(position_, look_at_point_, up_direction_);
 }
 
-auto Camera::validate_() -> void
+auto Camera::validate_and_rebuild_axes_() -> void
 {
-    if (up_ == ::glm::vec3{0.0f})
+    if (up_direction_ == ::glm::vec3{0.0f})
     {
         arm::log::warn("camera validation: all up components == 0, using default up = 0,1,0");
-        up_ = {0.0f, 1.0f, 0.0f};
+        up_direction_ = {0.0f, 1.0f, 0.0f};
     }
 
-    if (eye_ == center_)
+    if (position_ == look_at_point_)
     {
-        arm::log::warn("camera validation: eye == center, using defaults eye=0,0,5; center=0,0,0");
-        eye_ = {0.0f, 0.0f, 5.0f};
-        center_ = {0.0f, 0.0f, 0.0f};
+        arm::log::warn(
+            "camera validation: position can't equal look_at_point, using defaults pos=0,0,5; look_at=0,0,0");
+        position_ = {0.0f, 0.0f, 5.0f};
+        look_at_point_ = {0.0f, 0.0f, 0.0f};
     }
 
-    auto forward = center_ - eye_;
-    auto cross = ::glm::cross(forward, up_);
-    if (::glm::length(cross) < g_epsilon)
+    const auto new_forward = look_at_point_ - position_;
+    if (!(::glm::length(new_forward) < g_epsilon))
     {
-        auto default_up = ::glm::vec3{0.0f, 1.0f, 0.0f};
-        auto cross2 = ::glm::cross(forward, default_up);
+        forward_direction_ = new_forward / ::glm::length(new_forward);
+    }
+    else
+    {
+        arm::log::warn("camera validation: length of forward direction too small, reusing last forward_dir");
+    }
+
+    const auto new_right = ::glm::cross(forward_direction_, up_direction_);
+    if (::glm::length(new_right) < g_epsilon)
+    {
+        const auto default_up = ::glm::vec3{0.0f, 1.0f, 0.0f};
+        const auto cross2 = ::glm::cross(forward_direction_, default_up);
         if (::glm::length(cross2) < g_epsilon)
         {
             arm::log::warn(
                 "camera validation: up collinear with forward and forward ≈ default up, making up = side vector");
-            up_ = {1.0f, 0.0f, 0.0f};
+            up_direction_ = {1.0f, 0.0f, 0.0f};
         }
         else
         {
             arm::log::warn("camera validation: up collinear with forward, using default up = 0,1,0");
-            up_ = default_up;
+            up_direction_ = default_up;
         }
+        right_direction_ = ::glm::normalize(::glm::cross(forward_direction_, up_direction_));
     }
+    else
+    {
+        right_direction_ = ::glm::normalize(new_right);
+    }
+
+    up_direction_ = ::glm::normalize(::glm::cross(right_direction_, forward_direction_));
 }
 
 auto Camera::camera_ubo(const float aspect) const -> UBO_Camera
 {
     auto result = UBO_Camera{
         .view = get_view_matrix(),
-        .proj = ::glm::perspective(fov_, aspect, near_plane_, far_plane_),
+        .proj = ::glm::perspective(vertical_fov_radians_, aspect, near_clip_, far_clip_),
         .camera = {get_position(), 0.0f}};
     result.proj[1][1] *= -1.0f;
     return result;
