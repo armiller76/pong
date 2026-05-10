@@ -22,13 +22,17 @@ namespace pong
 using namespace std::literals;
 
 class Camera;
+class InputState;
 class Scene;
 class Win32Window;
 
 class RenderContext
 {
   public:
-    explicit RenderContext(const RenderContextInfo &render_context_info, Win32Window &win32_window);
+    explicit RenderContext(
+        const RenderContextInfo &render_context_info,
+        Win32Window &win32_window,
+        InputState &input_state);
 
     auto load_scene(std::string_view filename) -> Scene;
 
@@ -41,6 +45,7 @@ class RenderContext
     std::string engine_name_;
     [[maybe_unused]] Version version_;
     Win32Window &win32_window_;
+    InputState &input_state_;
 
     std::chrono::steady_clock::time_point last_window_recreate_time_;
     bool was_resize_pending_;

@@ -7,6 +7,7 @@
 #include <string>
 
 #include "engine/engine_types.h"
+#include "engine/input_state.h"
 #include "engine/resource_loader.h"
 #include "engine/resource_manager.h"
 #include "engine/vulkan/vulkan_descriptor_pool.h"
@@ -26,11 +27,12 @@ using namespace std::literals;
 class Camera;
 class Scene;
 
-RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32Window &win32_window)
+RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32Window &win32_window, InputState &input_state)
     : app_name_{render_context_info.app_name}
     , engine_name_{render_context_info.engine_name}
     , version_{render_context_info.version}
     , win32_window_{win32_window}
+    , input_state_{input_state}
     , last_window_recreate_time_{std::chrono::steady_clock::now()}
     , was_resize_pending_{false}
     , vulkan_context_{}
@@ -52,10 +54,6 @@ RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32
     , debug_renderer_{win32_window.win32_handles().window, vulkan_instance_, vulkan_device_, vulkan_renderer_,  render_context_info.project_root}
 {
     init_();
-
-    // book-keeping for dependencies that didn't exist when these objects were created
-    vulkan_pipeline_manager_.set_color_attachment_format(vulkan_renderer_.swapchain_format());
-    vulkan_pipeline_manager_.get_or_create_pipeline(vulkan_pipeline_manager_.get_default_pipeline_key());
 }
 
 auto RenderContext::load_scene(std::string_view filename) -> Scene
@@ -101,11 +99,11 @@ auto RenderContext::update_and_render(Scene &scene) -> void
         last_window_recreate_time_ = now;
     }
 
+    scene.entities().at(scene.root_indices().at(0).value).rotate_by({0.0f, 0.0001f, 0.0f});
+    scene.frame_camera().translate_by(input_state_.move_direction(scene.frame_camera(), 0.001f));
+
     debug_renderer_.begin_frame();
     debug_renderer_.render(); // calls ImGui::EndFrame() -- don't call manually
-
-    // TODO debug code - rotate around y
-    scene.entities().at(scene.root_indices().at(0).value).rotate_by({0.0f, 0.0001f, 0.0f});
 
     vulkan_renderer_.render(scene, debug_renderer_.get_draw_data());
 }
@@ -156,7 +154,12 @@ auto RenderContext::init_() -> void
     resource_manager_.default_fragment_shader() =
         resource_loader_.load("simple.frag"sv, std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"));
 
+    // set debug renderer callback function
     debug_renderer_resize_callback_ = [this] { debug_renderer_.recreate(); };
+
+    // book-keeping for pipeline manager dependencies
+    vulkan_pipeline_manager_.set_color_attachment_format(vulkan_renderer_.swapchain_format());
+    vulkan_pipeline_manager_.get_or_create_pipeline(vulkan_pipeline_manager_.get_default_pipeline_key());
 }
 
 } // namespace pong
