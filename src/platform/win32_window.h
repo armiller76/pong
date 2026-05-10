@@ -54,6 +54,8 @@ class Win32Window
   private:
     HINSTANCE hinstance_;
     InputState &input_state;
+    std::int32_t last_mouse_x_;
+    std::int32_t last_mouse_y_;
 
     bool should_close_ = false;
     bool resize_pending_ = false;
