@@ -1,7 +1,8 @@
 #include "win32_window.h"
 
-#include <map>
+#include <cstddef>
 #include <string>
+#include <vector>
 #include <windows.h>
 
 #include "imgui.h"
@@ -110,178 +111,202 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
     // TODO handle focus loss (notify InputState to clear all key-down status)
     switch (msg)
     {
-        case WM_KEYDOWN:
+        case WM_INPUT:
         {
-            auto key = static_cast<Key>(wParam);
-            input_state.events().emplace(KeyEvent{key, KeyPosition::Down});
-            input_state.dirty_keys().insert(key);
-            return 0;
-        }
-        break;
-        case WM_KEYUP:
-        {
-            auto key = static_cast<Key>(wParam);
-            input_state.events().emplace(KeyEvent{key, KeyPosition::Up});
-            input_state.dirty_keys().insert(key);
-            return 0;
-        }
-        break;
-
-        case WM_ERASEBKGND:
-        {
-            auto hdc = HDC(wParam);
-            auto window_rect = RECT{};
-
-            ::GetClientRect(hwnd_, &window_rect);
-            ::FillRect(hdc, &window_rect, clear_brush_);
-            return 1;
-        }
-        break;
-
-        case WM_ENTERSIZEMOVE:
-        {
-            resize_pending_ = true;
-            return 0;
-        }
-        case WM_SIZE:
-        {
-            if (wParam != SIZE_MINIMIZED)
+            const auto input_code = GET_RAWINPUT_CODE_WPARAM(wParam);
+            if (input_code == RIM_INPUT)
             {
-                is_minimized_ = false;
-                window_rect_.extent.width = LOWORD(lParam);
-                window_rect_.extent.height = HIWORD(lParam);
+                auto size = ::UINT{};
+                ::GetRawInputData(
+                    reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER));
+                auto buffer = std::vector<std::byte>(size);
+                ::GetRawInputData(
+                    reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, buffer.data(), &size, sizeof(RAWINPUTHEADER));
+                const auto raw = reinterpret_cast<const RAWINPUT *>(buffer.data());
+
+                if (raw->header.dwType != RIM_TYPEMOUSE)
+                {
+                    return ::DefWindowProcA(window, msg, wParam, lParam);
+                }
+                else
+                {
+                    auto mouse_data = raw->data.mouse;
+                    mouse_data.
+                }
             }
             else
+            { // background noise}
+            }
+            break;
+            case WM_KEYDOWN:
             {
-                is_minimized_ = true;
+                auto key = static_cast<Key>(wParam);
+                input_state.events().emplace(KeyEvent{key, KeyPosition::Down});
+                input_state.dirty_keys().insert(key);
+                return 0;
+            }
+            case WM_KEYUP:
+            {
+                auto key = static_cast<Key>(wParam);
+                input_state.events().emplace(KeyEvent{key, KeyPosition::Up});
+                input_state.dirty_keys().insert(key);
+                return 0;
             }
 
-            return 0;
-        }
-        case WM_EXITSIZEMOVE:
-        {
-            resize_pending_ = false;
-            return 0;
-        }
+            case WM_ERASEBKGND:
+            {
+                auto hdc = HDC(wParam);
+                auto window_rect = RECT{};
 
-        case WM_CLOSE:
-        {
-            should_close_ = true;
-            fire_close_callbacks();
-            ::PostQuitMessage(0);
-            return 0;
-        }
+                ::GetClientRect(hwnd_, &window_rect);
+                ::FillRect(hdc, &window_rect, clear_brush_);
+                return 1;
+            }
 
-        case WM_DESTROY:
-        {
-            should_close_ = true;
-            ::PostQuitMessage(0);
-            return 0;
-        }
+            case WM_ENTERSIZEMOVE:
+            {
+                resize_pending_ = true;
+                return 0;
+            }
+            case WM_SIZE:
+            {
+                if (wParam != SIZE_MINIMIZED)
+                {
+                    is_minimized_ = false;
+                    window_rect_.extent.width = LOWORD(lParam);
+                    window_rect_.extent.height = HIWORD(lParam);
+                }
+                else
+                {
+                    is_minimized_ = true;
+                }
 
-        default:
-        {
-            return ::DefWindowProcA(window, msg, wParam, lParam);
+                return 0;
+            }
+            case WM_EXITSIZEMOVE:
+            {
+                resize_pending_ = false;
+                return 0;
+            }
+
+            case WM_CLOSE:
+            {
+                should_close_ = true;
+                fire_close_callbacks();
+                ::PostQuitMessage(0);
+                return 0;
+            }
+
+            case WM_DESTROY:
+            {
+                should_close_ = true;
+                ::PostQuitMessage(0);
+                return 0;
+            }
+
+            default:
+            {
+                return ::DefWindowProcA(window, msg, wParam, lParam);
+            }
         }
     }
-}
 
-auto Win32Window::extent() const -> const Extent2D
-{
-    return window_rect_.extent;
-}
-
-auto Win32Window::set_title(std::string_view title) -> void
-{
-    ::SetWindowTextA(hwnd_, std::string(title).c_str());
-}
-
-auto Win32Window::should_close() const -> bool
-{
-    return should_close_;
-}
-
-auto Win32Window::win32_handles() const -> const Win32WindowHandles
-{
-    return {hwnd_, hinstance_};
-}
-
-auto Win32Window::fire_close_callbacks() const -> void
-{
-    for (const auto &[id, callback] : close_callbacks_)
+    auto Win32Window::extent() const -> const Extent2D
     {
-        callback();
+        return window_rect_.extent;
     }
-}
 
-auto Win32Window::add_close_callback(std::function<void()> close_callback) -> std::uint64_t
-{
-    auto token = ++current_callback_token_;
-    close_callbacks_.emplace(token, close_callback);
-    return token;
-}
-
-auto Win32Window::remove_close_callback(std::uint64_t callback_handle) -> void
-{
-    arm::ensure(
-        close_callbacks_.contains(callback_handle),
-        "Can't remove close_callbacks_ handle ({}) which is not in the map",
-        callback_handle);
-    close_callbacks_.erase(callback_handle);
-}
-
-auto Win32Window::fire_resize_callbacks() const -> void
-{
-    for (const auto &[id, callback] : resize_callbacks_)
+    auto Win32Window::set_title(std::string_view title) -> void
     {
-        callback(window_rect_.extent.width, window_rect_.extent.height);
+        ::SetWindowTextA(hwnd_, std::string(title).c_str());
     }
-}
 
-auto Win32Window::add_resize_callback(std::function<void(std::uint32_t, std::uint32_t)> resize_callback)
-    -> std::uint64_t
-{
-    auto token = ++current_callback_token_;
-    resize_callbacks_.emplace(token, resize_callback);
-    return token;
-}
-
-auto Win32Window::remove_resize_callback(std::uint64_t callback_handle) -> void
-{
-    arm::ensure(
-        resize_callbacks_.contains(callback_handle),
-        "Can't remove resize_callbacks_ handle ({}) which is not in the map",
-        callback_handle);
-    resize_callbacks_.erase(callback_handle);
-}
-
-auto Win32Window::resize_pending() const -> bool
-{
-    return resize_pending_;
-}
-
-auto Win32Window::is_minimized() const -> bool
-{
-    return is_minimized_;
-}
-
-auto CALLBACK Win32Window::instance_window_callback(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT
-{
-    if (msg == WM_NCCREATE)
+    auto Win32Window::should_close() const -> bool
     {
-        auto create_struct = reinterpret_cast<CREATESTRUCT *>(lParam);
-        auto this_pointer = reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams);
-        SetWindowLongPtr(window, GWLP_USERDATA, this_pointer);
-        return TRUE;
+        return should_close_;
     }
 
-    Win32Window *self = reinterpret_cast<Win32Window *>(::GetWindowLongPtrA(window, GWLP_USERDATA));
-    if (self)
+    auto Win32Window::win32_handles() const -> const Win32WindowHandles
     {
-        return self->handle_message(window, msg, wParam, lParam);
+        return {hwnd_, hinstance_};
     }
 
-    return DefWindowProcA(window, msg, wParam, lParam);
-}
+    auto Win32Window::fire_close_callbacks() const -> void
+    {
+        for (const auto &[id, callback] : close_callbacks_)
+        {
+            callback();
+        }
+    }
+
+    auto Win32Window::add_close_callback(std::function<void()> close_callback) -> std::uint64_t
+    {
+        auto token = ++current_callback_token_;
+        close_callbacks_.emplace(token, close_callback);
+        return token;
+    }
+
+    auto Win32Window::remove_close_callback(std::uint64_t callback_handle) -> void
+    {
+        arm::ensure(
+            close_callbacks_.contains(callback_handle),
+            "Can't remove close_callbacks_ handle ({}) which is not in the map",
+            callback_handle);
+        close_callbacks_.erase(callback_handle);
+    }
+
+    auto Win32Window::fire_resize_callbacks() const -> void
+    {
+        for (const auto &[id, callback] : resize_callbacks_)
+        {
+            callback(window_rect_.extent.width, window_rect_.extent.height);
+        }
+    }
+
+    auto Win32Window::add_resize_callback(std::function<void(std::uint32_t, std::uint32_t)> resize_callback)
+        -> std::uint64_t
+    {
+        auto token = ++current_callback_token_;
+        resize_callbacks_.emplace(token, resize_callback);
+        return token;
+    }
+
+    auto Win32Window::remove_resize_callback(std::uint64_t callback_handle) -> void
+    {
+        arm::ensure(
+            resize_callbacks_.contains(callback_handle),
+            "Can't remove resize_callbacks_ handle ({}) which is not in the map",
+            callback_handle);
+        resize_callbacks_.erase(callback_handle);
+    }
+
+    auto Win32Window::resize_pending() const -> bool
+    {
+        return resize_pending_;
+    }
+
+    auto Win32Window::is_minimized() const -> bool
+    {
+        return is_minimized_;
+    }
+
+    auto CALLBACK Win32Window::instance_window_callback(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT
+    {
+        if (msg == WM_NCCREATE)
+        {
+            auto create_struct = reinterpret_cast<CREATESTRUCT *>(lParam);
+            auto this_pointer = reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams);
+            SetWindowLongPtr(window, GWLP_USERDATA, this_pointer);
+            return TRUE;
+        }
+
+        Win32Window *self = reinterpret_cast<Win32Window *>(::GetWindowLongPtrA(window, GWLP_USERDATA));
+        if (self)
+        {
+            return self->handle_message(window, msg, wParam, lParam);
+        }
+
+        return DefWindowProcA(window, msg, wParam, lParam);
+    }
 
 } // namespace pong
