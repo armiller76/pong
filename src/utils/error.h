@@ -8,7 +8,6 @@
 
 #include "utils/auto_release.h"
 #include "utils/exception.h"
-#include "utils/formatter.h"
 #include "utils/log.h"
 
 namespace arm
