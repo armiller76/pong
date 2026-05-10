@@ -25,11 +25,24 @@ class InputState
         bool was_down_last_frame;
     };
 
+    struct MouseState
+    {
+        using ButtonState = KeyState;
+        ButtonState l_button_state;
+        ButtonState m_button_state;
+        ButtonState r_button_state;
+        float frame_delta_x;
+        float frame_delta_y;
+        float frame_delta_wheel;
+    };
+
     InputState();
 
     auto events(this auto &&self) -> auto &&;
 
     auto keyboard_state(this auto &&self) -> auto &&;
+
+    auto mouse_state(this auto &&self) -> auto &&;
 
     auto dirty_keys(this auto &&self) -> auto &&;
 
@@ -43,6 +56,9 @@ class InputState
     std::queue<Event> events_;
     std::array<KeyState, all_keys.size()> keyboard_state_;
     std::unordered_set<Key> dirty_keys_;
+    MouseState mouse_state_;
+
+    auto reset_state_(KeyState &state) -> void;
 
 }; // class InputState
 
@@ -54,6 +70,11 @@ auto InputState::events(this auto &&self) -> auto &&
 auto InputState::keyboard_state(this auto &&self) -> auto &&
 {
     return self.keyboard_state_;
+}
+
+auto InputState::mouse_state(this auto &&self) -> auto &&
+{
+    return self.mouse_state_;
 }
 
 auto InputState::dirty_keys(this auto &&self) -> auto &&

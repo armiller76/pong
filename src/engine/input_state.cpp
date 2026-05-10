@@ -19,6 +19,7 @@ InputState::InputState()
     : events_{}
     , keyboard_state_{}
     , dirty_keys_{}
+    , mouse_state_{}
 {
     arm::log::debug("InputState constructor");
 }
@@ -75,12 +76,16 @@ auto InputState::advance_frame() -> void
     {
         const auto index = get_key_index(k);
         arm::ensure(index.has_value(), "dirty_keys invariant is broken");
-        auto &key_state = keyboard_state_[index.value()];
-        key_state.was_down_last_frame = key_state.is_down_this_frame;
-        key_state.was_pressed_this_frame = false;
-        key_state.was_released_this_frame = false;
+        reset_state_(keyboard_state_[index.value()]);
     }
     dirty_keys_.clear();
+
+    reset_state_(mouse_state_.l_button_state);
+    reset_state_(mouse_state_.m_button_state);
+    reset_state_(mouse_state_.r_button_state);
+    mouse_state_.frame_delta_wheel = 0.0f;
+    mouse_state_.frame_delta_x = 0.0f;
+    mouse_state_.frame_delta_y = 0.0f;
 }
 
 auto InputState::move_direction(const Camera &camera, const float speed) -> ::glm::vec3
@@ -110,6 +115,13 @@ auto InputState::move_direction(const Camera &camera, const float speed) -> ::gl
     }
 
     return ::glm::normalize(result) * speed;
+}
+
+auto InputState::reset_state_(KeyState &state) -> void
+{
+    state.was_down_last_frame = state.is_down_this_frame;
+    state.was_pressed_this_frame = false;
+    state.was_released_this_frame = false;
 }
 
 } // namespace pong
