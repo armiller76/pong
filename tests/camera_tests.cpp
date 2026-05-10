@@ -64,7 +64,7 @@ TEST(Camera, TranslatePreservesLookDirection)
     // After translating by (2,0,0), both eye and center shift, so look direction
     // must remain (0,0,-1). Verify by checking the view matrix's Z-row (forward).
     const auto view_before = cam.get_view_matrix();
-    cam.translate({2.0f, 0.0f, 0.0f});
+    cam.translate_by({2.0f, 0.0f, 0.0f});
     const auto view_after = cam.get_view_matrix();
 
     // Row 2 (Z-row) encodes the forward direction; it should be unchanged.
@@ -77,7 +77,7 @@ TEST(Camera, TranslatePreservesLookDirection)
 TEST(Camera, TranslateMovesEyeByOffset)
 {
     auto cam = make_camera({0.0f, 0.0f, 5.0f}, {0.0f, 0.0f, 0.0f});
-    cam.translate({1.0f, 2.0f, -3.0f});
+    cam.translate_by({1.0f, 2.0f, -3.0f});
 
     // After the translate, the new eye should map to view-space origin.
     expect_vec3_near(eye_in_view_space(cam.get_view_matrix(), {1.0f, 2.0f, 2.0f}), {0.0f, 0.0f, 0.0f});
@@ -107,7 +107,7 @@ TEST(Camera, SetViewTargetChangesLookDirection)
 
     const auto view_before = cam.get_view_matrix();
     // Point camera at something clearly off-axis.
-    cam.set_view_target({5.0f, 0.0f, 0.0f});
+    cam.set_look_at_point({5.0f, 0.0f, 0.0f});
     const auto view_after = cam.get_view_matrix();
 
     // Z-rows must differ after retargeting.

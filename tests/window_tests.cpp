@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "engine/engine_types.h"
+#include "engine/input_state.h"
 #include "math/rectangle.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"
@@ -10,14 +11,17 @@ namespace pong
 
 struct TestWindow
 {
-    Win32Window window{RenderContextInfo{
-        .project_root = "c:/dev/Pong",
-        .app_name = "PongTest",
-        .engine_name = "PongTestEngine",
-        .frames_in_flight = 2u,
-        .clear_color = Color{0.1f, 0.2f, 0.3f, 1.0f},
-        .window_rect = Rectangle{Offset2D{100, 100}, Extent2D{64, 64}},
-        .version = Version{0u, 0u, 1u}}};
+    InputState state{};
+    Win32Window window{
+        RenderContextInfo{
+            .project_root = "c:/dev/Pong",
+            .app_name = "PongTest",
+            .engine_name = "PongTestEngine",
+            .frames_in_flight = 2u,
+            .clear_color = Color{0.1f, 0.2f, 0.3f, 1.0f},
+            .window_rect = Rectangle{Offset2D{100, 100}, Extent2D{64, 64}},
+            .version = Version{0u, 0u, 1u}},
+        state};
 };
 
 TEST(window, construct_and_run)
