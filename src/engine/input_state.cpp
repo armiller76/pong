@@ -9,7 +9,7 @@
 #include "core/mouse_button.h"
 #include "event/key_event.h"
 #include "event/mouse_move_event.h"
-#include "graphics/camera.h"
+#include "graphics/free_look_camera.h"
 #include "math/utils.h"
 #include "utils/error.h"
 #include "utils/log.h"
@@ -105,7 +105,7 @@ auto InputState::advance_frame() -> void
     mouse_state_.frame_delta_y = 0.0f;
 }
 
-auto InputState::move_direction(const Camera &camera, const float speed) -> ::glm::vec3
+auto InputState::move_direction(const FreeLookCamera &camera, const float speed) -> ::glm::vec3
 {
     auto result = ::glm::vec3{0.0f};
 

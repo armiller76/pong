@@ -5,7 +5,7 @@ add_library(
 
 target_sources(
   graphics
-  PRIVATE camera.cpp
+  PRIVATE free_look_camera.cpp
           mesh.cpp
           texture2d.cpp
 )
