@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <span>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "core/resource_handles.h"
@@ -32,7 +33,7 @@ class ResourceLoader
         VulkanPipelineManager &pipeline_manager,
         std::filesystem::path absolute_path_to_assets);
 
-    auto loadgltf(std::filesystem::path path) -> Scene;
+    auto loadgltf(std::filesystem::path path) -> std::pair<std::vector<Entity>, std::vector<EntityIndex>>;
 
     // Shader loading
     auto load(std::string_view name, std::filesystem::path path) -> ShaderHandle;

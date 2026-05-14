@@ -1,9 +1,6 @@
 #include "engine/render_context.h"
 
-#include <array>
 #include <chrono>
-#include <cstdint>
-#include <functional>
 #include <string>
 
 #include "engine/engine_types.h"
@@ -16,6 +13,7 @@
 #include "engine/vulkan/vulkan_pipeline_manager.h"
 #include "engine/vulkan/vulkan_renderer.h"
 #include "engine/vulkan/vulkan_surface.h"
+#include "graphics/free_look_camera.h"
 #include "graphics/image.h"
 #include "platform/win32_window.h"
 
@@ -24,7 +22,6 @@ namespace pong
 
 using namespace std::literals;
 
-class Camera;
 class Scene;
 
 RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32Window &win32_window, InputState &input_state)
@@ -58,7 +55,13 @@ RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32
 
 auto RenderContext::load_scene(std::string_view filename) -> Scene
 {
-    return resource_loader_.loadgltf(filename);
+    auto entity_info = resource_loader_.loadgltf(filename);
+    return {
+        std::move(entity_info.first),
+        std::move(entity_info.second),
+        vulkan_renderer_.swapchain_extent().width,
+        vulkan_renderer_.swapchain_extent().height,
+    };
 }
 
 auto RenderContext::update_and_render(Scene &scene) -> void
@@ -99,13 +102,20 @@ auto RenderContext::update_and_render(Scene &scene) -> void
         last_window_recreate_time_ = now;
     }
 
-    scene.entities().at(scene.root_indices().at(0).value).rotate_by({0.0f, 0.0001f, 0.0f});
-    scene.frame_camera().translate_by(input_state_.move_direction(scene.frame_camera(), 0.001f));
+    const auto translate_sensitivity = 0.1f;
+    const auto mouse_sensitivity = 0.001f;
+
+    scene.entities().at(scene.root_indices().at(0).value).rotate_by({0.0f, 0.01f, 0.0f});
+    scene.frame_camera().translate_by(input_state_.move_direction(scene.frame_camera(), translate_sensitivity));
+    scene.frame_camera().adjust_pitch(-input_state_.mouse_state().frame_delta_y * mouse_sensitivity);
+    scene.frame_camera().adjust_yaw(input_state_.mouse_state().frame_delta_x * mouse_sensitivity);
 
     debug_renderer_.begin_frame();
     debug_renderer_.render(); // calls ImGui::EndFrame() -- don't call manually
 
     vulkan_renderer_.render(scene, debug_renderer_.get_draw_data());
+
+    input_state_.advance_frame();
 }
 
 auto RenderContext::shutdown() -> void

@@ -46,12 +46,11 @@ ResourceLoader::ResourceLoader(
     arm::log::debug("ResourceLoader constructor");
 }
 
-auto ResourceLoader::loadgltf(std::filesystem::path path) -> Scene
+auto ResourceLoader::loadgltf(std::filesystem::path path) -> std::pair<std::vector<Entity>, std::vector<EntityIndex>>
 {
     auto gltf = FastGLTFWrapper();
     auto loaded_asset = gltf.load(path);
 
-    // const auto scene_count = loaded_asset.scenes.size();
     const auto default_scene_index = loaded_asset.default_scene_index.value_or(0);
     const auto &default_scene = loaded_asset.scenes[default_scene_index];
     arm::log::debug("gltf loaded default scene index/name: {}: {}", default_scene_index, default_scene.name);
