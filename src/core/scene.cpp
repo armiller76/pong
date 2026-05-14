@@ -7,6 +7,7 @@
 #include "core/entity.h"
 #include "core/resource_handles.h"
 #include "engine/ubo.h"
+#include "graphics/free_look_camera.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
@@ -14,10 +15,21 @@
 namespace pong
 {
 
-Scene::Scene(std::vector<Entity> entities, std::vector<EntityIndex> root_indices)
+Scene::Scene(
+    std::vector<Entity> entities,
+    std::vector<EntityIndex> root_indices,
+    std::uint32_t view_width,
+    std::uint32_t view_height)
     : entities_{std::move(entities)}
     , root_indices_{std::move(root_indices)}
-    , frame_camera_{{0.0f, 3.0f, 15.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, ::glm::radians(33.0f), 0.1f, 100.f}
+    , frame_camera_{
+          {0.0f, 0.0f, 10.0f},
+          {0.0f, 1.0f, 0.0f},
+          ::glm::radians(33.0f),
+          static_cast<float>(view_width),
+          static_cast<float>(view_height),
+          0.1f,
+          100.f}
 {
     arm::log::debug("Scene constructor: {} entities, {} roots", entities_.size(), root_indices_.size());
 }
@@ -138,7 +150,7 @@ auto Scene::remove_directional_light(LightHandle handle) -> void
     }
 }
 
-auto Scene::frame_camera() -> Camera &
+auto Scene::frame_camera() -> FreeLookCamera &
 {
     return frame_camera_;
 }
@@ -167,9 +179,9 @@ auto Scene::light_ubo() const -> UBO_Lighting
     return result;
 }
 
-auto Scene::frame_camera_ubo(const float aspect) const -> UBO_Camera
+auto Scene::frame_camera_ubo() const -> UBO_Camera
 {
-    return frame_camera_.camera_ubo(aspect);
+    return frame_camera_.get_camera_ubo();
 }
 
 } // namespace pong
