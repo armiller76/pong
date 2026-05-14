@@ -89,6 +89,11 @@ auto VulkanRenderer::swapchain_format() const -> ::vk::Format
     return swapchain_.format();
 }
 
+auto VulkanRenderer::swapchain_extent() const -> Extent2D
+{
+    return {swapchain_.extent().width, swapchain_.extent().height};
+}
+
 auto VulkanRenderer::descriptor_pool() -> VulkanDescriptorPool *
 {
     return &descriptor_pool_;
@@ -243,8 +248,7 @@ auto VulkanRenderer::record_(const Scene &scene, const std::vector<DrawItem> &dr
     rendering_info.pStencilAttachment = nullptr;
 
     // upload camera/view data
-    const auto aspect = static_cast<float>(swapchain_.extent().width) / swapchain_.extent().height;
-    auto camera = scene.frame_camera_ubo(aspect);
+    auto camera = scene.frame_camera_ubo();
     camera_uniform_buffers_[frame_index].upload(&camera, sizeof(UBO_Camera));
 
     // upload lighting data

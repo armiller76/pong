@@ -16,6 +16,7 @@
 #include "engine/vulkan/vulkan_swapchain.h"
 #include "graphics/color.h"
 #include "graphics/mesh.h"
+#include "math/rectangle.h"
 
 struct ImDrawData;
 
@@ -77,6 +78,7 @@ class VulkanRenderer
     auto swapchain_image_count() const -> std::uint32_t;
     auto swapchain_image_index() const -> std::uint32_t;
     auto swapchain_format() const -> ::vk::Format;
+    auto swapchain_extent() const -> Extent2D;
 
     auto descriptor_pool() -> VulkanDescriptorPool *;
     auto set_clear_color(const Color &color) -> void;
