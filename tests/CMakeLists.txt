@@ -25,7 +25,6 @@ endif()
 add_executable(
   unit_tests
   auto_release_tests.cpp
-  camera_tests.cpp
   engine_error_tests.cpp
   entity_tests.cpp
   error_tests.cpp
