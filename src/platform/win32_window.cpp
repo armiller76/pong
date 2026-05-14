@@ -1,8 +1,8 @@
 #include "win32_window.h"
 
+#include <algorithm>
 #include <climits>
 #include <cstddef>
-#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -230,17 +230,31 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
         case WM_KEYDOWN:
         {
             auto key = static_cast<Key>(wParam);
-            input_state.events().emplace(KeyEvent{key, KeyPosition::Down});
-            input_state.dirty_keys().insert(key);
-            return 0;
+            if (std::ranges::contains(all_keys, key))
+            {
+                input_state.events().emplace(KeyEvent{key, KeyPosition::Down});
+                input_state.dirty_keys().insert(key);
+                return 0;
+            }
+            else
+            {
+                return DefWindowProcA(hwnd_, msg, lParam, wParam);
+            }
         }
 
         case WM_KEYUP:
         {
             auto key = static_cast<Key>(wParam);
-            input_state.events().emplace(KeyEvent{key, KeyPosition::Up});
-            input_state.dirty_keys().insert(key);
-            return 0;
+            if (std::ranges::contains(all_keys, key))
+            {
+                input_state.events().emplace(KeyEvent{key, KeyPosition::Up});
+                input_state.dirty_keys().insert(key);
+                return 0;
+            }
+            else
+            {
+                return DefWindowProcA(hwnd_, msg, lParam, wParam);
+            }
         }
 
         case WM_ERASEBKGND:
