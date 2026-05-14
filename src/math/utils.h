@@ -34,7 +34,7 @@ inline auto normalize_safe(::glm::quat q) -> ::glm::quat
     }
 
     const auto length_squared = ::glm::dot(check, check);
-    if (::glm::isinf(length_squared) || length_squared < 0.00000001f)
+    if (::glm::isinf(length_squared) || length_squared < g_epsilon)
     {
         arm::log::info("normalize_safe Quaternion failed length check {}", q);
         return fallback;
