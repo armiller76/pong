@@ -105,7 +105,7 @@ auto InputState::advance_frame() -> void
     mouse_state_.frame_delta_y = 0.0f;
 }
 
-auto InputState::move_direction(const FreeLookCamera &camera, const float speed) -> ::glm::vec3
+auto InputState::move_direction(const FreeLookCamera &camera) -> ::glm::vec3
 {
     auto result = ::glm::vec3{0.0f};
 
@@ -131,7 +131,7 @@ auto InputState::move_direction(const FreeLookCamera &camera, const float speed)
         return ::glm::vec3{0.0f, 0.0f, 0.0f};
     }
 
-    return ::glm::normalize(result) * speed;
+    return ::glm::normalize(result);
 }
 
 auto InputState::reset_button_state_(ButtonState &state) -> void

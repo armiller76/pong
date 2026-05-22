@@ -50,7 +50,7 @@ class InputState
 
     auto advance_frame() -> void;
 
-    auto move_direction(const FreeLookCamera &camera, const float speed) -> ::glm::vec3;
+    auto move_direction(const FreeLookCamera &camera) -> ::glm::vec3;
 
   private:
     std::queue<Event> events_;
