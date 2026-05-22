@@ -26,14 +26,12 @@ int main()
             .window_rect = {.offset{100u, 100u}, .extent{800u, 600u}},
             .version = {.major = APP_VERSION_MAJOR, .minor = APP_VERSION_MINOR, .patch = APP_VERSION_PATCH}};
 
-        // TODO: other platforms
         auto input_state = pong::InputState();
         auto win32_window = pong::Win32Window(render_context_info, input_state);
         auto render_context = pong::RenderContext(render_context_info, win32_window, input_state);
 
         // auto scene = render_context.load_scene("assets/gltf/CesiumMilkTruck/CesiumMilkTruck.glb");
         // auto scene = render_context.load_scene("assets/gltf/BoomBox/BoomBox.glb");
-
         auto scene = render_context.load_scene("assets/gltf/DamagedHelmet/DamagedHelmet.glb");
         scene.entities().at(scene.root_indices().at(0).value).scale_by({2.0f, 2.0f, 2.0f});
         scene.add_directional_light({{-0.5f, -1.0f, -0.3f, 1.5f}, {1.0f, 0.95f, 0.8f, 0.0f}});
@@ -44,16 +42,6 @@ int main()
         {
             win32_window.process_events();
             input_state.process_events();
-
-            // accum_time += delta.count();
-            // auto angle_x = accum_time * 0.00025f;
-            // auto angle_y = accum_time * 0.00033f;
-            // auto angle_z = accum_time * 0.0005f;
-            // auto rotation = ::glm::quat(1, 0, 0, 0);
-            // rotation = ::glm::rotate(rotation, angle_x, {1, 0, 0});
-            // rotation = ::glm::rotate(rotation, angle_y, {0, 1, 0});
-            // rotation = ::glm::rotate(rotation, angle_z, {0, 0, 1});
-
             render_context.update_and_render(scene);
         }
         render_context.shutdown();
