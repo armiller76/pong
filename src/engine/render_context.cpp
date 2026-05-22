@@ -77,22 +77,15 @@ auto RenderContext::update_and_render(Scene &scene) -> void
 
     if (!win32_window_.is_minimized())
     {
-        if (vulkan_renderer_.needs_recreate())
-        {
-            should_recreate = true;
-        }
-        else if (was_resize_pending_ && !win32_window_.resize_pending())
-        {
-            should_recreate = true;
-        }
-        else if (win32_window_.resize_pending() && now - last_window_recreate_time_ >= 50ms) // TODO Magic number
+        if ((vulkan_renderer_.needs_recreate())                         //
+            || (was_resize_pending_ && !win32_window_.resize_pending()) //
+            || (win32_window_.resize_pending() && (frame_begin_timestamp_ - last_window_recreate_time_ >= 50ms)))
         {
             should_recreate = true;
         }
     }
     else
     {
-        // TODO is this right?
         return;
     }
 
