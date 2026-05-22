@@ -46,7 +46,7 @@ FreeLookCamera::FreeLookCamera(
     , camera_data_{{}, {}, position}
 {
     arm::log::debug("FreeLookCamera constructor");
-    resize_(static_cast<std::uint32_t>(width_), static_cast<std::uint32_t>(height_));
+    resize(static_cast<std::uint32_t>(width_), static_cast<std::uint32_t>(height_));
     adjust_pitch(0.0f);
 }
 
@@ -118,6 +118,16 @@ auto FreeLookCamera::set_world_up(const ::glm::vec3 up) -> void
 
     world_up_direction_ = up;
     update_all_();
+}
+
+auto FreeLookCamera::resize(std::uint32_t width, std::uint32_t height) -> void
+{
+    arm::ensure(width != 0 && height != 0, "invalid resize w:{} h:{}", width, height);
+    width_ = static_cast<float>(width);
+    height_ = static_cast<float>(height);
+
+    camera_data_.projection_matrix = ::glm::perspective(vertical_fov_radians_, width_ / height_, near_clip_, far_clip_);
+    camera_data_.projection_matrix[1][1] *= -1;
 }
 
 auto FreeLookCamera::get_world_up() const -> const ::glm::vec3
@@ -201,16 +211,6 @@ auto FreeLookCamera::update_view_() -> void
 {
     camera_data_.view_matrix =
         ::glm::lookAt(camera_data_.position, camera_data_.position + forward_direction_, up_direction_);
-}
-
-auto FreeLookCamera::resize_(std::uint32_t width, std::uint32_t height) -> void
-{
-    arm::ensure(width != 0 && height != 0, "invalid resize w:{} h:{}", width, height);
-    width_ = static_cast<float>(width);
-    height_ = static_cast<float>(height);
-
-    camera_data_.projection_matrix = ::glm::perspective(vertical_fov_radians_, width_ / height_, near_clip_, far_clip_);
-    camera_data_.projection_matrix[1][1] *= -1;
 }
 
 } // namespace pong

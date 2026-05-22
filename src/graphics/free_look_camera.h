@@ -44,6 +44,7 @@ class FreeLookCamera
     auto adjust_yaw(float radians) -> void;
     auto set_fov(float radians) -> void;
     auto set_world_up(const ::glm::vec3 up) -> void;
+    auto resize(std::uint32_t width, std::uint32_t height) -> void;
 
     auto get_world_up() const -> const ::glm::vec3;
     auto get_forward_direction() const -> const ::glm::vec3;
@@ -77,7 +78,6 @@ class FreeLookCamera
     auto update_all_() -> void;
     auto recalculate_vectors_() -> void;
     auto update_view_() -> void;
-    auto resize_(std::uint32_t width, std::uint32_t height) -> void;
 };
 
 }
