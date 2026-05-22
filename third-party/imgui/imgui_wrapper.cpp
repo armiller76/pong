@@ -1,5 +1,6 @@
 #include "imgui_wrapper.h"
 
+#include <format>
 #include <string_view>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -22,75 +23,74 @@ ImguiWrapper::ImguiWrapper(
     const VulkanDevice &device,
     VulkanRenderer &renderer,
     std::string_view project_root)
-    : io{[]()
-         {
-             IMGUI_CHECKVERSION();
-             ::ImGui::CreateContext();
-             return &::ImGui::GetIO();
-         }()}
+    : io_{[]()
+          {
+              IMGUI_CHECKVERSION();
+              ::ImGui::CreateContext();
+              return &::ImGui::GetIO();
+          }()}
     , windows_handle_{hwnd}
     , instance_{instance}
     , device_{device}
     , renderer_{renderer}
-    , ini_file_{std::string(std::string(project_root) + "/third-party/imgui/imgui.ini")}
+    , ini_file_{std::format("{}{}", project_root, "/third-party/imgui/imgui.ini")}
 {
-    io->IniFilename = ini_file_.c_str();
-    io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io_->IniFilename = ini_file_.c_str();
+    io_->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-    startup();
+    io_->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    startup_();
 }
 
 ImguiWrapper::~ImguiWrapper()
 {
-    shutdown();
 }
 
-auto ImguiWrapper::startup() -> void
+auto ImguiWrapper::recreate() -> void
 {
-    init_windows();
-    init_vulkan();
+    ::ImGui_ImplWin32_Shutdown();
+    ::ImGui_ImplVulkan_Shutdown();
+    init_vulkan_();
+    init_windows_();
 }
 
-auto ImguiWrapper::init_windows() -> void
+auto ImguiWrapper::draw_fps() -> void
 {
-    ::ImGui_ImplWin32_Init(windows_handle_);
+    const auto viewport = ::ImGui::GetMainViewport();
+    ::ImGui::SetNextWindowPos(
+        {viewport->WorkPos.x + viewport->WorkSize.x - 10.0f, viewport->WorkPos.y + 10.0f},
+        ::ImGuiCond_Always,
+        {1.0f, 0.0f});
+    ::ImGui::SetNextWindowBgAlpha(0.35f);
+    ::ImGui::Begin(
+        "FPS",
+        nullptr,
+        ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize
+            | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking);
+    ::ImGui::Text("%.3fms/%.1fFPS", 1000.0f / io_->Framerate, io_->Framerate);
+    ::ImGui::End();
 }
 
-auto ImguiWrapper::init_vulkan() -> void
+auto ImguiWrapper::draw_settings() -> void
 {
-    auto init_info = ImGui_ImplVulkan_InitInfo{};
-    init_info.ApiVersion = VK_API_VERSION_1_3;
-    init_info.Instance = *instance_.native_handle();
-    init_info.PhysicalDevice = *device_.physical_device();
-    init_info.Device = *device_.native_handle();
-    init_info.QueueFamily = device_.graphics_queue_family_index();
-    init_info.Queue = device_.graphics_queue();
-    // init_info.DescriptorPool = vk_renderer_.descriptor_pool_.native_handle();
-    init_info.DescriptorPoolSize = 32; // == 0 -> use DescriptorPool; != 0 -> imgui creates its own
-    init_info.MinImageCount = renderer_.swapchain_image_count();
-    init_info.ImageCount = renderer_.swapchain_image_count();
+}
 
-    // TODO if you implement a pipeline cache, set this
-    //  init_info.PipelineCache = ;
+auto ImguiWrapper::render() -> void
+{
+    ::ImGui_ImplVulkan_NewFrame();
+    ::ImGui_ImplWin32_NewFrame();
+    ::ImGui::NewFrame();
 
-    // set up dynamic rendering
-    auto color_attachment_formats = std::array{
-        renderer_.swapchain_format(),
-    };
-    auto pipeline_rendering_create_info = ::vk::PipelineRenderingCreateInfo{};
-    pipeline_rendering_create_info.sType = ::vk::StructureType::ePipelineRenderingCreateInfoKHR;
-    pipeline_rendering_create_info.colorAttachmentCount = static_cast<std::uint32_t>(color_attachment_formats.size());
-    pipeline_rendering_create_info.pColorAttachmentFormats = color_attachment_formats.data();
-    auto pipeline_info = ImGui_ImplVulkan_PipelineInfo{};
-    pipeline_info.PipelineRenderingCreateInfo = pipeline_rendering_create_info;
-    init_info.PipelineInfoMain = pipeline_info;
-    init_info.UseDynamicRendering = true;
+    draw_fps();
+    draw_settings();
 
-    // set up error handling
-    init_info.CheckVkResultFn = check_vk_result;
+    ::ImGui::Render();
+    draw_data_ = ::ImGui::GetDrawData();
+}
 
-    ::ImGui_ImplVulkan_Init(&init_info);
-    ::ImGui::StyleColorsDark();
+auto ImguiWrapper::get_draw_data() -> ImDrawData *
+{
+    return draw_data_;
 }
 
 auto ImguiWrapper::shutdown() -> void
@@ -103,28 +103,50 @@ auto ImguiWrapper::shutdown() -> void
     }
 }
 
-auto ImguiWrapper::recreate() -> void
+auto ImguiWrapper::startup_() -> void
 {
-    ::ImGui_ImplVulkan_Shutdown();
-    init_vulkan();
+    init_vulkan_();
+    init_windows_();
 }
 
-auto ImguiWrapper::begin_frame() -> void
+auto ImguiWrapper::init_vulkan_() -> void
 {
-    ::ImGui_ImplVulkan_NewFrame();
-    ::ImGui_ImplWin32_NewFrame();
-    ::ImGui::NewFrame();
+    auto color_attachment_formats = std::array{
+        renderer_.swapchain_format(),
+    };
+    auto pipeline_rendering_create_info = ::vk::PipelineRenderingCreateInfo{};
+    pipeline_rendering_create_info.sType = ::vk::StructureType::ePipelineRenderingCreateInfoKHR;
+    pipeline_rendering_create_info.pNext = nullptr;
+    pipeline_rendering_create_info.colorAttachmentCount = static_cast<std::uint32_t>(color_attachment_formats.size());
+    pipeline_rendering_create_info.pColorAttachmentFormats = color_attachment_formats.data();
+    pipeline_rendering_create_info.depthAttachmentFormat = renderer_.depth_format();
+    pipeline_rendering_create_info.stencilAttachmentFormat = ::vk::Format::eUndefined;
+
+    auto pipeline_info = ImGui_ImplVulkan_PipelineInfo{};
+    pipeline_info.PipelineRenderingCreateInfo = pipeline_rendering_create_info;
+
+    auto init_info = ImGui_ImplVulkan_InitInfo{};
+    init_info.ApiVersion = VK_API_VERSION_1_3;
+    init_info.Instance = *instance_.native_handle();
+    init_info.PhysicalDevice = *device_.physical_device();
+    init_info.Device = *device_.native_handle();
+    init_info.QueueFamily = device_.graphics_queue_family_index();
+    init_info.Queue = device_.graphics_queue();
+    init_info.DescriptorPool = nullptr;
+    init_info.DescriptorPoolSize = 128; // == 0 -> use DescriptorPool; != 0 -> imgui creates its own
+    init_info.MinImageCount = renderer_.swapchain_image_count();
+    init_info.ImageCount = renderer_.swapchain_image_count();
+    init_info.PipelineCache = nullptr; // TODO if you implement a pipeline cache, set this
+    init_info.PipelineInfoMain = pipeline_info;
+    init_info.UseDynamicRendering = true;
+    init_info.CheckVkResultFn = check_vk_result;
+    ::ImGui_ImplVulkan_Init(&init_info);
+    ::ImGui::StyleColorsDark();
 }
 
-auto ImguiWrapper::render() -> void
+auto ImguiWrapper::init_windows_() -> void
 {
-    ::ImGui::Render();
-    draw_data_ = ::ImGui::GetDrawData();
-}
-
-auto ImguiWrapper::get_draw_data() -> ImDrawData *
-{
-    return draw_data_;
+    ::ImGui_ImplWin32_Init(windows_handle_);
 }
 
 }

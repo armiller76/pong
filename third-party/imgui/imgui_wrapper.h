@@ -12,7 +12,6 @@
 namespace pong
 {
 
-class VulkanDescriptorPool;
 class VulkanDevice;
 class VulkanInstance;
 class VulkanRenderer;
@@ -34,26 +33,31 @@ class ImguiWrapper
     ImguiWrapper(ImguiWrapper &&) noexcept = delete;
     auto operator=(ImguiWrapper &&) noexcept -> ImguiWrapper & = delete;
 
-    auto startup() -> void;
-    auto init_windows() -> void;
-    auto init_vulkan() -> void;
-    auto shutdown() -> void;
-    auto recreate() -> void;
+    auto draw_fps() -> void;
 
-    auto begin_frame() -> void;
+    auto draw_settings() -> void;
+
     auto render() -> void;
 
+    auto recreate() -> void;
+
     auto get_draw_data() -> ImDrawData *;
-    auto process_window_event() -> void;
+
+    auto shutdown() -> void;
 
   private:
-    ImGuiIO *io;
+    ImGuiIO *io_;
     HWND windows_handle_;
     const VulkanInstance &instance_;
     const VulkanDevice &device_;
     VulkanRenderer &renderer_;
     ImDrawData *draw_data_;
     std::string ini_file_;
+
+  private:
+    auto startup_() -> void;
+    auto init_windows_() -> void;
+    auto init_vulkan_() -> void;
 };
 
 }

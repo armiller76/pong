@@ -95,7 +95,7 @@ endif()
 FetchContent_Declare(
   imgui
   GIT_REPOSITORY https://github.com/ocornut/imgui.git
-  GIT_TAG v1.92.7
+  GIT_TAG v1.92.7-docking
 )
 FetchContent_MakeAvailable(imgui)
 add_subdirectory(third-party/imgui)
