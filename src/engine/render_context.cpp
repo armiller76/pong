@@ -32,6 +32,7 @@ RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32
     , input_state_{input_state}
     , last_window_recreate_time_{std::chrono::steady_clock::now()}
     , was_resize_pending_{false}
+    , frame_begin_timestamp_{std::chrono::steady_clock::now()}
     , vulkan_context_{}
     , vulkan_instance_{vulkan_context_, render_context_info}
     , vulkan_surface_{vulkan_instance_, win32_window_.win32_handles()}
@@ -66,8 +67,9 @@ auto RenderContext::load_scene(std::string_view filename) -> Scene
 
 auto RenderContext::update_and_render(Scene &scene) -> void
 {
-    auto now = std::chrono::steady_clock::now();
-    last_window_recreate_time_ = now;
+    auto last_frame_timestamp = frame_begin_timestamp_;
+    frame_begin_timestamp_ = std::chrono::steady_clock::now();
+    auto frame_delta_seconds = std::chrono::duration<float>(frame_begin_timestamp_ - last_frame_timestamp);
 
     was_resize_pending_ = false;
     auto should_recreate = false;
@@ -99,7 +101,7 @@ auto RenderContext::update_and_render(Scene &scene) -> void
     {
         recreate_resources_();
         debug_renderer_.recreate();
-        last_window_recreate_time_ = now;
+        last_window_recreate_time_ = frame_begin_timestamp_;
     }
 
     const auto translate_sensitivity = 0.1f;

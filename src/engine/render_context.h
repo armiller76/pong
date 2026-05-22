@@ -50,6 +50,8 @@ class RenderContext
     std::chrono::steady_clock::time_point last_window_recreate_time_;
     bool was_resize_pending_;
 
+    std::chrono::steady_clock::time_point frame_begin_timestamp_;
+
     ::vk::raii::Context vulkan_context_;
 
     VulkanInstance vulkan_instance_;
