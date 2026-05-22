@@ -71,7 +71,8 @@ auto RenderContext::update_and_render(Scene &scene) -> void
     frame_begin_timestamp_ = std::chrono::steady_clock::now();
     auto frame_delta_seconds = std::chrono::duration<float>(frame_begin_timestamp_ - last_frame_timestamp);
 
-    was_resize_pending_ = false;
+    // TODO if resize logic goes haywire, then i guess the next line was needed, but why?!
+    // was_resize_pending_ = false;
     auto should_recreate = false;
 
     if (!win32_window_.is_minimized())
