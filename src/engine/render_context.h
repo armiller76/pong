@@ -68,8 +68,6 @@ class RenderContext
   private:
     auto recreate_resources_() -> bool;
     auto init_() -> void;
-
-    std::function<void(void)> debug_renderer_resize_callback_;
 }; // class RenderContext
 
 } // namespace pong

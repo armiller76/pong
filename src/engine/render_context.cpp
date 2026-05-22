@@ -96,6 +96,9 @@ auto RenderContext::update_and_render(Scene &scene) -> void
         recreate_resources_();
         debug_renderer_.recreate();
         last_window_recreate_time_ = frame_begin_timestamp_;
+
+        const auto new_extent = vulkan_renderer_.swapchain_extent();
+        scene.frame_camera().resize(new_extent.width, new_extent.height);
     }
 
     const auto translate_speed = 10.0f;
@@ -107,8 +110,7 @@ auto RenderContext::update_and_render(Scene &scene) -> void
     scene.frame_camera().adjust_pitch(-input_state_.mouse_state().frame_delta_y * mouse_sensitivity);
     scene.frame_camera().adjust_yaw(input_state_.mouse_state().frame_delta_x * mouse_sensitivity);
 
-    debug_renderer_.begin_frame();
-    debug_renderer_.render(); // calls ImGui::EndFrame() -- don't call manually
+    debug_renderer_.render(); // calls ImGui::BeginFrame() and ImGui::EndFrame() -- don't call manually
 
     vulkan_renderer_.render(scene, debug_renderer_.get_draw_data());
 
@@ -120,7 +122,6 @@ auto RenderContext::shutdown() -> void
     vulkan_device_.native_handle().waitIdle();
 
     // TODO shutdown order?
-    debug_renderer_resize_callback_ = nullptr;
     debug_renderer_.shutdown();
     vulkan_renderer_.shutdown();
     resource_manager_.shutdown();
@@ -135,15 +136,10 @@ auto RenderContext::recreate_resources_() -> bool
         return false;
     }
 
-    // TODO should the context keep a list of resize callbacks?
     vulkan_device_.native_handle().waitIdle();
 
     vulkan_renderer_.recreate_resources();
-
-    if (debug_renderer_resize_callback_)
-    {
-        debug_renderer_resize_callback_();
-    }
+    debug_renderer_.recreate();
 
     return true;
 }
@@ -160,9 +156,6 @@ auto RenderContext::init_() -> void
         resource_loader_.load("simple.vert"sv, std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_vert.spv"));
     resource_manager_.default_fragment_shader() =
         resource_loader_.load("simple.frag"sv, std::filesystem::path("c:/dev/Pong/assets/shaders/bin/simple_frag.spv"));
-
-    // set debug renderer callback function
-    debug_renderer_resize_callback_ = [this] { debug_renderer_.recreate(); };
 
     // book-keeping for pipeline manager dependencies
     vulkan_pipeline_manager_.set_color_attachment_format(vulkan_renderer_.swapchain_format());
