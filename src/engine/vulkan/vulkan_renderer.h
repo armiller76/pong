@@ -79,6 +79,7 @@ class VulkanRenderer
     auto swapchain_image_index() const -> std::uint32_t;
     auto swapchain_format() const -> ::vk::Format;
     auto swapchain_extent() const -> Extent2D;
+    auto depth_format() const -> ::vk::Format;
 
     auto descriptor_pool() -> VulkanDescriptorPool *;
     auto set_clear_color(const Color &color) -> void;

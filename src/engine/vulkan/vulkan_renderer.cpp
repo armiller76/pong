@@ -94,6 +94,11 @@ auto VulkanRenderer::swapchain_extent() const -> Extent2D
     return {swapchain_.extent().width, swapchain_.extent().height};
 }
 
+auto VulkanRenderer::depth_format() const -> ::vk::Format
+{
+    return depth_buffer_.format();
+}
+
 auto VulkanRenderer::descriptor_pool() -> VulkanDescriptorPool *
 {
     return &descriptor_pool_;
