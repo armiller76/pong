@@ -6,7 +6,8 @@
 #include <string>
 #include <vector>
 
-#include "graphics/glm_wrapper.h" // IWYU pragma: keep
+#include <glm/vec4.hpp>
+
 #include "graphics/types.h"
 #include "graphics/vertex.h"
 #include "math/transform.h"
