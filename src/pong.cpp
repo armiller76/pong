@@ -2,12 +2,14 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "core/scene.h"
 #include "engine/engine_utils.h"
 #include "engine/input_state.h"
 #include "engine/render_context.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"
 #include "utils/log.h"
+
 
 int main()
 {

@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "core/resource_handles.h"
-#include "core/scene.h"
 #include "engine/vulkan/vulkan_immediate_command_context.h"
 #include "gltf/fastgltf_primitives.h"
 #include "graphics/image_format.h"

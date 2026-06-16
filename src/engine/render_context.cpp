@@ -3,6 +3,7 @@
 #include <chrono>
 #include <string>
 
+#include "core/scene.h"
 #include "engine/engine_utils.h"
 #include "engine/input_state.h"
 #include "engine/resource_loader.h"
@@ -16,6 +17,7 @@
 #include "graphics/free_look_camera.h"
 #include "graphics/image.h"
 #include "platform/win32_window.h"
+
 
 namespace pong
 {
