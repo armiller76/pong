@@ -4,7 +4,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_error.h"
+#include "engine/engine_utils.h"
 #include "engine/vulkan/vulkan_instance.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"

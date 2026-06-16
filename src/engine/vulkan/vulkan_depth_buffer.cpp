@@ -4,7 +4,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_error.h"
+#include "engine/engine_utils.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "utils/exception.h"
 #include "utils/log.h"

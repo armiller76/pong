@@ -3,7 +3,7 @@
 #include <chrono>
 #include <string>
 
-#include "engine/engine_types.h"
+#include "engine/engine_utils.h"
 #include "engine/input_state.h"
 #include "engine/resource_loader.h"
 #include "engine/resource_manager.h"

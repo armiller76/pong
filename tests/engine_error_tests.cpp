@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "engine/engine_error.h"
+#include "engine/engine_utils.h"
 
 namespace pong
 {

@@ -7,7 +7,7 @@
 
 #include <windows.h>
 
-#include "engine/engine_types.h"
+#include "engine/engine_utils.h"
 #include "math/rectangle.h"
 #include "utils/auto_release.h"
 

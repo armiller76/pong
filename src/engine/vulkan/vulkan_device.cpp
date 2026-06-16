@@ -9,7 +9,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_error.h"
+#include "engine/engine_utils.h"
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_surface.h"
 #include "graphics/types.h"

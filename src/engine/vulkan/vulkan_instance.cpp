@@ -9,8 +9,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_error.h"
-#include "engine/engine_types.h"
+#include "engine/engine_utils.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
