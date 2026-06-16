@@ -146,7 +146,7 @@ auto InputState::update_button_state_(ButtonState &state, bool down) -> void
     if (down)
     {
         state.is_down_this_frame = true;
-        if (state.was_down_last_frame)
+        if (!state.was_down_last_frame)
         {
             state.was_pressed_this_frame = true;
         }
