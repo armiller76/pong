@@ -87,8 +87,7 @@ auto FreeLookCamera::adjust_yaw(float radians) -> void
     }
 
     const auto pi_x2 = std::numbers::pi_v<float> * 2.0f;
-    yaw_ += radians;
-    yaw_ = std::fmodf(yaw_, pi_x2);
+    yaw_ = std::fmodf(yaw_ + radians, pi_x2);
     if (yaw_ < 0)
     {
         yaw_ += pi_x2;
@@ -98,9 +97,9 @@ auto FreeLookCamera::adjust_yaw(float radians) -> void
 
 auto FreeLookCamera::set_fov(float radians) -> void
 {
-    if (::glm::isinf(radians))
+    if (radians > std::numbers::pi_v<float> * 2.0f || ::glm::isinf(radians))
     {
-        arm::log::warn("camera: set_fov angle infinite, ignoring");
+        arm::log::warn("camera: set_fov angle unusual or infinite, ignoring");
         return;
     }
 
@@ -126,7 +125,7 @@ auto FreeLookCamera::resize(std::uint32_t width, std::uint32_t height) -> void
     width_ = static_cast<float>(width);
     height_ = static_cast<float>(height);
 
-    camera_data_.projection_matrix = ::glm::perspective(vertical_fov_radians_, width_ / height_, near_clip_, far_clip_);
+    camera_data_.projection_matrix = ::glm::perspective(vertical_fov_radians_, get_aspect(), near_clip_, far_clip_);
     camera_data_.projection_matrix[1][1] *= -1;
 }
 
@@ -185,7 +184,7 @@ auto FreeLookCamera::get_position() const -> const ::glm::vec3
     return camera_data_.position;
 }
 
-auto FreeLookCamera::get_camera_ubo() const -> UBO_Camera
+auto FreeLookCamera::get_ubo() const -> UBO_Camera
 {
     return {
         .view = camera_data_.view_matrix,

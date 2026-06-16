@@ -57,7 +57,7 @@ class FreeLookCamera
     auto get_near_clip() const -> float;
     auto get_far_clip() const -> float;
     auto get_position() const -> const ::glm::vec3;
-    auto get_camera_ubo() const -> UBO_Camera;
+    auto get_ubo() const -> UBO_Camera;
 
   private:
     float vertical_fov_radians_;
