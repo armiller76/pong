@@ -34,18 +34,14 @@ Scene::Scene(
     arm::log::debug("Scene constructor: {} entities, {} roots", entities_.size(), root_indices_.size());
 }
 
-auto Scene::insert_root(Entity &&entity) -> EntityIndex
+auto Scene::insert_entity(Entity &&entity, bool is_root) -> EntityIndex
 {
     auto result = EntityIndex(entities_.size());
     entities_.push_back(std::move(entity));
-    root_indices_.push_back(result);
-    return result;
-}
-
-auto Scene::insert_entity(Entity &&entity) -> EntityIndex
-{
-    auto result = EntityIndex(entities_.size());
-    entities_.push_back(std::move(entity));
+    if (is_root)
+    {
+        root_indices_.push_back(result);
+    }
     return result;
 }
 
@@ -84,19 +80,19 @@ auto Scene::set_ambient_strength(float strength) -> void
     ambient_strength_ = std::max(strength, 0.0f);
 }
 
-auto Scene::get_directional_light(LightHandle handle) -> DirectionalLightData &
+auto Scene::get_directional_light(const LightHandle handle) -> DirectionalLightData &
 {
     if (directional_versions_[handle.value] != handle.version)
     {
         // TODO what do we do with a stale handle?
-        throw arm::Exception("stale handle");
+        throw arm::Exception("stale directional light handle");
     }
 
     auto light_result = directional_lights_.find(handle.value);
     if (light_result == directional_lights_.end())
     {
         // TODO what do we do if a handle we expect exists, doesn't?
-        throw arm::Exception("can't find handle");
+        throw arm::Exception("can't find directional light handle");
     }
     else
     {
@@ -122,16 +118,16 @@ auto Scene::add_directional_light(DirectionalLightData light) -> LightHandle
         version = directional_versions_[index];
     }
     auto [handle_result, inserted] = directional_lights_.emplace(index, light);
-    arm::ensure(inserted, "internal map error");
+    arm::ensure(inserted, "directional light map insertion error");
     return {handle_result->first, version};
 }
 
-auto Scene::remove_directional_light(LightHandle handle) -> void
+auto Scene::remove_directional_light(const LightHandle handle) -> void
 {
     if (directional_versions_[handle.value] != handle.version)
     {
         // TODO what do we do with a stale handle?
-        throw arm::Exception("stale handle");
+        throw arm::Exception("stale directional light handle");
     }
     else
     {
@@ -139,7 +135,7 @@ auto Scene::remove_directional_light(LightHandle handle) -> void
         if (light_result == directional_lights_.end())
         {
             // TODO what do we do if an expected handle is missing?
-            throw arm::Exception("handle not in map");
+            throw arm::Exception("directional light handle not in map");
         }
         else
         {
@@ -163,7 +159,7 @@ auto Scene::light_ubo() const -> UBO_Lighting
         .directional = {},
     };
 
-    auto directional_count = std::uint32_t{};
+    auto directional_count = 0u;
     for (const auto &[key, value] : directional_lights_)
     {
         if (directional_count == MAX_DIR_LIGHTS)
@@ -181,7 +177,7 @@ auto Scene::light_ubo() const -> UBO_Lighting
 
 auto Scene::frame_camera_ubo() const -> UBO_Camera
 {
-    return frame_camera_.get_camera_ubo();
+    return frame_camera_.get_ubo();
 }
 
 } // namespace pong

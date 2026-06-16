@@ -25,8 +25,7 @@ class Scene
         std::uint32_t view_width,
         std::uint32_t view_height);
 
-    auto insert_root(Entity &&entity) -> EntityIndex;
-    auto insert_entity(Entity &&entity) -> EntityIndex;
+    auto insert_entity(Entity &&entity, bool is_root = false) -> EntityIndex;
 
     auto entities() -> std::vector<Entity> &; // TODO get rid of this when not needed for debug
     auto entities() const -> const std::vector<Entity> &;
@@ -38,9 +37,9 @@ class Scene
     auto set_ambient_color(Color color) -> void;
     auto set_ambient_strength(float strength) -> void;
 
-    auto get_directional_light(LightHandle handle) -> DirectionalLightData &;
+    auto get_directional_light(const LightHandle handle) -> DirectionalLightData &;
     auto add_directional_light(DirectionalLightData light) -> LightHandle;
-    auto remove_directional_light(LightHandle handle) -> void;
+    auto remove_directional_light(const LightHandle handle) -> void;
 
     auto frame_camera() -> FreeLookCamera &;
 
@@ -55,11 +54,11 @@ class Scene
     // lights
     Color ambient_color_;
     float ambient_strength_;
-
     std::unordered_map<std::uint32_t, DirectionalLightData> directional_lights_;
     std::vector<std::uint32_t> directional_free_list_;
     std::vector<std::uint32_t> directional_versions_;
 
+    // camera
     FreeLookCamera frame_camera_;
 }; // class Scene
 
