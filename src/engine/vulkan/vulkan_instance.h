@@ -13,7 +13,9 @@ class VulkanInstance
   public:
     VulkanInstance(const ::vk::raii::Context &context, const RenderContextInfo &render_context_info);
 
-    auto native_handle() const -> const ::vk::raii::Instance &;
+    auto get() const -> const ::vk::raii::Instance &;
+
+    auto native_handle() const -> const ::vk::Instance;
 
   private:
     std::string application_name_;

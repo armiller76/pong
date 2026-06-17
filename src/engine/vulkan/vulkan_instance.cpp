@@ -97,9 +97,14 @@ VulkanInstance::VulkanInstance(const ::vk::raii::Context &context, const RenderC
     debug_messenger_ = std::move(debug_messenger_result.value());
 }
 
-auto VulkanInstance::native_handle() const -> const ::vk::raii::Instance &
+auto VulkanInstance::get() const -> const ::vk::raii::Instance &
 {
     return instance_;
+}
+
+auto VulkanInstance::native_handle() const -> const ::vk::Instance
+{
+    return *instance_;
 }
 
 VKAPI_ATTR auto VKAPI_CALL VulkanInstance::vk_debug_callback(

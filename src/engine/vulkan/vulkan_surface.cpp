@@ -16,7 +16,7 @@ namespace pong
 VulkanSurface::VulkanSurface(const VulkanInstance &vk_instance, const Win32WindowHandles &handles)
     : surface_{[&]
                {
-                   auto surface_result = check_vk_expected(vk_instance.native_handle().createWin32SurfaceKHR(
+                   auto surface_result = check_vk_expected(vk_instance.get().createWin32SurfaceKHR(
                        ::vk::Win32SurfaceCreateInfoKHR{{}, handles.instance, handles.window}));
                    if (!surface_result)
                    {
