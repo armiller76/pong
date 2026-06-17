@@ -27,7 +27,10 @@ VulkanInstance::VulkanInstance(const ::vk::raii::Context &context, const RenderC
     arm::log::debug("VulkanInstance constructor");
 
     auto required_extensions = std::vector{
-        VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME, VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
+        ::vk::KHRSurfaceExtensionName,
+        ::vk::KHRWin32SurfaceExtensionName,
+        ::vk::EXTDebugUtilsExtensionName,
+    };
 
     const auto [extension_property_result, available_extensions] = ::vk::enumerateInstanceExtensionProperties();
     arm::ensure(extension_property_result == ::vk::Result::eSuccess, "unable to get available instance extensions");
@@ -59,10 +62,10 @@ VulkanInstance::VulkanInstance(const ::vk::raii::Context &context, const RenderC
     vk_application_info.sType = ::vk::StructureType::eApplicationInfo;
     vk_application_info.pNext = nullptr;
     vk_application_info.pApplicationName = application_name_.c_str();
-    vk_application_info.applicationVersion = VK_MAKE_VERSION(
+    vk_application_info.applicationVersion = ::vk::makeVersion(
         render_context_info.version.major, render_context_info.version.minor, render_context_info.version.patch);
     vk_application_info.pEngineName = engine_name_.c_str();
-    vk_application_info.apiVersion = VK_API_VERSION_1_3;
+    vk_application_info.apiVersion = ::vk::ApiVersion13;
 
     auto vk_instance_create_info = ::vk::InstanceCreateInfo{};
     vk_instance_create_info.sType = ::vk::StructureType::eInstanceCreateInfo;
@@ -169,7 +172,7 @@ VKAPI_ATTR auto VKAPI_CALL VulkanInstance::vk_debug_callback(
             throw arm::Exception("Unknown Vk debug message severity");
         }
     }
-    return VK_FALSE;
+    return ::vk::False;
 }
 
 } // namespace pong

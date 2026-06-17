@@ -18,8 +18,8 @@ class VulkanInstance
     auto native_handle() const -> const ::vk::Instance;
 
   private:
-    std::string application_name_;
-    std::string engine_name_;
+    const std::string application_name_;
+    const std::string engine_name_;
     ::vk::raii::Instance instance_;
     ::vk::raii::DebugUtilsMessengerEXT debug_messenger_;
 
