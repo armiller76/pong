@@ -41,9 +41,9 @@ class RenderContext
     auto shutdown() -> void;
 
   private:
-    std::string app_name_;
-    std::string engine_name_;
-    [[maybe_unused]] Version version_;
+    const std::string app_name_;
+    const std::string engine_name_;
+    [[maybe_unused]] const Version version_;
     Win32Window &win32_window_;
     InputState &input_state_;
 

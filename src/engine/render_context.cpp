@@ -50,7 +50,7 @@ RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32
           vulkan_descriptor_pool_,
           render_context_info.frames_in_flight,
           render_context_info.clear_color}
-    , debug_renderer_{win32_window.win32_handles().window, vulkan_instance_, vulkan_device_, vulkan_renderer_,  render_context_info.project_root}
+    , debug_renderer_{win32_window.win32_handles().window, vulkan_instance_, vulkan_device_, vulkan_renderer_, render_context_info.project_root}
 {
     init_();
 }
