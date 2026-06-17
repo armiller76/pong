@@ -10,17 +10,11 @@
 
 #include "engine/engine_utils.h"
 #include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_utils.h"
 #include "utils/exception.h"
 
 namespace pong
 {
-
-enum class ShaderStage
-{
-    Vertex,
-    Fragment,
-    Compute
-};
 
 class Shader
 {
