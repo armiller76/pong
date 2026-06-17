@@ -10,12 +10,13 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_utils.h"
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_surface.h"
+#include "engine/vulkan/vulkan_utils.h"
 #include "graphics/types.h"
 #include "utils/error.h"
 #include "utils/exception.h"
+
 
 namespace
 {
@@ -236,7 +237,12 @@ auto VulkanDevice::native_handle() const -> const ::vk::Device
     return *device_;
 }
 
-auto VulkanDevice::physical_device_handle() const -> const ::vk::PhysicalDevice
+auto VulkanDevice::get_physical_device() const -> const ::vk::raii::PhysicalDevice &
+{
+    return physical_device_;
+}
+
+auto VulkanDevice::physical_device_native_handle() const -> const ::vk::PhysicalDevice
 {
     return *physical_device_;
 }

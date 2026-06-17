@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "engine/engine_utils.h"
+#include "engine/vulkan/vulkan_utils.h"
 
 namespace pong
 {

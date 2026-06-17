@@ -4,8 +4,8 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_utils.h"
 #include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_utils.h"
 #include "utils/exception.h"
 #include "utils/log.h"
 
@@ -59,7 +59,7 @@ DepthBuffer::DepthBuffer(const VulkanDevice &device, ::vk::Extent2D extent)
     view_create_info.subresourceRange.levelCount = 1u;
     view_create_info.subresourceRange.baseArrayLayer = 0u;
     view_create_info.subresourceRange.layerCount = 1u;
-    auto view_result = check_vk_expected(device_->native_handle().createImageView(view_create_info));
+    auto view_result = check_vk_expected(device_->get().createImageView(view_create_info));
     if (!view_result)
     {
         throw arm::Exception("unable to create depth buffer image view");

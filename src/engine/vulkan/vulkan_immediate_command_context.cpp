@@ -7,6 +7,7 @@
 
 #include "engine/vulkan/vulkan_command_pool.h"
 #include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_utils.h"
 #include "utils/error.h"
 #include "utils/log.h"
 

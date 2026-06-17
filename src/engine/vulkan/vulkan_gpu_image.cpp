@@ -10,6 +10,7 @@
 #include "engine/vulkan/vulkan_gpu_buffer.h"
 #include "engine/vulkan/vulkan_immediate_command_context.h"
 #include "engine/vulkan/vulkan_render_utils.h"
+#include "engine/vulkan/vulkan_utils.h"
 #include "graphics/image.h"
 #include "utils/exception.h"
 #include "utils/log.h"
@@ -70,7 +71,7 @@ VulkanGpuImage::VulkanGpuImage(
     view_create_info.subresourceRange.levelCount = 1u;
     view_create_info.subresourceRange.baseArrayLayer = 0u;
     view_create_info.subresourceRange.layerCount = 1u;
-    auto view_result = check_vk_expected(device_->native_handle().createImageView(view_create_info));
+    auto view_result = check_vk_expected(device_->get().createImageView(view_create_info));
     if (!view_result)
     {
         throw arm::Exception("uanble to create imageview");

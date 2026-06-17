@@ -7,9 +7,9 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_utils.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_surface.h"
+#include "engine/vulkan/vulkan_utils.h"
 #include "utils/exception.h"
 #include "utils/log.h"
 
@@ -65,9 +65,9 @@ auto VulkanSwapchain::semaphores() const -> const std::vector<::vk::raii::Semaph
 
 auto VulkanSwapchain::init_() -> void
 {
-    capabilities_ = device_.physical_device().getSurfaceCapabilitiesKHR(surface_.native_handle());
-    formats_ = device_.physical_device().getSurfaceFormatsKHR(surface_.native_handle());
-    modes_ = device_.physical_device().getSurfacePresentModesKHR(surface_.native_handle());
+    capabilities_ = device_.get_physical_device().getSurfaceCapabilitiesKHR(surface_.native_handle());
+    formats_ = device_.get_physical_device().getSurfaceFormatsKHR(surface_.native_handle());
+    modes_ = device_.get_physical_device().getSurfacePresentModesKHR(surface_.native_handle());
     // if the device didn't give us any surface formats or present modes, crash
     if (formats_.empty() || modes_.empty())
     {

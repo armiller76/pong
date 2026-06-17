@@ -10,9 +10,9 @@
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_win32.h"
 
-#include "engine/engine_utils.h"
 #include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_renderer.h"
+#include "engine/vulkan/vulkan_utils.h"
 
 namespace pong
 {
@@ -128,7 +128,7 @@ auto ImguiWrapper::init_vulkan_() -> void
     auto init_info = ImGui_ImplVulkan_InitInfo{};
     init_info.ApiVersion = VK_API_VERSION_1_3;
     init_info.Instance = instance_.native_handle();
-    init_info.PhysicalDevice = *device_.physical_device();
+    init_info.PhysicalDevice = device_.physical_device_native_handle();
     init_info.Device = device_.native_handle();
     init_info.QueueFamily = device_.graphics_queue_family_index();
     init_info.Queue = device_.graphics_queue();

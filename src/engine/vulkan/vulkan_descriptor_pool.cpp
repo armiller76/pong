@@ -6,13 +6,14 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_utils.h"
 #include "engine/ubo.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_gpu_buffer.h"
 #include "engine/vulkan/vulkan_gpu_image.h"
+#include "engine/vulkan/vulkan_utils.h"
 #include "utils/error.h"
 #include "utils/log.h"
+
 
 namespace pong
 {

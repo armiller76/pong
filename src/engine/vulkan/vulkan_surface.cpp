@@ -4,11 +4,12 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_utils.h"
 #include "engine/vulkan/vulkan_instance.h"
+#include "engine/vulkan/vulkan_utils.h"
 #include "platform/win32_window.h"
 #include "utils/exception.h"
 #include "utils/log.h"
+
 
 namespace pong
 {

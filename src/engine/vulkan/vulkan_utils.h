@@ -2,13 +2,53 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
+#include "engine/engine_utils.h"
 #include "graphics/image_format.h"
-#include "graphics/shader.h"
+#include "graphics/shader_stage.h"
 #include "math/rectangle.h"
 #include "utils/exception.h"
 
+
 namespace pong
 {
+
+[[maybe_unused]] [[nodiscard]] static inline auto check_vk_result(::vk::Result r) -> EngineResult
+{
+    if (r == ::vk::Result::eSuccess)
+    {
+        return {ResultCode::Ok, {}};
+    }
+    else
+    {
+        return {ResultCode::Error, std::format("Vulkan result: {}", ::vk::to_string(r))};
+    }
+}
+
+[[maybe_unused]] static inline auto check_vk_result(VkResult err) -> void
+{
+    if (err == 0)
+    {
+        return;
+    }
+    else
+    {
+        throw arm::Exception("Vulkan error: {}", vk::to_string(static_cast<::vk::Result>(err)));
+    }
+}
+
+template <typename T>
+[[nodiscard]] static inline auto check_vk_expected(std::expected<T, ::vk::Result> &&check)
+    -> std::expected<T, EngineResult>
+{
+    if (!check) // error state
+    {
+        return std::unexpected(EngineResult{ResultCode::Error, ::vk::to_string(check.error())});
+    }
+    else // success state
+    {
+        return std::move(check.value());
+    }
+}
 
 inline auto to_vk(ShaderStage s) -> ::vk::ShaderStageFlagBits
 {

@@ -10,8 +10,8 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_utils.h"
 #include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_utils.h"
 #include "utils/exception.h"
 
 namespace pong

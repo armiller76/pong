@@ -5,8 +5,8 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_utils.h"
 #include "engine/vulkan/vulkan_device.h"
+#include "engine/vulkan/vulkan_utils.h"
 #include "utils/error.h"
 #include "utils/exception.h"
 #include "utils/log.h"
@@ -28,7 +28,7 @@ VulkanGpuBuffer::VulkanGpuBuffer(
               buffer_info.size = size;
               buffer_info.usage = usage;
               buffer_info.sharingMode = ::vk::SharingMode::eExclusive;
-              auto buffer_result = check_vk_expected(device_->native_handle().createBuffer(buffer_info));
+              auto buffer_result = check_vk_expected(device_->get().createBuffer(buffer_info));
               if (!buffer_result)
               {
                   throw arm::Exception("unable to create gpu buffer");
@@ -42,7 +42,7 @@ VulkanGpuBuffer::VulkanGpuBuffer(
               auto memory_info = ::vk::MemoryAllocateInfo{};
               memory_info.allocationSize = memory_requirements.size;
               memory_info.memoryTypeIndex = device_->find_memory_type_index(memory_requirements, memory_flags);
-              auto memory_result = check_vk_expected(device_->native_handle().allocateMemory(memory_info));
+              auto memory_result = check_vk_expected(device_->get().allocateMemory(memory_info));
               if (!memory_result)
               {
                   throw arm::Exception("unable to allocate buffer memory");
@@ -77,7 +77,7 @@ auto VulkanGpuBuffer::upload(const void *data, std::size_t bytes, std::size_t of
         flush_range.memory = *memory_;
         flush_range.offset = offset;
         flush_range.size = bytes;
-        device_->native_handle().flushMappedMemoryRanges({flush_range});
+        device_->get().flushMappedMemoryRanges({flush_range});
     }
 }
 
