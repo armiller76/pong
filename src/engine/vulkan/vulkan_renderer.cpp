@@ -164,7 +164,7 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
         next_image_info.deviceMask = 1u;
 
         auto swap_chain_image_index = std::uint32_t{};
-        auto vk_result = vkAcquireNextImage2KHR(*device_.native_handle(), &next_image_info, &swap_chain_image_index);
+        auto vk_result = vkAcquireNextImage2KHR(device_.native_handle(), &next_image_info, &swap_chain_image_index);
 
         if (vk_result == VK_SUCCESS || vk_result == VK_SUBOPTIMAL_KHR)
         {

@@ -38,7 +38,7 @@ class Shader
                       create_info.sType = ::vk::StructureType::eShaderModuleCreateInfo;
                       create_info.codeSize = spirv_view().size_bytes();
                       create_info.pCode = spirv_view().data();
-                      auto result = check_vk_expected(device.native_handle().createShaderModule(create_info));
+                      auto result = check_vk_expected(device.get().createShaderModule(create_info));
                       if (!result)
                       {
                           // TODO avoid exception once error handling is available

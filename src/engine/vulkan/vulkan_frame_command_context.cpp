@@ -50,13 +50,13 @@ VulkanFrameCommandContext::VulkanFrameCommandContext(const VulkanDevice &device,
     fence_info.flags = ::vk::FenceCreateFlagBits::eSignaled;
     for (std::uint32_t i = 0; i < frames_in_flight_; ++i)
     {
-        auto fence_result = check_vk_expected(device_.native_handle().createFence(fence_info));
+        auto fence_result = check_vk_expected(device_.get().createFence(fence_info));
         if (!fence_result)
         {
             throw arm::Exception("unable to create fence");
         }
 
-        auto semaphore_result = check_vk_expected(device_.native_handle().createSemaphore(semaphore_info));
+        auto semaphore_result = check_vk_expected(device_.get().createSemaphore(semaphore_info));
         if (!semaphore_result)
         {
             throw arm::Exception("unable to create semaphore");
@@ -67,14 +67,14 @@ VulkanFrameCommandContext::VulkanFrameCommandContext(const VulkanDevice &device,
         debug_name_info.pObjectName = debug_name_str.c_str();
         debug_name_info.objectType = ::vk::ObjectType::eFence;
         debug_name_info.objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkFence>(*fence_result.value()));
-        device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
+        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
 
         debug_name_str = std::format("Image Available Semaphore {}", i);
         debug_name_info.pObjectName = debug_name_str.c_str();
         debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
         debug_name_info.objectHandle =
             reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*semaphore_result.value()));
-        device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
+        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
 #endif
 
         in_flight_fences_.push_back(std::move(fence_result.value()));
@@ -84,13 +84,13 @@ VulkanFrameCommandContext::VulkanFrameCommandContext(const VulkanDevice &device,
 
 auto VulkanFrameCommandContext::wait_for_fence() -> void
 {
-    auto result = device_.native_handle().waitForFences(*current_fence(), VK_TRUE, UINT64_MAX);
+    auto result = device_.get().waitForFences(*current_fence(), VK_TRUE, UINT64_MAX);
     arm::ensure(result == ::vk::Result::eSuccess, "Failed to wait for fence");
 }
 
 auto VulkanFrameCommandContext::reset_fence() -> void
 {
-    device_.native_handle().resetFences(*current_fence());
+    device_.get().resetFences(*current_fence());
 }
 auto VulkanFrameCommandContext::advance_frame() -> void
 {

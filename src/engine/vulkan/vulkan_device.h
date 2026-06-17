@@ -30,8 +30,9 @@ class VulkanDevice
   public:
     VulkanDevice(const VulkanInstance &instance, const VulkanSurface &surface);
 
-    auto native_handle() const -> const ::vk::raii::Device &;
-    auto physical_device() const -> const ::vk::raii::PhysicalDevice &;
+    auto get() const -> const ::vk::raii::Device &;
+    auto native_handle() const -> const ::vk::Device;
+    auto physical_device_handle() const -> const ::vk::PhysicalDevice;
 
     auto graphics_queue() const -> ::vk::Queue;
     auto graphics_queue_family_index() const -> std::uint32_t;

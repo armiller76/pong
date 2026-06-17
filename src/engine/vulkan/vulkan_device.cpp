@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <set>
 #include <string_view>
 #include <utility>
@@ -42,8 +43,8 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
         ::vk::KHRSynchronization2ExtensionName,
         ::vk::KHRDynamicRenderingExtensionName};
 
-    auto available_device_result = check_vk_expected(instance.native_handle().enumeratePhysicalDevices());
-    if (!available_device_result)
+    auto available_device_result = check_vk_expected(instance.get().enumeratePhysicalDevices());
+    if (!available_device_result.has_value())
     {
         throw arm::Exception("unable to enumerate physical devices");
     }
@@ -226,14 +227,19 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
     };
 }
 
-auto VulkanDevice::native_handle() const -> const ::vk::raii::Device &
+auto VulkanDevice::get() const -> const ::vk::raii::Device &
 {
     return device_;
 }
 
-auto VulkanDevice::physical_device() const -> const ::vk::raii::PhysicalDevice &
+auto VulkanDevice::native_handle() const -> const ::vk::Device
 {
-    return physical_device_;
+    return *device_;
+}
+
+auto VulkanDevice::physical_device_handle() const -> const ::vk::PhysicalDevice
+{
+    return *physical_device_;
 }
 
 auto VulkanDevice::graphics_queue() const -> ::vk::Queue

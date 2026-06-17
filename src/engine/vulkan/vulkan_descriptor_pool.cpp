@@ -43,8 +43,7 @@ auto VulkanDescriptorPool::allocate_per_frame_descriptor_sets(
     descriptor_set_allocate_info.descriptorSetCount = static_cast<std::uint32_t>(layout_array.size());
     descriptor_set_allocate_info.pSetLayouts = layout_array.data();
 
-    auto descriptor_set_result =
-        check_vk_expected(device_.native_handle().allocateDescriptorSets(descriptor_set_allocate_info));
+    auto descriptor_set_result = check_vk_expected(device_.get().allocateDescriptorSets(descriptor_set_allocate_info));
     if (!descriptor_set_result)
     {
         throw arm::Exception("unable to allocate per-frame descriptor sets");
@@ -91,7 +90,7 @@ auto VulkanDescriptorPool::allocate_per_frame_descriptor_sets(
             light_write_descriptor_set,
         };
 
-        device_.native_handle().updateDescriptorSets(descriptors, {});
+        device_.get().updateDescriptorSets(descriptors, {});
     }
 
     return std::move(descriptor_set_result.value());
@@ -106,8 +105,7 @@ auto VulkanDescriptorPool::allocate_material_descriptor_set(const ::vk::raii::De
     descriptor_set_allocate_info.descriptorPool = *pool_;
     descriptor_set_allocate_info.descriptorSetCount = 1u;
     descriptor_set_allocate_info.pSetLayouts = &*layout;
-    auto descriptor_set_result =
-        check_vk_expected(device_.native_handle().allocateDescriptorSets(descriptor_set_allocate_info));
+    auto descriptor_set_result = check_vk_expected(device_.get().allocateDescriptorSets(descriptor_set_allocate_info));
     if (!descriptor_set_result)
     {
         throw arm::Exception("unalbe to allocate material descriptor set");
@@ -144,7 +142,7 @@ auto VulkanDescriptorPool::create_pool_() -> ::vk::raii::DescriptorPool
     pool_create_info.poolSizeCount = static_cast<std::uint32_t>(pool_sizes.size());
     pool_create_info.pPoolSizes = pool_sizes.data();
 
-    auto create_result = check_vk_expected(device_.native_handle().createDescriptorPool(pool_create_info));
+    auto create_result = check_vk_expected(device_.get().createDescriptorPool(pool_create_info));
     if (!create_result)
     {
         throw arm::Exception("unable to create descriptor pool");

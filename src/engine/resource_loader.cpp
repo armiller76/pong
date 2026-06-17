@@ -331,7 +331,7 @@ auto ResourceLoader::process_loaded_node_(
                 material_write_descriptor_set.pBufferInfo = &material_descriptor_buffer_info;
                 material_write_descriptor_set.pTexelBufferView = nullptr;
 
-                device_.native_handle().updateDescriptorSets(
+                device_.get().updateDescriptorSets(
                     {base_write_descriptor_set,
                      metal_write_descriptor_set,
                      normal_write_descriptor_set,

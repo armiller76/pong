@@ -10,7 +10,6 @@
 #include "utils/error.h"
 #include "utils/log.h"
 
-
 namespace pong
 
 {
@@ -21,7 +20,7 @@ VulkanImmediateCommandContext::VulkanImmediateCommandContext(const VulkanDevice 
     , buffer_{std::move(create_command_buffers(device_, name, 1u, *pool_).at(0))}
     , fence_{[&]()
              {
-                 auto fence_result = check_vk_expected(device_.native_handle().createFence(::vk::FenceCreateInfo{}));
+                 auto fence_result = check_vk_expected(device_.get().createFence(::vk::FenceCreateInfo{}));
                  if (!fence_result)
                  {
                      throw arm::Exception("unable to create fence");
@@ -45,10 +44,10 @@ auto VulkanImmediateCommandContext::fence() const -> ::vk::Fence
 
 auto VulkanImmediateCommandContext::wait_for_fence() const -> void
 {
-    auto result = device_.native_handle().waitForFences(*fence_, VK_TRUE, UINT64_MAX);
+    auto result = device_.get().waitForFences(*fence_, VK_TRUE, UINT64_MAX);
     arm::ensure(result == ::vk::Result::eSuccess, "Failed to wait for fence");
 
-    device_.native_handle().resetFences(*fence_);
+    device_.get().resetFences(*fence_);
 }
 
 } // namespace pong

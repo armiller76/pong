@@ -52,7 +52,7 @@ inline auto create_command_pool(const VulkanDevice &device, command_context_type
         }
         break;
     }
-    auto command_pool_result = check_vk_expected(device.native_handle().createCommandPool(pool_create_info));
+    auto command_pool_result = check_vk_expected(device.get().createCommandPool(pool_create_info));
     if (!command_pool_result)
     {
         throw arm::Exception("unable to create command pool '{}'", name);
@@ -64,7 +64,7 @@ inline auto create_command_pool(const VulkanDevice &device, command_context_type
     debug_name_info.objectType = ::vk::ObjectType::eCommandPool;
     debug_name_info.objectHandle =
         reinterpret_cast<std::uint64_t>(static_cast<::VkCommandPool>(*command_pool_result.value()));
-    device.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
+    device.get().setDebugUtilsObjectNameEXT(debug_name_info);
 #endif
 
     return std::move(command_pool_result.value());
@@ -82,7 +82,7 @@ inline auto create_command_buffers(
     cb_allocate_info.level = ::vk::CommandBufferLevel::ePrimary;
     cb_allocate_info.commandBufferCount = count;
 
-    auto command_buffers_result = check_vk_expected(device.native_handle().allocateCommandBuffers(cb_allocate_info));
+    auto command_buffers_result = check_vk_expected(device.get().allocateCommandBuffers(cb_allocate_info));
     if (!command_buffers_result)
     {
         throw arm::Exception("unable to allocate command buffers");
@@ -99,7 +99,7 @@ inline auto create_command_buffers(
         debug_name_info.objectType = ::vk::ObjectType::eCommandBuffer;
         debug_name_info.objectHandle =
             reinterpret_cast<std::uint64_t>(static_cast<::VkCommandBuffer>(*command_buffers_result.value().at(i)));
-        device.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
+        device.get().setDebugUtilsObjectNameEXT(debug_name_info);
     }
 #endif
 

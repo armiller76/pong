@@ -129,7 +129,7 @@ auto ImguiWrapper::init_vulkan_() -> void
     init_info.ApiVersion = VK_API_VERSION_1_3;
     init_info.Instance = *instance_.native_handle();
     init_info.PhysicalDevice = *device_.physical_device();
-    init_info.Device = *device_.native_handle();
+    init_info.Device = device_.native_handle();
     init_info.QueueFamily = device_.graphics_queue_family_index();
     init_info.Queue = device_.graphics_queue();
     init_info.DescriptorPool = nullptr;

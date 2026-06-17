@@ -121,7 +121,7 @@ auto VulkanSwapchain::create_() -> void
     swapchain_create_info.presentMode = present_mode_;
     swapchain_create_info.clipped = VK_TRUE;
     swapchain_create_info.oldSwapchain = *swapchain_ != VK_NULL_HANDLE ? *swapchain_ : ::vk::SwapchainKHR{};
-    auto swapchain_result = check_vk_expected(device_.native_handle().createSwapchainKHR(swapchain_create_info));
+    auto swapchain_result = check_vk_expected(device_.get().createSwapchainKHR(swapchain_create_info));
     if (!swapchain_result)
     {
         throw arm::Exception("uanble to create swapchain");
@@ -150,7 +150,7 @@ auto VulkanSwapchain::create_() -> void
         image_view_create_info.subresourceRange.baseArrayLayer = 0;
         image_view_create_info.subresourceRange.layerCount = 1;
 
-        auto view_result = check_vk_expected(device_.native_handle().createImageView(image_view_create_info));
+        auto view_result = check_vk_expected(device_.get().createImageView(image_view_create_info));
         if (!view_result)
         {
             throw arm::Exception("unable to create image view");
@@ -165,7 +165,7 @@ auto VulkanSwapchain::create_() -> void
 #endif
     for (std::size_t i = 0; i < images_.size(); ++i)
     {
-        auto semaphore_result = check_vk_expected(device_.native_handle().createSemaphore(::vk::SemaphoreCreateInfo{}));
+        auto semaphore_result = check_vk_expected(device_.get().createSemaphore(::vk::SemaphoreCreateInfo{}));
         if (!semaphore_result)
         {
             throw arm::Exception("unable to create semaphore");
@@ -176,7 +176,7 @@ auto VulkanSwapchain::create_() -> void
         debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
         debug_name_info.objectHandle =
             reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*semaphore_result.value()));
-        device_.native_handle().setDebugUtilsObjectNameEXT(debug_name_info);
+        device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
 #endif
         render_finished_semaphores_.push_back(std::move(semaphore_result.value()));
     }

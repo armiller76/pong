@@ -187,8 +187,8 @@ auto VulkanPipelineManager::create_per_frame_descriptor_set_layout_() -> ::vk::r
 
     // ---- SET 0 ---- //
 
-    auto result = check_vk_expected(
-        device_.native_handle().createDescriptorSetLayout(per_frame_descriptor_set_layout_create_info));
+    auto result =
+        check_vk_expected(device_.get().createDescriptorSetLayout(per_frame_descriptor_set_layout_create_info));
     if (!result)
     {
         // TODO avoid exception once error handling is available
@@ -250,8 +250,8 @@ auto VulkanPipelineManager::create_per_material_descriptor_set_layout_() -> ::vk
     per_material_descriptor_set_layout_create_info.pBindings = per_material_layout_bindings.data();
 
     // ---- SET 1 ---- //
-    auto result = check_vk_expected(
-        device_.native_handle().createDescriptorSetLayout(per_material_descriptor_set_layout_create_info));
+    auto result =
+        check_vk_expected(device_.get().createDescriptorSetLayout(per_material_descriptor_set_layout_create_info));
     if (!result)
     {
         // TODO avoid exception once error handling is available
@@ -286,7 +286,7 @@ auto VulkanPipelineManager::create_layout_() -> ::vk::raii::PipelineLayout
     pipeline_layout_create_info.pushConstantRangeCount = static_cast<std::uint32_t>(push_constant_ranges_.size());
     pipeline_layout_create_info.pPushConstantRanges = push_constant_ranges_.data();
 
-    auto result = check_vk_expected(device_.native_handle().createPipelineLayout(pipeline_layout_create_info));
+    auto result = check_vk_expected(device_.get().createPipelineLayout(pipeline_layout_create_info));
     if (!result)
     {
         // TODO avoid exception once error handling is available
@@ -548,7 +548,7 @@ auto VulkanPipelineManager::create_pipeline_(
     pipeline_create_info.basePipelineHandle = nullptr;
     pipeline_create_info.basePipelineIndex = 0;
 
-    auto result = check_vk_expected(device_.native_handle().createGraphicsPipeline(nullptr, pipeline_create_info));
+    auto result = check_vk_expected(device_.get().createGraphicsPipeline(nullptr, pipeline_create_info));
     if (!result)
     {
         // TODO avoid exception once error handling is available

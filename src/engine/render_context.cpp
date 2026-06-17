@@ -18,7 +18,6 @@
 #include "graphics/image.h"
 #include "platform/win32_window.h"
 
-
 namespace pong
 {
 
@@ -121,7 +120,7 @@ auto RenderContext::update_and_render(Scene &scene) -> void
 
 auto RenderContext::shutdown() -> void
 {
-    vulkan_device_.native_handle().waitIdle();
+    vulkan_device_.get().waitIdle();
 
     // TODO shutdown order?
     debug_renderer_.shutdown();
@@ -138,7 +137,7 @@ auto RenderContext::recreate_resources_() -> bool
         return false;
     }
 
-    vulkan_device_.native_handle().waitIdle();
+    vulkan_device_.get().waitIdle();
 
     vulkan_renderer_.recreate_resources();
     debug_renderer_.recreate();
