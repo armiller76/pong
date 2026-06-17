@@ -30,6 +30,11 @@ class VulkanDevice
   public:
     VulkanDevice(const VulkanInstance &instance, const VulkanSurface &surface);
 
+    VulkanDevice(const VulkanDevice &) = delete;
+    auto operator=(const VulkanDevice &) -> VulkanDevice & = delete;
+    VulkanDevice(VulkanDevice &&) noexcept = delete;
+    auto operator=(VulkanDevice &&) noexcept -> VulkanDevice & = delete;
+
     auto get() const -> const ::vk::raii::Device &;
     auto native_handle() const -> const ::vk::Device;
     auto get_physical_device() const -> const ::vk::raii::PhysicalDevice &;
@@ -49,24 +54,30 @@ class VulkanDevice
         -> std::pair<::vk::raii::Image, ::vk::raii::DeviceMemory>;
 
     auto get_sampler(const SamplerKey &key) -> ::vk::Sampler;
-    auto get_default_sampler_key() const -> const SamplerKey;
+    auto get_default_sampler_key() const -> const SamplerKey &;
 
   private:
+    const VulkanInstance &instance_;
+    const VulkanSurface &surface_;
+
     ::vk::raii::PhysicalDevice physical_device_;
     ::vk::raii::Device device_;
+
     std::uint32_t graphics_queue_family_index_;
     std::uint32_t present_queue_family_index_;
     ::vk::Queue graphics_queue_;
     ::vk::Queue present_queue_;
+
     std::unordered_map<SamplerKey, ::vk::raii::Sampler> samplers_;
-    SamplerKey fallback_sampler_key_;
+    const SamplerKey fallback_sampler_key_;
 
-    bool supports_api13_;
-    bool supports_dynamic_rendering_;
-    bool supports_sync2_;
+    VulkanDeviceInfo chosen_device_info_;
 
-    auto score_device_(VulkanDeviceInfo &info, const VulkanSurface &surface, const ::vk::raii::PhysicalDevice &device)
-        -> bool;
+  private:
+    auto score_device_(VulkanDeviceInfo &info, const ::vk::raii::PhysicalDevice &device) -> bool;
+    auto choose_physical_device_() -> void;
+    auto create_device_() -> void;
+
 }; // class VulkanDevice
 
 } // namespace pong

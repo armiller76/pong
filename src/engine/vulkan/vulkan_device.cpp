@@ -20,10 +20,27 @@
 namespace
 {
 
-static constexpr uint32_t DISCRETE_GPU_BONUS = 500;
-static constexpr uint32_t INTEGRATED_GPU_BONUS = 250;
-static constexpr uint32_t COMBINED_QUEUE_BONUS = 50;
-static constexpr uint32_t SEPARATE_QUEUE_BONUS = 25;
+constexpr auto DISCRETE_GPU_BONUS = 500u;
+constexpr auto INTEGRATED_GPU_BONUS = 250u;
+constexpr auto COMBINED_QUEUE_BONUS = 50u;
+constexpr auto SEPARATE_QUEUE_BONUS = 25u;
+
+constexpr auto uint32_max = std::numeric_limits<std::uint32_t>::max();
+
+constexpr std::array<const char *, 1> required_device_extensions_if_13 = {
+    ::vk::KHRSwapchainExtensionName,
+};
+constexpr std::array<const char *, 3> required_device_extensions_no_13 = {
+    ::vk::KHRSwapchainExtensionName,
+    ::vk::KHRSynchronization2ExtensionName,
+    ::vk::KHRDynamicRenderingExtensionName,
+};
+
+const auto preferred_depth_formats = std::vector<::vk::Format>{
+    ::vk::Format::eD32SfloatS8Uint,
+    ::vk::Format::eD24UnormS8Uint,
+    ::vk::Format::eD32Sfloat,
+};
 
 } // anonymous namespace
 
@@ -31,22 +48,281 @@ namespace pong
 {
 
 VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &surface)
-    : physical_device_{nullptr}
+    : instance_{instance}
+    , surface_{surface}
+    , physical_device_{nullptr}
     , device_{nullptr}
+    , fallback_sampler_key_{
+          .mag_filter_mode = FilterMode::Linear,
+          .min_filter_mode = FilterMode::Linear,
+          .mip_map_mode = MipMapMode::Linear,
+          .u_wrap = WrapMode::Repeat,
+          .v_wrap = WrapMode::Repeat,
+          .w_wrap = WrapMode::Repeat,
+          .enable_anisotropy = false,
+          .max_anisotropy = 0.0f,
+          .enable_compare = false,
+          .compare_op = CompareOp::Never,
+          .min_lod = 0.0f,
+          .max_lod = 0.0f,
+          .mip_lod_bias = 0.0f,
+          .enable_border_color = false,
+          .unnormalized_coordinates = false}
 {
     arm::log::debug("VulkanDevice constructor");
-    arm::log::debug("Starting device selection and creation...");
 
-    constexpr std::array<const char *, 1> required_device_extensions_if_13 = {
-        ::vk::KHRSwapchainExtensionName,
-    };
-    constexpr std::array<const char *, 3> required_device_extensions_no_13 = {
-        ::vk::KHRSwapchainExtensionName,
-        ::vk::KHRSynchronization2ExtensionName,
-        ::vk::KHRDynamicRenderingExtensionName};
+    choose_physical_device_();
+    arm::ensure(physical_device_ != nullptr, "No physical device found");
+    arm::ensure(graphics_queue_family_index_ != uint32_max, "No graphics queue family found");
+    arm::ensure(present_queue_family_index_ != uint32_max, "No present queue family found");
+    arm::log::debug(
+        "Selected physical device: {} (graphics queue index {}, present queue index {})",
+        std::string_view(physical_device_.getProperties().deviceName),
+        graphics_queue_family_index_,
+        present_queue_family_index_);
+
+    create_device_();
+    arm::ensure(device_ != nullptr, "Device was not created");
+
+    arm::log::debug(
+        "Device creation complete...\n\tAPI Version: {}\n\tDynamic Rendering: {}\n\tSynchronization2: {}",
+        chosen_device_info_.supports_api13 ? ">= 1.3" : "< 1.3",
+        chosen_device_info_.supports_dynamic_rendering ? "Supported" : "Not Supported",
+        chosen_device_info_.supports_sync2 ? "Supported" : "Not Supported");
+}
+
+auto VulkanDevice::get() const -> const ::vk::raii::Device &
+{
+    return device_;
+}
+
+auto VulkanDevice::native_handle() const -> const ::vk::Device
+{
+    return *device_;
+}
+
+auto VulkanDevice::get_physical_device() const -> const ::vk::raii::PhysicalDevice &
+{
+    return physical_device_;
+}
+
+auto VulkanDevice::physical_device_native_handle() const -> const ::vk::PhysicalDevice
+{
+    return *physical_device_;
+}
+
+auto VulkanDevice::graphics_queue() const -> ::vk::Queue
+{
+    return graphics_queue_;
+}
+
+auto VulkanDevice::graphics_queue_family_index() const -> std::uint32_t
+{
+    return graphics_queue_family_index_;
+}
+
+auto VulkanDevice::present_queue() const -> ::vk::Queue
+{
+    return present_queue_;
+}
+
+auto VulkanDevice::present_queue_family_index() const -> std::uint32_t
+{
+    return present_queue_family_index_;
+}
+
+auto VulkanDevice::supports_dynamic_rendering() const -> bool
+{
+    return chosen_device_info_.supports_dynamic_rendering;
+}
+
+auto VulkanDevice::find_memory_type_index(
+    const ::vk::MemoryRequirements requirements,
+    const ::vk::MemoryPropertyFlags flags) const -> std::uint32_t
+{
+    const auto device_memory_info = physical_device_.getMemoryProperties();
+    for (std::uint32_t i = 0; i < device_memory_info.memoryTypeCount; ++i)
+    {
+        const auto type_supported = bool(requirements.memoryTypeBits & (1u << i));
+        const auto properties_match = (device_memory_info.memoryTypes[i].propertyFlags & flags) == flags;
+
+        if (type_supported && properties_match)
+        {
+            return i;
+        }
+    }
+
+    throw arm::Exception("unable to find usable gpu memory");
+}
+
+auto VulkanDevice::choose_depth_format() const -> ::vk::Format
+{
+    arm::ensure(physical_device_ != nullptr, "can't choose depth format without a device");
+    for (const auto &entry : preferred_depth_formats)
+    {
+        auto format_properties = physical_device_.getFormatProperties(entry);
+        if (format_properties.optimalTilingFeatures & ::vk::FormatFeatureFlagBits::eDepthStencilAttachment)
+        {
+            return entry;
+        }
+    }
+    throw arm::Exception("Unable to find suitable format for depth buffer");
+}
+
+auto VulkanDevice::allocate_image(::vk::ImageCreateInfo &info, ::vk::MemoryPropertyFlags flags) const
+    -> std::pair<::vk::raii::Image, ::vk::raii::DeviceMemory>
+{
+    arm::ensure(physical_device_ != nullptr, "can't allocate an image without a device");
+    auto image_result = check_vk_expected(device_.createImage(info));
+    if (!image_result.has_value())
+    {
+        throw arm::Exception("unable to allocate image");
+    }
+
+    auto &image = image_result.value();
+    auto requirements = image.getMemoryRequirements();
+    auto memory_index = find_memory_type_index(requirements, flags);
+    auto memory_allocate_info = ::vk::MemoryAllocateInfo{};
+    memory_allocate_info.sType = ::vk::StructureType::eMemoryAllocateInfo;
+    memory_allocate_info.pNext = nullptr;
+    memory_allocate_info.allocationSize = requirements.size;
+    memory_allocate_info.memoryTypeIndex = memory_index;
+
+    auto image_memory_result = check_vk_expected(device_.allocateMemory(memory_allocate_info));
+    if (!image_memory_result.has_value())
+    {
+        throw arm::Exception("unable to allocate image memory");
+    }
+
+    auto &memory = image_memory_result.value();
+    image.bindMemory(memory, 0);
+
+    return {std::move(image), std::move(memory)};
+}
+
+auto VulkanDevice::get_sampler(const SamplerKey &key) -> ::vk::Sampler
+{
+    arm::ensure(physical_device_ != nullptr, "can't get samplers without a device");
+    auto result = samplers_.find(key);
+    if (result != samplers_.end())
+    {
+        return *result->second;
+    }
+    else
+    {
+        auto create_info = ::vk::SamplerCreateInfo{};
+        create_info.sType = ::vk::StructureType::eSamplerCreateInfo;
+        create_info.pNext = nullptr;
+        create_info.flags = {};
+        create_info.magFilter = to_vk(key.mag_filter_mode);
+        create_info.minFilter = to_vk(key.min_filter_mode);
+        create_info.mipmapMode = to_vk(key.mip_map_mode);
+        create_info.addressModeU = to_vk(key.u_wrap);
+        create_info.addressModeV = to_vk(key.v_wrap);
+        create_info.addressModeW = to_vk(key.w_wrap);
+        create_info.mipLodBias = key.mip_lod_bias;
+        create_info.anisotropyEnable = key.enable_anisotropy ? ::vk::True : ::vk::False;
+        create_info.maxAnisotropy = key.max_anisotropy;
+        create_info.compareEnable = key.enable_compare ? ::vk::True : ::vk::False;
+        create_info.compareOp = to_vk(key.compare_op);
+        create_info.minLod = key.min_lod;
+        create_info.maxLod = key.max_lod;
+        create_info.borderColor = ::vk::BorderColor::eFloatTransparentBlack;
+        create_info.unnormalizedCoordinates = key.unnormalized_coordinates ? ::vk::True : ::vk::False;
+        auto sampler_result = check_vk_expected(device_.createSampler(create_info));
+        if (!sampler_result.has_value())
+        {
+            throw arm::Exception("unable to create sampler");
+        }
+        else
+        {
+            auto [result, inserted] = samplers_.emplace(key, std::move(sampler_result.value()));
+            return *result->second;
+        }
+    }
+}
+
+auto VulkanDevice::get_default_sampler_key() const -> const SamplerKey &
+{
+    return fallback_sampler_key_;
+}
+
+auto VulkanDevice::score_device_(VulkanDeviceInfo &info, const ::vk::raii::PhysicalDevice &device) -> bool
+{
+    auto result = false;
+
+    const auto queue_family_properties = device.getQueueFamilyProperties();
     constexpr auto uint32_max = std::numeric_limits<std::uint32_t>::max();
 
-    auto available_device_result = check_vk_expected(instance.get().enumeratePhysicalDevices());
+    auto graphics_index = uint32_max;
+    auto present_index = uint32_max;
+    auto combined_index = uint32_max;
+
+    for (std::uint32_t i = 0; i < queue_family_properties.size(); ++i)
+    {
+        const auto has_graphics = (queue_family_properties[i].queueFlags & ::vk::QueueFlagBits::eGraphics)
+                                  != static_cast<::vk::QueueFlags>(0);
+        const auto has_present = surface_.get_present_support(device, i);
+
+        if (has_graphics && graphics_index == uint32_max)
+        {
+            graphics_index = i;
+        }
+
+        if (has_present && present_index == uint32_max)
+        {
+            present_index = i;
+        }
+
+        if (has_graphics && has_present && combined_index == uint32_max)
+        {
+            combined_index = i;
+            break;
+        }
+    }
+
+    if (combined_index != uint32_max)
+    {
+        info.graphics_index = combined_index;
+        info.present_index = combined_index;
+        info.score += COMBINED_QUEUE_BONUS;
+        result = true;
+    }
+    else if (graphics_index != uint32_max && present_index != uint32_max)
+    {
+        info.graphics_index = graphics_index;
+        info.present_index = present_index;
+        info.score += SEPARATE_QUEUE_BONUS;
+        result = true;
+    }
+
+    const auto device_properties = device.getProperties();
+    if (device_properties.deviceType == ::vk::PhysicalDeviceType::eDiscreteGpu)
+    {
+        info.score += DISCRETE_GPU_BONUS;
+    }
+    else if (device_properties.deviceType == ::vk::PhysicalDeviceType::eIntegratedGpu)
+    {
+        info.score += INTEGRATED_GPU_BONUS;
+    }
+
+    const auto device_memory_properties = device.getMemoryProperties();
+    auto largest_heap_size = ::vk::DeviceSize{};
+    for (const auto &heap : device_memory_properties.memoryHeaps)
+    {
+        if (heap.flags & ::vk::MemoryHeapFlagBits::eDeviceLocal)
+        {
+            largest_heap_size = heap.size > largest_heap_size ? heap.size : largest_heap_size;
+        }
+    }
+    info.score += static_cast<uint32_t>(largest_heap_size / (256u * 1024u * 1024u));
+
+    return result;
+}
+
+auto VulkanDevice::choose_physical_device_() -> void
+{
+    auto available_device_result = check_vk_expected(instance_.get().enumeratePhysicalDevices());
     if (!available_device_result.has_value())
     {
         throw arm::Exception("unable to enumerate physical devices");
@@ -118,7 +394,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
 
         if (has_extensions)
         {
-            if (score_device_(vulkan_device_info, surface, physical_device))
+            if (score_device_(vulkan_device_info, physical_device))
             {
                 // score_device_ returns true if the device has graphics and present support
                 device_infos.push_back(std::move(vulkan_device_info));
@@ -133,20 +409,15 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
     arm::ensure(!device_infos.empty(), "Unable to find a suitable graphics device");
 
     std::ranges::sort(device_infos, std::greater{}, &VulkanDeviceInfo::score);
+    chosen_device_info_ = std::move(device_infos[0]);
 
-    const auto &chosen_device = device_infos[0];
-    physical_device_ = ::vk::raii::PhysicalDevice(instance.get(), chosen_device.physical_device);
-    graphics_queue_family_index_ = chosen_device.graphics_index;
-    present_queue_family_index_ = chosen_device.present_index;
-    arm::log::debug(
-        "Selected physical device: {} (graphics queue index {}, present queue index {})",
-        std::string_view(physical_device_.getProperties().deviceName),
-        graphics_queue_family_index_,
-        present_queue_family_index_);
+    physical_device_ = ::vk::raii::PhysicalDevice(instance_.get(), chosen_device_info_.physical_device);
+    graphics_queue_family_index_ = chosen_device_info_.graphics_index;
+    present_queue_family_index_ = chosen_device_info_.present_index;
+}
 
-    arm::ensure(graphics_queue_family_index_ != uint32_max, "No graphics queue family found");
-    arm::ensure(present_queue_family_index_ != uint32_max, "No present queue family found");
-
+auto VulkanDevice::create_device_() -> void
+{
     auto queue_priority = 1.0f;
     auto queue_create_infos = std::vector<vk::DeviceQueueCreateInfo>{};
 
@@ -168,10 +439,10 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
     [[maybe_unused]] auto feature_sync2 = ::vk::PhysicalDeviceSynchronization2Features{};
     [[maybe_unused]] auto feature_dynamic_rendering = ::vk::PhysicalDeviceDynamicRenderingFeatures{};
 
-    if (chosen_device.supports_api13)
+    if (chosen_device_info_.supports_api13)
     {
-        feature_api13.synchronization2 = chosen_device.supports_sync2 ? ::vk::True : ::vk::False;
-        feature_api13.dynamicRendering = chosen_device.supports_dynamic_rendering ? ::vk::True : ::vk::False;
+        feature_api13.synchronization2 = chosen_device_info_.supports_sync2 ? ::vk::True : ::vk::False;
+        feature_api13.dynamicRendering = chosen_device_info_.supports_dynamic_rendering ? ::vk::True : ::vk::False;
 
         device_create_info = {{}, queue_create_infos, {}, required_device_extensions_if_13, nullptr};
         device_create_info.pNext = &feature_api13;
@@ -179,8 +450,8 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
     else
     {
         feature_dynamic_rendering.dynamicRendering =
-            chosen_device.supports_dynamic_rendering ? ::vk::True : ::vk::False;
-        feature_sync2.synchronization2 = chosen_device.supports_sync2 ? ::vk::True : ::vk::False;
+            chosen_device_info_.supports_dynamic_rendering ? ::vk::True : ::vk::False;
+        feature_sync2.synchronization2 = chosen_device_info_.supports_sync2 ? ::vk::True : ::vk::False;
         feature_sync2.pNext = &feature_dynamic_rendering;
 
         device_create_info = {{}, queue_create_infos, {}, required_device_extensions_no_13, nullptr};
@@ -207,270 +478,6 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
         throw arm::Exception("unable to get present queue from device");
     }
     present_queue_ = std::move(present_queue_result.value());
-
-    supports_api13_ = chosen_device.supports_api13;
-    supports_dynamic_rendering_ = chosen_device.supports_dynamic_rendering;
-    supports_sync2_ = chosen_device.supports_sync2;
-
-    arm::log::debug(
-        "Device creation complete...\n\tAPI Version: {}\n\tDynamic Rendering: {}\n\tSynchronization2: {}",
-        supports_api13_ ? ">= 1.3" : "< 1.3",
-        supports_dynamic_rendering_ ? "Supported" : "Not Supported",
-        supports_sync2_ ? "Supported" : "Not Supported");
-
-    fallback_sampler_key_ = SamplerKey{
-        .mag_filter_mode = FilterMode::Linear,
-        .min_filter_mode = FilterMode::Linear,
-        .mip_map_mode = MipMapMode::Linear,
-        .u_wrap = WrapMode::Repeat,
-        .v_wrap = WrapMode::Repeat,
-        .w_wrap = WrapMode::Repeat,
-        .enable_anisotropy = false,
-        .max_anisotropy = 0.0f,
-        .enable_compare = false,
-        .compare_op = CompareOp::Never,
-        .min_lod = 0.0f,
-        .max_lod = 0.0f,
-        .mip_lod_bias = 0.0f,
-        .enable_border_color = false,
-        .unnormalized_coordinates = false,
-    };
-}
-
-auto VulkanDevice::get() const -> const ::vk::raii::Device &
-{
-    return device_;
-}
-
-auto VulkanDevice::native_handle() const -> const ::vk::Device
-{
-    return *device_;
-}
-
-auto VulkanDevice::get_physical_device() const -> const ::vk::raii::PhysicalDevice &
-{
-    return physical_device_;
-}
-
-auto VulkanDevice::physical_device_native_handle() const -> const ::vk::PhysicalDevice
-{
-    return *physical_device_;
-}
-
-auto VulkanDevice::graphics_queue() const -> ::vk::Queue
-{
-    return graphics_queue_;
-}
-
-auto VulkanDevice::graphics_queue_family_index() const -> std::uint32_t
-{
-    return graphics_queue_family_index_;
-}
-
-auto VulkanDevice::present_queue() const -> ::vk::Queue
-{
-    return present_queue_;
-}
-
-auto VulkanDevice::present_queue_family_index() const -> std::uint32_t
-{
-    return present_queue_family_index_;
-}
-
-auto VulkanDevice::supports_dynamic_rendering() const -> bool
-{
-    return supports_dynamic_rendering_;
-}
-
-auto VulkanDevice::find_memory_type_index(
-    const ::vk::MemoryRequirements requirements,
-    const ::vk::MemoryPropertyFlags flags) const -> std::uint32_t
-{
-    const auto device_memory_info = physical_device_.getMemoryProperties();
-    for (std::uint32_t i = 0; i < device_memory_info.memoryTypeCount; ++i)
-    {
-        const auto type_supported = bool(requirements.memoryTypeBits & (1u << i));
-        const auto properties_match = (device_memory_info.memoryTypes[i].propertyFlags & flags) == flags;
-
-        if (type_supported && properties_match)
-        {
-            return i;
-        }
-    }
-
-    throw arm::Exception("unable to find usable gpu memory");
-}
-
-auto VulkanDevice::choose_depth_format() const -> ::vk::Format
-{
-    // TODO Consider parameterizing preferred depth formats
-    auto preferred = std::vector{
-        ::vk::Format::eD32SfloatS8Uint,
-        ::vk::Format::eD24UnormS8Uint,
-        ::vk::Format::eD32Sfloat,
-    };
-
-    for (const auto &entry : preferred)
-    {
-        auto format_properties = physical_device_.getFormatProperties(entry);
-        if (format_properties.optimalTilingFeatures & ::vk::FormatFeatureFlagBits::eDepthStencilAttachment)
-        {
-            return entry;
-        }
-    }
-    throw arm::Exception("Unable to find suitable format for depth buffer");
-}
-
-auto VulkanDevice::allocate_image(::vk::ImageCreateInfo &info, ::vk::MemoryPropertyFlags flags) const
-    -> std::pair<::vk::raii::Image, ::vk::raii::DeviceMemory>
-{
-    auto image_result = check_vk_expected(device_.createImage(info));
-    if (!image_result.has_value())
-    {
-        throw arm::Exception("unable to allocate image");
-    }
-
-    auto &image = image_result.value();
-    auto requirements = image.getMemoryRequirements();
-    auto memory_index = find_memory_type_index(requirements, flags);
-    auto memory_allocate_info = ::vk::MemoryAllocateInfo{};
-    memory_allocate_info.sType = ::vk::StructureType::eMemoryAllocateInfo;
-    memory_allocate_info.pNext = nullptr;
-    memory_allocate_info.allocationSize = requirements.size;
-    memory_allocate_info.memoryTypeIndex = memory_index;
-
-    auto image_memory_result = check_vk_expected(device_.allocateMemory(memory_allocate_info));
-    if (!image_memory_result.has_value())
-    {
-        throw arm::Exception("unable to allocate image memory");
-    }
-
-    auto &memory = image_memory_result.value();
-    image.bindMemory(memory, 0);
-
-    return {std::move(image), std::move(memory)};
-}
-
-auto VulkanDevice::get_sampler(const SamplerKey &key) -> ::vk::Sampler
-{
-    auto result = samplers_.find(key);
-    if (result != samplers_.end())
-    {
-        return *result->second;
-    }
-    else
-    {
-        auto create_info = ::vk::SamplerCreateInfo{};
-        create_info.sType = ::vk::StructureType::eSamplerCreateInfo;
-        create_info.pNext = nullptr;
-        create_info.flags = {};
-        create_info.magFilter = to_vk(key.mag_filter_mode);
-        create_info.minFilter = to_vk(key.min_filter_mode);
-        create_info.mipmapMode = to_vk(key.mip_map_mode);
-        create_info.addressModeU = to_vk(key.u_wrap);
-        create_info.addressModeV = to_vk(key.v_wrap);
-        create_info.addressModeW = to_vk(key.w_wrap);
-        create_info.mipLodBias = key.mip_lod_bias;
-        create_info.anisotropyEnable = key.enable_anisotropy ? ::vk::True : ::vk::False;
-        create_info.maxAnisotropy = key.max_anisotropy;
-        create_info.compareEnable = key.enable_compare ? ::vk::True : ::vk::False;
-        create_info.compareOp = to_vk(key.compare_op);
-        create_info.minLod = key.min_lod;
-        create_info.maxLod = key.max_lod;
-        create_info.borderColor = ::vk::BorderColor::eFloatTransparentBlack;
-        create_info.unnormalizedCoordinates = key.unnormalized_coordinates ? ::vk::True : ::vk::False;
-        auto sampler_result = check_vk_expected(device_.createSampler(create_info));
-        if (!sampler_result.has_value())
-        {
-            throw arm::Exception("unable to create sampler");
-        }
-        else
-        {
-            auto [result, inserted] = samplers_.emplace(key, std::move(sampler_result.value()));
-            return *result->second;
-        }
-    }
-}
-
-auto VulkanDevice::get_default_sampler_key() const -> const SamplerKey
-{
-    return fallback_sampler_key_;
-}
-
-auto VulkanDevice::score_device_(
-    VulkanDeviceInfo &info,
-    const VulkanSurface &surface,
-    const ::vk::raii::PhysicalDevice &device) -> bool
-{
-    auto result = false;
-
-    const auto queue_family_properties = device.getQueueFamilyProperties();
-    constexpr auto uint32_max = std::numeric_limits<std::uint32_t>::max();
-
-    auto graphics_index = uint32_max;
-    auto present_index = uint32_max;
-    auto combined_index = uint32_max;
-
-    for (std::uint32_t i = 0; i < queue_family_properties.size(); ++i)
-    {
-        const auto has_graphics = (queue_family_properties[i].queueFlags & ::vk::QueueFlagBits::eGraphics)
-                                  != static_cast<::vk::QueueFlags>(0);
-        const auto has_present = surface.get_present_support(device, i);
-
-        if (has_graphics && graphics_index == uint32_max)
-        {
-            graphics_index = i;
-        }
-
-        if (has_present && present_index == uint32_max)
-        {
-            present_index = i;
-        }
-
-        if (has_graphics && has_present && combined_index == uint32_max)
-        {
-            combined_index = i;
-            break;
-        }
-    }
-
-    if (combined_index != uint32_max)
-    {
-        info.graphics_index = combined_index;
-        info.present_index = combined_index;
-        info.score += COMBINED_QUEUE_BONUS;
-        result = true;
-    }
-    else if (graphics_index != uint32_max && present_index != uint32_max)
-    {
-        info.graphics_index = graphics_index;
-        info.present_index = present_index;
-        info.score += SEPARATE_QUEUE_BONUS;
-        result = true;
-    }
-
-    const auto device_properties = device.getProperties();
-    if (device_properties.deviceType == ::vk::PhysicalDeviceType::eDiscreteGpu)
-    {
-        info.score += DISCRETE_GPU_BONUS;
-    }
-    else if (device_properties.deviceType == ::vk::PhysicalDeviceType::eIntegratedGpu)
-    {
-        info.score += INTEGRATED_GPU_BONUS;
-    }
-
-    const auto device_memory_properties = device.getMemoryProperties();
-    auto largest_heap_size = ::vk::DeviceSize{};
-    for (const auto &heap : device_memory_properties.memoryHeaps)
-    {
-        if (heap.flags & ::vk::MemoryHeapFlagBits::eDeviceLocal)
-        {
-            largest_heap_size = heap.size > largest_heap_size ? heap.size : largest_heap_size;
-        }
-    }
-    info.score += static_cast<uint32_t>(largest_heap_size / (256u * 1024u * 1024u));
-
-    return result;
 }
 
 } // namespace pong
