@@ -18,9 +18,10 @@
 namespace pong
 {
 
-VulkanInstance::VulkanInstance(const ::vk::raii::Context &context, const RenderContextInfo &render_context_info)
+VulkanInstance::VulkanInstance(const RenderContextInfo &render_context_info)
     : application_name_{render_context_info.app_name}
     , engine_name_{render_context_info.engine_name}
+    , context_{}
     , instance_{nullptr}
     , debug_messenger_{nullptr}
 {
@@ -77,7 +78,7 @@ VulkanInstance::VulkanInstance(const ::vk::raii::Context &context, const RenderC
     vk_instance_create_info.enabledExtensionCount = static_cast<std::uint32_t>(required_extensions.size());
     vk_instance_create_info.ppEnabledExtensionNames = required_extensions.data();
 
-    auto create_instance_result = check_vk_expected(context.createInstance(vk_instance_create_info));
+    auto create_instance_result = check_vk_expected(context_.createInstance(vk_instance_create_info));
     if (!create_instance_result)
     {
         throw arm::Exception("unable to create Vulkan instance");

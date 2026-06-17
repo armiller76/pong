@@ -34,8 +34,7 @@ RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32
     , frame_begin_timestamp_{std::chrono::steady_clock::now()}
     , last_window_recreate_time_{std::chrono::steady_clock::now()}
     , was_resize_pending_{false}
-    , vulkan_context_{}
-    , vulkan_instance_{vulkan_context_, render_context_info}
+    , vulkan_instance_{render_context_info}
     , vulkan_surface_{vulkan_instance_, win32_window_.win32_handles()}
     , vulkan_device_{vulkan_instance_, vulkan_surface_}
     , vulkan_descriptor_pool_{vulkan_device_, 2u} // TODO magic number (frames in flight)

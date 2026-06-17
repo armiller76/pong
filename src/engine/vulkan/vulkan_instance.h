@@ -11,7 +11,7 @@ namespace pong
 class VulkanInstance
 {
   public:
-    VulkanInstance(const ::vk::raii::Context &context, const RenderContextInfo &render_context_info);
+    VulkanInstance(const RenderContextInfo &render_context_info);
 
     auto get() const -> const ::vk::raii::Instance &;
 
@@ -20,6 +20,7 @@ class VulkanInstance
   private:
     const std::string application_name_;
     const std::string engine_name_;
+    ::vk::raii::Context context_;
     ::vk::raii::Instance instance_;
     ::vk::raii::DebugUtilsMessengerEXT debug_messenger_;
 

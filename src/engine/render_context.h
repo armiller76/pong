@@ -51,8 +51,6 @@ class RenderContext
     std::chrono::steady_clock::time_point last_window_recreate_time_;
     bool was_resize_pending_;
 
-    ::vk::raii::Context vulkan_context_;
-
     VulkanInstance vulkan_instance_;
     VulkanSurface vulkan_surface_;
     VulkanDevice vulkan_device_;
