@@ -47,10 +47,9 @@ class RenderContext
     Win32Window &win32_window_;
     InputState &input_state_;
 
+    std::chrono::steady_clock::time_point frame_begin_timestamp_;
     std::chrono::steady_clock::time_point last_window_recreate_time_;
     bool was_resize_pending_;
-
-    std::chrono::steady_clock::time_point frame_begin_timestamp_;
 
     ::vk::raii::Context vulkan_context_;
 
@@ -61,6 +60,7 @@ class RenderContext
     ResourceManager resource_manager_;
     VulkanPipelineManager vulkan_pipeline_manager_;
     ResourceLoader resource_loader_;
+
     VulkanRenderer vulkan_renderer_;
 
     ImguiWrapper debug_renderer_;

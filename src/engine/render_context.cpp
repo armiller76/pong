@@ -31,9 +31,9 @@ RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32
     , version_{render_context_info.version}
     , win32_window_{win32_window}
     , input_state_{input_state}
+    , frame_begin_timestamp_{std::chrono::steady_clock::now()}
     , last_window_recreate_time_{std::chrono::steady_clock::now()}
     , was_resize_pending_{false}
-    , frame_begin_timestamp_{std::chrono::steady_clock::now()}
     , vulkan_context_{}
     , vulkan_instance_{vulkan_context_, render_context_info}
     , vulkan_surface_{vulkan_instance_, win32_window_.win32_handles()}
@@ -131,7 +131,7 @@ auto RenderContext::shutdown() -> void
 // returns true if recreated, false if minimized
 auto RenderContext::recreate_resources_() -> bool
 {
-    auto current_caps = vulkan_device_.physical_device().getSurfaceCapabilitiesKHR(vulkan_surface_.native_handle());
+    auto current_caps = vulkan_device_.get_physical_device().getSurfaceCapabilitiesKHR(vulkan_surface_.native_handle());
     if (current_caps.currentExtent.height == 0 || current_caps.currentExtent.width == 0)
     {
         return false;
