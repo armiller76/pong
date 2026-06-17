@@ -17,7 +17,6 @@
 #include "utils/error.h"
 #include "utils/exception.h"
 
-
 namespace
 {
 
@@ -149,9 +148,20 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
     arm::ensure(present_queue_family_index_ != uint32_max, "No present queue family found");
 
     auto queue_priority = 1.0f;
-    auto queue_create_infos = std::vector<::vk::DeviceQueueCreateInfo>(
-        {{{}, graphics_queue_family_index_, 1u, &queue_priority},
-         {{}, present_queue_family_index_, 1u, &queue_priority}});
+    auto queue_create_infos = std::vector<vk::DeviceQueueCreateInfo>{};
+
+    // putting indices into a set deduplicates them in cases when graphics and present are the same queue.
+    // in most cases, the set will only have one entry
+    std::set<uint32_t> queue_families_set = {graphics_queue_family_index_, present_queue_family_index_};
+
+    for (uint32_t queue_family : queue_families_set)
+    {
+        queue_create_infos.emplace_back(
+            ::vk::DeviceQueueCreateFlags{},
+            queue_family,
+            1, // queue count
+            &queue_priority);
+    }
 
     auto device_create_info = vk::DeviceCreateInfo{};
     [[maybe_unused]] auto feature_api13 = ::vk::PhysicalDeviceVulkan13Features{};
