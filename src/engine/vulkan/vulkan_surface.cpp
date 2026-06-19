@@ -10,16 +10,21 @@
 #include "utils/exception.h"
 #include "utils/log.h"
 
-
 namespace pong
 {
 
 VulkanSurface::VulkanSurface(const VulkanInstance &vk_instance, const Win32WindowHandles &handles)
     : surface_{[&]
                {
-                   auto surface_result = check_vk_expected(vk_instance.get().createWin32SurfaceKHR(
-                       ::vk::Win32SurfaceCreateInfoKHR{{}, handles.instance, handles.window}));
-                   if (!surface_result)
+                   auto surface_create_info = ::vk::Win32SurfaceCreateInfoKHR{
+                       .sType = ::vk::StructureType::eWin32SurfaceCreateInfoKHR,
+                       .pNext = nullptr,
+                       .flags = {},
+                       .hinstance = handles.instance,
+                       .hwnd = handles.window};
+                   auto surface_result =
+                       check_vk_expected(vk_instance.get().createWin32SurfaceKHR(surface_create_info));
+                   if (!surface_result.has_value())
                    {
                        throw arm::Exception("unable to create Vulkan surface");
                    }

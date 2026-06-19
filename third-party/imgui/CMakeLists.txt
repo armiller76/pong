@@ -3,7 +3,17 @@ add_library(
   STATIC
 )
 
-target_sources(imgui PRIVATE imgui_wrapper.cpp)
+target_sources(
+  imgui
+  PRIVATE imgui_wrapper.cpp
+          ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
+          ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
+          ${imgui_SOURCE_DIR}/imgui.cpp
+          ${imgui_SOURCE_DIR}/imgui_draw.cpp
+          ${imgui_SOURCE_DIR}/imgui_tables.cpp
+          ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+          ${imgui_SOURCE_DIR}/imgui_demo.cpp
+)
 
 target_include_directories(
   imgui
@@ -12,14 +22,4 @@ target_include_directories(
          ${imgui_SOURCE_DIR}
          ${imgui_SOURCE_DIR}/backends
          ${Vulkan_INCLUDE_DIRS}
-)
-target_sources(
-  imgui
-  PRIVATE ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
-          ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
-          ${imgui_SOURCE_DIR}/imgui.cpp
-          ${imgui_SOURCE_DIR}/imgui_draw.cpp
-          ${imgui_SOURCE_DIR}/imgui_tables.cpp
-          ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-          ${imgui_SOURCE_DIR}/imgui_demo.cpp
 )

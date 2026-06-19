@@ -1,5 +1,6 @@
 #include "vulkan_swapchain.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <format>
 #include <utility>
@@ -194,28 +195,21 @@ auto VulkanSwapchain::choose_surface_format_(std::span<const ::vk::SurfaceFormat
     // TODO: Consider parameterizing the preferred format
     const auto preferred_format =
         ::vk::SurfaceFormatKHR{::vk::Format::eB8G8R8A8Srgb, ::vk::ColorSpaceKHR::eSrgbNonlinear};
-    if (std::ranges::find(formats, preferred_format, &::vk::SurfaceFormatKHR::format) != formats.end())
+
+    if (const auto found_preferred = std::ranges::find(formats, preferred_format); found_preferred != formats.end())
     {
-        for (const auto &fmt : formats)
+        return *found_preferred;
+    }
+
+    for (const auto &format : formats)
+    {
+        if (format.format != ::vk::Format::eUndefined)
         {
-            if (fmt.format == preferred_format.format && fmt.colorSpace == preferred_format.colorSpace)
-            {
-                // found preferred format, use it
-                return fmt;
-            }
+            return format;
         }
     }
 
-    for (const auto &fmt : formats)
-    {
-        if (fmt.format != ::vk::Format::eUndefined)
-        {
-            // preferred not found, use first defined format
-            return fmt;
-        }
-    }
-
-    arm::log::warn("Swapchain format undefined. This shouldn't happen");
+    arm::log::warn("Swapchain format undefined/empty. Falling back to first available");
     return formats.front();
 }
 

@@ -4,8 +4,6 @@
 #include <string>
 #include <string_view>
 
-#include <vulkan/vulkan_raii.hpp>
-
 #include "graphics/color.h"
 #include "math/rectangle.h"
 
@@ -38,6 +36,12 @@ enum class ResultCode
     DescriptorSetLayoutCreateFailed,
 };
 
+struct EngineResult
+{
+    ResultCode code;
+    std::string message;
+};
+
 constexpr auto to_string(ResultCode code)
 {
     using enum ResultCode;
@@ -51,11 +55,5 @@ constexpr auto to_string(ResultCode code)
         default: return "<UNKNOWN>";
     }
 }
-
-struct EngineResult
-{
-    ResultCode code;
-    std::string message;
-};
 
 } // namespace pong

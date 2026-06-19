@@ -262,8 +262,8 @@ auto VulkanRenderer::record_(const Scene &scene, const std::vector<DrawItem> &dr
 
     // start command buffer
     auto &command_buffer = frame_command_context_.current_command_buffer();
-    const auto command_buffer_begin_info =
-        ::vk::CommandBufferBeginInfo{::vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
+    auto command_buffer_begin_info = ::vk::CommandBufferBeginInfo{};
+    command_buffer_begin_info.setFlags(::vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     command_buffer.reset();
     command_buffer.begin(command_buffer_begin_info);
 

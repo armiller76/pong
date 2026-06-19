@@ -2,12 +2,11 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_utils.h"
+#include "engine/engine_types.h"
 #include "graphics/image_format.h"
 #include "graphics/shader_stage.h"
 #include "math/rectangle.h"
 #include "utils/exception.h"
-
 
 namespace pong
 {

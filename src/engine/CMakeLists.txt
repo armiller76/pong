@@ -17,22 +17,20 @@ target_include_directories(
   engine
   PUBLIC ${PROJECT_SOURCE_DIR}/src
          ${PROJECT_SOURCE_DIR}/third-party
-         ${Vulkan_INCLUDE_DIRS}
 )
+
+target_compile_definitions(engine PRIVATE MAX_DIR_LIGHTS=${PONG_MAX_DIR_LIGHTS})
 
 target_link_libraries(
   engine
   PUBLIC glm::glm
          imgui
+         vulkan
   PRIVATE mikktspace
           stb_image
 )
 
 if(ENABLE_SPIRV_VALIDATION)
   target_link_libraries(engine PUBLIC spv_tools)
-  target_compile_definitions(
-    engine
-    PUBLIC MAX_DIR_LIGHTS=${PONG_MAX_DIR_LIGHTS}
-           PONG_ENABLE_SPIRV_VALIDATION=1
-  )
+  target_compile_definitions(engine PUBLIC PONG_ENABLE_SPIRV_VALIDATION=1)
 endif()

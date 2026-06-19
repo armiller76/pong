@@ -7,7 +7,7 @@
 #include <vulkan/vulkan_raii.hpp>
 
 #include "core/resource_handles.h"
-#include "engine/engine_utils.h"
+#include "engine/engine_types.h"
 #include "engine/resource_manager.h"
 #include "engine/vulkan/vulkan_descriptor_pool.h"
 #include "engine/vulkan/vulkan_device.h"

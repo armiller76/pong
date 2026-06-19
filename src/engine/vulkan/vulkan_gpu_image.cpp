@@ -5,7 +5,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_utils.h"
+#include "engine/engine_types.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_gpu_buffer.h"
 #include "engine/vulkan/vulkan_immediate_command_context.h"

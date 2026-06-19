@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "engine/engine_utils.h"
+#include "engine/engine_types.h"
 #include "engine/input_state.h"
 #include "math/rectangle.h"
 #include "platform/win32_window.h"

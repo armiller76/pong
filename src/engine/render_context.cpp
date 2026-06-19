@@ -4,7 +4,7 @@
 #include <string>
 
 #include "core/scene.h"
-#include "engine/engine_utils.h"
+#include "engine/engine_types.h"
 #include "engine/input_state.h"
 #include "engine/resource_loader.h"
 #include "engine/resource_manager.h"

@@ -5,6 +5,7 @@
 #include <limits>
 #include <set>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -52,7 +53,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
     , surface_{surface}
     , physical_device_{nullptr}
     , device_{nullptr}
-    , fallback_sampler_key_{
+    , fallback_sampler_key_{SamplerKey{
           .mag_filter_mode = FilterMode::Linear,
           .min_filter_mode = FilterMode::Linear,
           .mip_map_mode = MipMapMode::Linear,
@@ -67,7 +68,7 @@ VulkanDevice::VulkanDevice(const VulkanInstance &instance, const VulkanSurface &
           .max_lod = 0.0f,
           .mip_lod_bias = 0.0f,
           .enable_border_color = false,
-          .unnormalized_coordinates = false}
+          .unnormalized_coordinates = false}}
 {
     arm::log::debug("VulkanDevice constructor");
 
@@ -427,35 +428,41 @@ auto VulkanDevice::create_device_() -> void
 
     for (uint32_t queue_family : queue_families_set)
     {
-        queue_create_infos.emplace_back(
-            ::vk::DeviceQueueCreateFlags{},
-            queue_family,
-            1, // queue count
-            &queue_priority);
+        auto create_info = ::vk::DeviceQueueCreateInfo{
+            .sType = ::vk::StructureType::eDeviceQueueCreateInfo,
+            .pNext = nullptr,
+            .flags = {},
+            .queueFamilyIndex = queue_family,
+            .queueCount = 1u,
+            .pQueuePriorities = &queue_priority};
+        queue_create_infos.emplace_back(create_info);
     }
 
     auto device_create_info = vk::DeviceCreateInfo{};
+    device_create_info.setQueueCreateInfos(queue_create_infos);
+
     [[maybe_unused]] auto feature_api13 = ::vk::PhysicalDeviceVulkan13Features{};
     [[maybe_unused]] auto feature_sync2 = ::vk::PhysicalDeviceSynchronization2Features{};
     [[maybe_unused]] auto feature_dynamic_rendering = ::vk::PhysicalDeviceDynamicRenderingFeatures{};
 
     if (chosen_device_info_.supports_api13)
     {
-        feature_api13.synchronization2 = chosen_device_info_.supports_sync2 ? ::vk::True : ::vk::False;
-        feature_api13.dynamicRendering = chosen_device_info_.supports_dynamic_rendering ? ::vk::True : ::vk::False;
+        feature_api13.setDynamicRendering(chosen_device_info_.supports_dynamic_rendering ? ::vk::True : ::vk::False);
+        feature_api13.setSynchronization2(chosen_device_info_.supports_sync2 ? ::vk::True : ::vk::False);
 
-        device_create_info = {{}, queue_create_infos, {}, required_device_extensions_if_13, nullptr};
-        device_create_info.pNext = &feature_api13;
+        device_create_info.setPEnabledExtensionNames(required_device_extensions_if_13);
+        device_create_info.setPNext(&feature_api13);
     }
     else
     {
-        feature_dynamic_rendering.dynamicRendering =
-            chosen_device_info_.supports_dynamic_rendering ? ::vk::True : ::vk::False;
-        feature_sync2.synchronization2 = chosen_device_info_.supports_sync2 ? ::vk::True : ::vk::False;
-        feature_sync2.pNext = &feature_dynamic_rendering;
+        feature_dynamic_rendering.setDynamicRendering(
+            chosen_device_info_.supports_dynamic_rendering ? ::vk::True : ::vk::False);
 
-        device_create_info = {{}, queue_create_infos, {}, required_device_extensions_no_13, nullptr};
-        device_create_info.pNext = &feature_sync2;
+        feature_sync2.setSynchronization2(chosen_device_info_.supports_sync2 ? ::vk::True : ::vk::False);
+        feature_sync2.setPNext(&feature_dynamic_rendering);
+
+        device_create_info.setPEnabledExtensionNames(required_device_extensions_no_13);
+        device_create_info.setPNext(&feature_sync2);
     }
 
     auto device_result = check_vk_expected(physical_device_.createDevice(device_create_info));

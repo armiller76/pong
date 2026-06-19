@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/engine_utils.h"
+#include "engine/engine_types.h"
 #include <string>
 
 #include <vulkan/vulkan_raii.hpp>

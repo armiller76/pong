@@ -1,6 +1,7 @@
 #pragma once
 
-#include "graphics/glm_wrapper.h" // IWYU pragma: keep
+#include <glm/mat4x4.hpp>
+#include <glm/vec4.hpp>
 
 namespace pong
 {
