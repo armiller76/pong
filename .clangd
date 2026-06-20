@@ -1,5 +1,32 @@
+#.clangd
+
+CompileFlags:
+  CompilationDatabase: "."
+  Compiler: clang-cl
+  Add: [
+    -std=c++23,
+    -DMAX_DIR_LIGHTS=8,
+    -DVULKAN_HPP_NO_STRUCT_CONSTRUCTORS,
+    -Wno-unknown-argument, 
+    -Wno-msvc-not-found
+  ]
+
 Index:
-  Background: Build       # Enable project-wide background indexing
+  Background: Build       
 
 InlayHints:
-  Enabled: false
+  Enabled: Yes
+  ParameterNames: Yes
+  DeducedTypes: No 
+  Designators: Yes
+
+Diagnostics:
+  ClangTidy:
+    Add: [
+      bugprone-*, 
+      performance-*, 
+      modernize-*
+    ]
+    Remove: [
+      bugprone-easily-swappable-parameters
+    ]
