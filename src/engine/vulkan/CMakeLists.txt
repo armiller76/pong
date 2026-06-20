@@ -15,15 +15,12 @@ target_sources(
           vulkan_instance.cpp
           vulkan_pipeline_manager.cpp
           vulkan_renderer.cpp
+          vulkan_render_utils.cpp
           vulkan_surface.cpp
           vulkan_swapchain.cpp
 )
 
-target_compile_definitions(
-  vulkan
-  PRIVATE VULKAN_HPP_NO_STRUCT_CONSTRUCTORS
-          MAX_DIR_LIGHTS=${PONG_MAX_DIR_LIGHTS}
-)
+target_compile_definitions(vulkan PRIVATE MAX_DIR_LIGHTS=${PONG_MAX_DIR_LIGHTS})
 
 target_include_directories(
   vulkan
