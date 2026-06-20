@@ -29,8 +29,8 @@ class VulkanFrameCommandContext
     auto current_fence(this auto &&self) -> auto &&;
     auto current_image_available_semaphore(this auto &&self) -> auto &&;
 
-    auto frames_in_flight() const -> std::uint32_t;
-    auto current_frame_index() const -> std::uint32_t;
+    [[nodiscard]] auto frames_in_flight() const -> std::uint32_t;
+    [[nodiscard]] auto current_frame_index() const -> std::uint32_t;
 
   private:
     const VulkanDevice &device_;

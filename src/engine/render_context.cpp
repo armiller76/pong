@@ -159,7 +159,6 @@ auto RenderContext::init_() -> void
 
     // book-keeping for pipeline manager dependencies
     vulkan_pipeline_manager_.set_color_attachment_format(vulkan_renderer_.swapchain_format());
-    vulkan_pipeline_manager_.get_or_create_pipeline(vulkan_pipeline_manager_.get_default_pipeline_key());
 }
 
 } // namespace pong

@@ -14,7 +14,7 @@
 namespace pong
 {
 
-enum class PassType
+enum class PassType : std::uint8_t
 {
     Main,
     Light,
@@ -25,7 +25,7 @@ enum class PassType
     PassTypeCount,
 };
 
-enum class RasterState
+enum class RasterState : std::uint8_t
 {
     Default,   // back culling, filled polygons
     Double,    // no culling, filled polygons
@@ -35,7 +35,7 @@ enum class RasterState
     RasterStateCount,
 };
 
-enum class VertexInput
+enum class VertexInput : std::uint8_t
 {
     NOT_IMPLEMENTED,
     StaticMesh,
@@ -45,7 +45,7 @@ enum class VertexInput
     VertexInputCount,
 };
 
-enum class ShaderFeature : std::uint32_t
+enum class ShaderFeature : std::uint8_t
 {
     None = 0,
     NormalMap = 1 << 0,

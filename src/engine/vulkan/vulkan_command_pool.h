@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstddef>
 #include <cstdint>
 #include <format>
 #include <string>
@@ -17,26 +16,23 @@
 namespace pong
 {
 
-enum class command_context_type
+enum class CommandContextType : std::uint8_t
 {
     Frame,
     Immediate,
 };
 
-inline auto create_command_pool(const VulkanDevice &device, command_context_type type, std::string_view name)
+inline auto create_command_pool(const VulkanDevice &device, CommandContextType type, std::string_view name)
     -> ::vk::raii::CommandPool
 {
-#ifndef NDEBUG
-    auto debug_name_info = ::vk::DebugUtilsObjectNameInfoEXT{};
-    debug_name_info.sType = ::vk::StructureType::eDebugUtilsObjectNameInfoEXT;
-    auto debug_name_str = std::string{};
-#endif
+    auto pool_create_info = ::vk::CommandPoolCreateInfo{
+        .sType = ::vk::StructureType::eCommandPoolCreateInfo,
+        .pNext = nullptr,
+    };
 
-    auto pool_create_info = ::vk::CommandPoolCreateInfo{};
-    pool_create_info.sType = ::vk::StructureType::eCommandPoolCreateInfo;
-    using enum command_context_type;
     switch (type)
     {
+        using enum CommandContextType;
         case Frame:
         {
             pool_create_info.flags = ::vk::CommandPoolCreateFlagBits::eResetCommandBuffer;
@@ -52,18 +48,22 @@ inline auto create_command_pool(const VulkanDevice &device, command_context_type
         }
         break;
     }
+
     auto command_pool_result = check_vk_expected(device.get().createCommandPool(pool_create_info));
-    if (!command_pool_result)
+    if (!command_pool_result.has_value())
     {
         throw arm::Exception("unable to create command pool '{}'", name);
     }
 
 #ifndef NDEBUG
-    debug_name_str = std::format("Command Pool {}", name);
-    debug_name_info.pObjectName = debug_name_str.c_str();
-    debug_name_info.objectType = ::vk::ObjectType::eCommandPool;
-    debug_name_info.objectHandle =
-        reinterpret_cast<std::uint64_t>(static_cast<::VkCommandPool>(*command_pool_result.value()));
+    const auto debug_name_str = std::format("Command Pool: {}", name);
+    const auto debug_name_info = ::vk::DebugUtilsObjectNameInfoEXT{
+        .sType = ::vk::StructureType::eDebugUtilsObjectNameInfoEXT,
+        .pNext = nullptr,
+        .objectType = ::vk::ObjectType::eCommandPool,
+        .objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkCommandPool>(*command_pool_result.value())),
+        .pObjectName = debug_name_str.c_str(),
+    };
     device.get().setDebugUtilsObjectNameEXT(debug_name_info);
 #endif
 
@@ -76,34 +76,38 @@ inline auto create_command_buffers(
     std::uint32_t count,
     const ::vk::CommandPool &pool) -> std::vector<::vk::raii::CommandBuffer>
 {
-    auto cb_allocate_info = ::vk::CommandBufferAllocateInfo{};
-    cb_allocate_info.sType = ::vk::StructureType::eCommandBufferAllocateInfo;
-    cb_allocate_info.commandPool = pool;
-    cb_allocate_info.level = ::vk::CommandBufferLevel::ePrimary;
-    cb_allocate_info.commandBufferCount = count;
+    const auto cb_allocate_info = ::vk::CommandBufferAllocateInfo{
+        .sType = ::vk::StructureType::eCommandBufferAllocateInfo,
+        .pNext = nullptr,
+        .commandPool = pool,
+        .level = ::vk::CommandBufferLevel::ePrimary,
+        .commandBufferCount = count,
+    };
 
     auto command_buffers_result = check_vk_expected(device.get().allocateCommandBuffers(cb_allocate_info));
-    if (!command_buffers_result)
+    if (!command_buffers_result.has_value())
     {
         throw arm::Exception("unable to allocate command buffers");
     }
 
+    auto &command_buffers = command_buffers_result.value();
 #ifndef NDEBUG
-    auto debug_name_info = ::vk::DebugUtilsObjectNameInfoEXT{};
-    debug_name_info.sType = ::vk::StructureType::eDebugUtilsObjectNameInfoEXT;
-    auto debug_name_str = std::string{};
-    for (std::size_t i = 0; i < command_buffers_result.value().size(); ++i)
+    auto i = 0u;
+    for (const auto &cb : command_buffers)
     {
-        debug_name_str = std::format("{} [{}]", name, i);
-        debug_name_info.pObjectName = debug_name_str.c_str();
-        debug_name_info.objectType = ::vk::ObjectType::eCommandBuffer;
-        debug_name_info.objectHandle =
-            reinterpret_cast<std::uint64_t>(static_cast<::VkCommandBuffer>(*command_buffers_result.value().at(i)));
+        const auto debug_name_str = std::format("{} [{}]", name, i++);
+        const auto debug_name_info = ::vk::DebugUtilsObjectNameInfoEXT{
+            .sType = ::vk::StructureType::eDebugUtilsObjectNameInfoEXT,
+            .pNext = nullptr,
+            .objectType = ::vk::ObjectType::eCommandBuffer,
+            .objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkCommandBuffer>(*cb)),
+            .pObjectName = debug_name_str.c_str(),
+        };
         device.get().setDebugUtilsObjectNameEXT(debug_name_info);
     }
 #endif
 
-    return std::move(command_buffers_result.value());
+    return std::move(command_buffers);
 }
 
 } // namespace pong

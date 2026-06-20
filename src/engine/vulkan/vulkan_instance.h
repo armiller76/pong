@@ -1,9 +1,10 @@
 #pragma once
 
-#include "engine/engine_types.h"
 #include <string>
 
 #include <vulkan/vulkan_raii.hpp>
+
+#include "engine/engine_types.h"
 
 namespace pong
 {
@@ -13,9 +14,9 @@ class VulkanInstance
   public:
     VulkanInstance(const RenderContextInfo &render_context_info);
 
-    auto get() const -> const ::vk::raii::Instance &;
+    [[nodiscard]] auto get() const -> const ::vk::raii::Instance &;
 
-    auto native_handle() const -> const ::vk::Instance;
+    [[nodiscard]] auto native_handle() const -> const ::vk::Instance;
 
   private:
     const std::string application_name_;

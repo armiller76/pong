@@ -19,12 +19,11 @@ class DepthBuffer
     DepthBuffer(DepthBuffer &&) noexcept = default;
     auto operator=(DepthBuffer &&) noexcept -> DepthBuffer & = default;
 
-    auto format() const -> ::vk::Format;
-    auto image() const -> ::vk::Image;
-    auto image_view() const -> ::vk::ImageView;
+    [[nodiscard]] auto format() const -> ::vk::Format;
+    [[nodiscard]] auto image() const -> ::vk::Image;
+    [[nodiscard]] auto image_view() const -> ::vk::ImageView;
 
   private:
-    const VulkanDevice *device_;
     ::vk::Format format_;
     ::vk::raii::Image image_;
     ::vk::raii::DeviceMemory memory_;

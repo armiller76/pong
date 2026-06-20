@@ -34,7 +34,7 @@ auto VulkanSwapchain::recreate() -> void
     create_();
 }
 
-auto VulkanSwapchain::native_handle() const -> const ::vk::raii::SwapchainKHR &
+auto VulkanSwapchain::get() const -> const ::vk::raii::SwapchainKHR &
 {
     return swapchain_;
 }
@@ -90,26 +90,33 @@ auto VulkanSwapchain::create_() -> void
 
     // determine how many swapchain images we are allowed
     std::uint32_t image_count = capabilities_.minImageCount + 1u;
-    std::uint32_t max_image_count = capabilities_.maxImageCount;
-    if (max_image_count > 0)
+    if (const std::uint32_t max_image_count = capabilities_.maxImageCount; max_image_count > 0)
     {
         image_count = image_count < max_image_count ? image_count : max_image_count;
     }
 
     // begin creating swapchain
-    auto swapchain_create_info = ::vk::SwapchainCreateInfoKHR{};
-    swapchain_create_info.sType = ::vk::StructureType::eSwapchainCreateInfoKHR;
-    swapchain_create_info.surface = surface_.native_handle();
-    swapchain_create_info.minImageCount = image_count;
-    swapchain_create_info.imageFormat = surface_format_;
-    swapchain_create_info.imageColorSpace = color_space_;
-    swapchain_create_info.imageExtent = extent_;
-    swapchain_create_info.imageArrayLayers = 1u;
-    swapchain_create_info.imageUsage =
-        ::vk::ImageUsageFlagBits::eColorAttachment | ::vk::ImageUsageFlagBits::eTransferDst;
+    auto swapchain_create_info = ::vk::SwapchainCreateInfoKHR{
+        .sType = ::vk::StructureType::eSwapchainCreateInfoKHR,
+        .surface = surface_.native_handle(),
+        .minImageCount = image_count,
+        .imageFormat = surface_format_,
+        .imageColorSpace = color_space_,
+        .imageExtent = extent_,
+        .imageArrayLayers = 1u,
+        .imageUsage = ::vk::ImageUsageFlagBits::eColorAttachment | ::vk::ImageUsageFlagBits::eTransferDst,
+        .preTransform = capabilities_.currentTransform,
+        .compositeAlpha = ::vk::CompositeAlphaFlagBitsKHR::eOpaque,
+        .presentMode = present_mode_,
+        .clipped = VK_TRUE,
+        .oldSwapchain = *swapchain_ != VK_NULL_HANDLE ? *swapchain_ : ::vk::SwapchainKHR{},
+    };
+
     if (device_.graphics_queue_family_index() == device_.present_queue_family_index())
     {
         swapchain_create_info.imageSharingMode = ::vk::SharingMode::eExclusive;
+        swapchain_create_info.queueFamilyIndexCount = 0u;
+        swapchain_create_info.pQueueFamilyIndices = nullptr;
     }
     else
     {
@@ -117,39 +124,42 @@ auto VulkanSwapchain::create_() -> void
         swapchain_create_info.queueFamilyIndexCount = static_cast<std::uint32_t>(queue_indices.size());
         swapchain_create_info.pQueueFamilyIndices = queue_indices.data();
     }
-    swapchain_create_info.preTransform = capabilities_.currentTransform;
-    swapchain_create_info.compositeAlpha = ::vk::CompositeAlphaFlagBitsKHR::eOpaque;
-    swapchain_create_info.presentMode = present_mode_;
-    swapchain_create_info.clipped = VK_TRUE;
-    swapchain_create_info.oldSwapchain = *swapchain_ != VK_NULL_HANDLE ? *swapchain_ : ::vk::SwapchainKHR{};
+
     auto swapchain_result = check_vk_expected(device_.get().createSwapchainKHR(swapchain_create_info));
-    if (!swapchain_result)
+    if (!swapchain_result.has_value())
     {
         throw arm::Exception("uanble to create swapchain");
     }
     swapchain_ = std::move(swapchain_result.value());
 
-    // get our images from the swapchain and create image_views for each image
+    // get the created images from the swapchain and create image_views for each
     images_ = swapchain_.getImages();
+
     image_views_.clear();
     image_views_.reserve(images_.size());
     for (const auto &image : images_)
     {
-        auto image_view_create_info = ::vk::ImageViewCreateInfo{};
-        image_view_create_info.image = image;
-        image_view_create_info.viewType = ::vk::ImageViewType::e2D;
-        image_view_create_info.format = surface_format_;
-        image_view_create_info.components = ::vk::ComponentMapping{
-            ::vk::ComponentSwizzle::eIdentity,
-            ::vk::ComponentSwizzle::eIdentity,
-            ::vk::ComponentSwizzle::eIdentity,
-            ::vk::ComponentSwizzle::eIdentity,
+        const auto image_view_create_info = ::vk::ImageViewCreateInfo{
+            .sType = ::vk::StructureType::eImageViewCreateInfo,
+            .pNext = nullptr,
+            .flags = {},
+            .image = image,
+            .viewType = ::vk::ImageViewType::e2D,
+            .format = surface_format_,
+            .components{
+                .r = ::vk::ComponentSwizzle::eIdentity,
+                .g = ::vk::ComponentSwizzle::eIdentity,
+                .b = ::vk::ComponentSwizzle::eIdentity,
+                .a = ::vk::ComponentSwizzle::eIdentity,
+            },
+            .subresourceRange{
+                .aspectMask = ::vk::ImageAspectFlagBits::eColor,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
         };
-        image_view_create_info.subresourceRange.aspectMask = ::vk::ImageAspectFlagBits::eColor;
-        image_view_create_info.subresourceRange.baseMipLevel = 0;
-        image_view_create_info.subresourceRange.levelCount = 1;
-        image_view_create_info.subresourceRange.baseArrayLayer = 0;
-        image_view_create_info.subresourceRange.layerCount = 1;
 
         auto view_result = check_vk_expected(device_.get().createImageView(image_view_create_info));
         if (!view_result)
@@ -159,26 +169,26 @@ auto VulkanSwapchain::create_() -> void
         image_views_.push_back(std::move(view_result.value()));
     }
 
-#ifndef NDEBUG
-    auto debug_name_info = ::vk::DebugUtilsObjectNameInfoEXT{};
-    debug_name_info.sType = ::vk::StructureType::eDebugUtilsObjectNameInfoEXT;
-    auto debug_name_str = std::string{};
-#endif
     for (std::size_t i = 0; i < images_.size(); ++i)
     {
         auto semaphore_result = check_vk_expected(device_.get().createSemaphore(::vk::SemaphoreCreateInfo{}));
-        if (!semaphore_result)
+        if (!semaphore_result.has_value())
         {
             throw arm::Exception("unable to create semaphore");
         }
+
 #ifndef NDEBUG
-        debug_name_str = std::format("Render Finished Semaphore {}", i);
-        debug_name_info.pObjectName = debug_name_str.c_str();
-        debug_name_info.objectType = ::vk::ObjectType::eSemaphore;
-        debug_name_info.objectHandle =
-            reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*semaphore_result.value()));
+        const auto debug_name_str = std::format("Render Finished Semaphore {}", i);
+        const auto debug_name_info = ::vk::DebugUtilsObjectNameInfoEXT{
+            .sType = ::vk::StructureType::eDebugUtilsObjectNameInfoEXT,
+            .pNext = nullptr,
+            .objectType = ::vk::ObjectType::eSemaphore,
+            .objectHandle = reinterpret_cast<std::uint64_t>(static_cast<::VkSemaphore>(*semaphore_result.value())),
+            .pObjectName = debug_name_str.c_str(),
+        };
         device_.get().setDebugUtilsObjectNameEXT(debug_name_info);
 #endif
+
         render_finished_semaphores_.push_back(std::move(semaphore_result.value()));
     }
 }
@@ -193,8 +203,10 @@ auto VulkanSwapchain::destroy_() -> void
 auto VulkanSwapchain::choose_surface_format_(std::span<const ::vk::SurfaceFormatKHR> formats) -> ::vk::SurfaceFormatKHR
 {
     // TODO: Consider parameterizing the preferred format
-    const auto preferred_format =
-        ::vk::SurfaceFormatKHR{::vk::Format::eB8G8R8A8Srgb, ::vk::ColorSpaceKHR::eSrgbNonlinear};
+    const auto preferred_format = ::vk::SurfaceFormatKHR{
+        .format = ::vk::Format::eB8G8R8A8Srgb,
+        .colorSpace = ::vk::ColorSpaceKHR::eSrgbNonlinear,
+    };
 
     if (const auto found_preferred = std::ranges::find(formats, preferred_format); found_preferred != formats.end())
     {
@@ -228,9 +240,12 @@ auto VulkanSwapchain::choose_extent_(const ::vk::SurfaceCapabilitiesKHR &capabil
     {
         return capabilities.currentExtent;
     }
-
     arm::log::error("currentExtent was not defined, should not get here");
-    return {800, 600};
+
+    return {
+        .width = 800,
+        .height = 600,
+    };
 }
 
 } // namespace pong

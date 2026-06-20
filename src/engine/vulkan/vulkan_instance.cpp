@@ -39,7 +39,7 @@ VulkanInstance::VulkanInstance(const RenderContextInfo &render_context_info)
     arm::ensure(
         std::ranges::all_of(
             required_extensions,
-            [&](const auto &required)
+            [&](const auto &required) -> auto
             {
                 return std::ranges::find_if(
                            available_extensions,
@@ -55,47 +55,58 @@ VulkanInstance::VulkanInstance(const RenderContextInfo &render_context_info)
     arm::ensure(
         std::ranges::find_if(
             available_layers,
-            [&validation](const auto &available) { return std::string_view(available.layerName) == validation[0]; })
+            [&validation](const auto &available) -> auto
+            { return std::string_view(available.layerName) == validation[0]; })
             != available_layers.end(),
         "Validation layers not available");
 
-    auto vk_application_info = ::vk::ApplicationInfo{};
-    vk_application_info.sType = ::vk::StructureType::eApplicationInfo;
-    vk_application_info.pNext = nullptr;
-    vk_application_info.pApplicationName = application_name_.c_str();
-    vk_application_info.applicationVersion = ::vk::makeVersion(
+    const auto app_engine_version = ::vk::makeVersion(
         render_context_info.version.major, render_context_info.version.minor, render_context_info.version.patch);
-    vk_application_info.pEngineName = engine_name_.c_str();
-    vk_application_info.apiVersion = ::vk::ApiVersion13;
+    const auto vk_application_info = ::vk::ApplicationInfo{
+        .sType = ::vk::StructureType::eApplicationInfo,
+        .pNext = nullptr,
+        .pApplicationName = application_name_.c_str(),
+        .applicationVersion = app_engine_version,
+        .pEngineName = engine_name_.c_str(),
+        .engineVersion = app_engine_version,
+        .apiVersion = ::vk::ApiVersion13,
+    };
 
-    auto vk_instance_create_info = ::vk::InstanceCreateInfo{};
-    vk_instance_create_info.sType = ::vk::StructureType::eInstanceCreateInfo;
-    vk_instance_create_info.pNext = nullptr;
-    vk_instance_create_info.flags = {};
-    vk_instance_create_info.pApplicationInfo = &vk_application_info;
-    vk_instance_create_info.enabledLayerCount = 1;
-    vk_instance_create_info.ppEnabledLayerNames = validation.data();
-    vk_instance_create_info.enabledExtensionCount = static_cast<std::uint32_t>(required_extensions.size());
-    vk_instance_create_info.ppEnabledExtensionNames = required_extensions.data();
+    const auto vk_instance_create_info = ::vk::InstanceCreateInfo{
+        .sType = ::vk::StructureType::eInstanceCreateInfo,
+        .pNext = nullptr,
+        .flags = {},
+        .pApplicationInfo = &vk_application_info,
+        .enabledLayerCount = 1,
+        .ppEnabledLayerNames = validation.data(),
+        .enabledExtensionCount = static_cast<std::uint32_t>(required_extensions.size()),
+        .ppEnabledExtensionNames = required_extensions.data(),
+    };
 
     auto create_instance_result = check_vk_expected(context_.createInstance(vk_instance_create_info));
-    if (!create_instance_result)
+    if (!create_instance_result.has_value())
     {
         throw arm::Exception("unable to create Vulkan instance");
     }
     instance_ = std::move(create_instance_result.value());
 
-    auto debug_messenger_create_info = ::vk::DebugUtilsMessengerCreateInfoEXT{};
-    debug_messenger_create_info.messageSeverity = ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
-                                                  | ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
-                                                  | ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
-    debug_messenger_create_info.messageType = ::vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
-                                              | ::vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance
-                                              | ::vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation;
-    debug_messenger_create_info.pfnUserCallback = &pong::VulkanInstance::vk_debug_callback;
+    const auto debug_messenger_create_info = ::vk::DebugUtilsMessengerCreateInfoEXT{
+        .sType = ::vk::StructureType::eDebugUtilsMessengerCreateInfoEXT,
+        .pNext = nullptr,
+        .flags = {},
+        .messageSeverity = ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
+                           | ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
+                           | ::vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo,
+        .messageType = ::vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
+                       | ::vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance
+                       | ::vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
+        .pfnUserCallback = &pong::VulkanInstance::vk_debug_callback,
+        .pUserData = nullptr,
+    };
+
     auto debug_messenger_result =
         check_vk_expected(instance_.createDebugUtilsMessengerEXT(debug_messenger_create_info, nullptr));
-    if (!debug_messenger_result)
+    if (!debug_messenger_result.has_value())
     {
         throw arm::Exception("unable to create Vulkan debug messenger");
     }

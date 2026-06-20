@@ -14,7 +14,6 @@
 #include "utils/error.h"
 #include "utils/log.h"
 
-
 namespace pong
 {
 
@@ -36,57 +35,61 @@ auto VulkanDescriptorPool::allocate_per_frame_descriptor_sets(
     std::vector<VulkanGpuBuffer> &view_proj_uniform_buffers,
     std::vector<VulkanGpuBuffer> &light_uniform_buffers) -> std::vector<vk::raii::DescriptorSet>
 {
-    auto layout_array = std::vector(frames_in_flight_, *layout);
-    auto descriptor_set_allocate_info = ::vk::DescriptorSetAllocateInfo{};
-    descriptor_set_allocate_info.sType = ::vk::StructureType::eDescriptorSetAllocateInfo;
-    descriptor_set_allocate_info.pNext = nullptr;
-    descriptor_set_allocate_info.descriptorPool = *pool_;
-    descriptor_set_allocate_info.descriptorSetCount = static_cast<std::uint32_t>(layout_array.size());
-    descriptor_set_allocate_info.pSetLayouts = layout_array.data();
+    auto layouts = std::vector(frames_in_flight_, *layout);
+
+    const auto descriptor_set_allocate_info = ::vk::DescriptorSetAllocateInfo{
+        .sType = ::vk::StructureType::eDescriptorSetAllocateInfo,
+        .pNext = nullptr,
+        .descriptorPool = *pool_,
+        .descriptorSetCount = static_cast<std::uint32_t>(layouts.size()),
+        .pSetLayouts = layouts.data(),
+    };
 
     auto descriptor_set_result = check_vk_expected(device_.get().allocateDescriptorSets(descriptor_set_allocate_info));
-    if (!descriptor_set_result)
+    if (!descriptor_set_result.has_value())
     {
         throw arm::Exception("unable to allocate per-frame descriptor sets");
     }
 
     for (std::size_t i = 0; i < frames_in_flight_; ++i)
     {
-        auto view_proj_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
-        view_proj_descriptor_buffer_info.buffer = view_proj_uniform_buffers.at(i).native_handle();
-        view_proj_descriptor_buffer_info.offset = 0;
-        view_proj_descriptor_buffer_info.range = sizeof(UBO_Camera);
+        const auto view_proj_descriptor_buffer_info = ::vk::DescriptorBufferInfo{
+            .buffer = view_proj_uniform_buffers[i].native_handle(),
+            .offset = 0u,
+            .range = sizeof(UBO_Camera),
+        };
+        const auto view_proj_write_descriptor_set = ::vk::WriteDescriptorSet{
+            .sType = ::vk::StructureType::eWriteDescriptorSet,
+            .pNext = nullptr,
+            .dstSet = descriptor_set_result.value()[i],
+            .dstBinding = 0u,
+            .dstArrayElement = 0u,
+            .descriptorCount = 1u,
+            .descriptorType = ::vk::DescriptorType::eUniformBuffer,
+            .pImageInfo = nullptr,
+            .pBufferInfo = &view_proj_descriptor_buffer_info,
+            .pTexelBufferView = nullptr,
+        };
 
-        auto view_proj_write_descriptor_set = ::vk::WriteDescriptorSet{};
-        view_proj_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
-        view_proj_write_descriptor_set.pNext = nullptr;
-        view_proj_write_descriptor_set.dstSet = descriptor_set_result.value().at(i);
-        view_proj_write_descriptor_set.dstBinding = 0;
-        view_proj_write_descriptor_set.dstArrayElement = 0;
-        view_proj_write_descriptor_set.descriptorCount = 1;
-        view_proj_write_descriptor_set.descriptorType = ::vk::DescriptorType::eUniformBuffer;
-        view_proj_write_descriptor_set.pImageInfo = nullptr;
-        view_proj_write_descriptor_set.pBufferInfo = &view_proj_descriptor_buffer_info;
-        view_proj_write_descriptor_set.pTexelBufferView = nullptr;
+        const auto light_descriptor_buffer_info = ::vk::DescriptorBufferInfo{
+            .buffer = light_uniform_buffers[i].native_handle(),
+            .offset = 0u,
+            .range = sizeof(UBO_Lighting),
+        };
+        const auto light_write_descriptor_set = ::vk::WriteDescriptorSet{
+            .sType = ::vk::StructureType::eWriteDescriptorSet,
+            .pNext = nullptr,
+            .dstSet = descriptor_set_result.value()[i],
+            .dstBinding = 1u,
+            .dstArrayElement = 0u,
+            .descriptorCount = 1u,
+            .descriptorType = ::vk::DescriptorType::eUniformBuffer,
+            .pImageInfo = nullptr,
+            .pBufferInfo = &light_descriptor_buffer_info,
+            .pTexelBufferView = nullptr,
+        };
 
-        auto light_descriptor_buffer_info = ::vk::DescriptorBufferInfo{};
-        light_descriptor_buffer_info.buffer = light_uniform_buffers.at(i).native_handle();
-        light_descriptor_buffer_info.offset = 0;
-        light_descriptor_buffer_info.range = sizeof(UBO_Lighting);
-
-        auto light_write_descriptor_set = ::vk::WriteDescriptorSet{};
-        light_write_descriptor_set.sType = ::vk::StructureType::eWriteDescriptorSet;
-        light_write_descriptor_set.pNext = nullptr;
-        light_write_descriptor_set.dstSet = descriptor_set_result.value().at(i);
-        light_write_descriptor_set.dstBinding = 1;
-        light_write_descriptor_set.dstArrayElement = 0;
-        light_write_descriptor_set.descriptorCount = 1;
-        light_write_descriptor_set.descriptorType = ::vk::DescriptorType::eUniformBuffer;
-        light_write_descriptor_set.pImageInfo = nullptr;
-        light_write_descriptor_set.pBufferInfo = &light_descriptor_buffer_info;
-        light_write_descriptor_set.pTexelBufferView = nullptr;
-
-        auto descriptors = std::array{
+        const auto descriptors = std::array{
             view_proj_write_descriptor_set,
             light_write_descriptor_set,
         };
@@ -100,14 +103,16 @@ auto VulkanDescriptorPool::allocate_per_frame_descriptor_sets(
 auto VulkanDescriptorPool::allocate_material_descriptor_set(const ::vk::raii::DescriptorSetLayout &layout)
     -> vk::raii::DescriptorSet
 {
-    auto descriptor_set_allocate_info = ::vk::DescriptorSetAllocateInfo{};
-    descriptor_set_allocate_info.sType = ::vk::StructureType::eDescriptorSetAllocateInfo;
-    descriptor_set_allocate_info.pNext = nullptr;
-    descriptor_set_allocate_info.descriptorPool = *pool_;
-    descriptor_set_allocate_info.descriptorSetCount = 1u;
-    descriptor_set_allocate_info.pSetLayouts = &*layout;
+    const auto descriptor_set_allocate_info = ::vk::DescriptorSetAllocateInfo{
+        .sType = ::vk::StructureType::eDescriptorSetAllocateInfo,
+        .pNext = nullptr,
+        .descriptorPool = *pool_,
+        .descriptorSetCount = 1u,
+        .pSetLayouts = &*layout,
+    };
+
     auto descriptor_set_result = check_vk_expected(device_.get().allocateDescriptorSets(descriptor_set_allocate_info));
-    if (!descriptor_set_result)
+    if (!descriptor_set_result.has_value())
     {
         throw arm::Exception("unalbe to allocate material descriptor set");
     }
@@ -122,26 +127,29 @@ auto VulkanDescriptorPool::create_pool_() -> ::vk::raii::DescriptorPool
     const auto ubo_count = PER_FRAME_UBO_COUNT * frames_in_flight_ + MATERIAL_UBO_COUNT * MAX_MATERIALS;
     const auto sampler_count = MAX_MATERIALS * SAMPLERS_PER_MATERIAL;
 
-    auto ubo_pool_size = ::vk::DescriptorPoolSize{};
-    ubo_pool_size.type = ::vk::DescriptorType::eUniformBuffer;
-    ubo_pool_size.descriptorCount = ubo_count;
+    const auto ubo_pool_size = ::vk::DescriptorPoolSize{
+        .type = ::vk::DescriptorType::eUniformBuffer,
+        .descriptorCount = ubo_count,
+    };
 
-    auto sampler_pool_size = ::vk::DescriptorPoolSize{};
-    sampler_pool_size.type = ::vk::DescriptorType::eCombinedImageSampler;
-    sampler_pool_size.descriptorCount = sampler_count;
+    const auto sampler_pool_size = ::vk::DescriptorPoolSize{
+        .type = ::vk::DescriptorType::eCombinedImageSampler,
+        .descriptorCount = sampler_count,
+    };
 
-    auto pool_sizes = std::array{
+    const auto pool_sizes = std::array{
         ubo_pool_size,
         sampler_pool_size,
     };
 
-    auto pool_create_info = ::vk::DescriptorPoolCreateInfo{};
-    pool_create_info.sType = ::vk::StructureType::eDescriptorPoolCreateInfo;
-    pool_create_info.pNext = nullptr;
-    pool_create_info.flags = ::vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
-    pool_create_info.maxSets = frames_in_flight_ + MAX_MATERIALS;
-    pool_create_info.poolSizeCount = static_cast<std::uint32_t>(pool_sizes.size());
-    pool_create_info.pPoolSizes = pool_sizes.data();
+    const auto pool_create_info = ::vk::DescriptorPoolCreateInfo{
+        .sType = ::vk::StructureType::eDescriptorPoolCreateInfo,
+        .pNext = nullptr,
+        .flags = ::vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet,
+        .maxSets = frames_in_flight_ + MAX_MATERIALS,
+        .poolSizeCount = static_cast<std::uint32_t>(pool_sizes.size()),
+        .pPoolSizes = pool_sizes.data(),
+    };
 
     auto create_result = check_vk_expected(device_.get().createDescriptorPool(pool_create_info));
     if (!create_result)

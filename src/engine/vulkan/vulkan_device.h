@@ -35,29 +35,29 @@ class VulkanDevice
     VulkanDevice(VulkanDevice &&) noexcept = delete;
     auto operator=(VulkanDevice &&) noexcept -> VulkanDevice & = delete;
 
-    auto get() const -> const ::vk::raii::Device &;
-    auto native_handle() const -> const ::vk::Device;
-    auto get_physical_device() const -> const ::vk::raii::PhysicalDevice &;
-    auto physical_device_native_handle() const -> const ::vk::PhysicalDevice;
+    [[nodiscard]] auto get() const -> const ::vk::raii::Device &;
+    [[nodiscard]] auto native_handle() const -> const ::vk::Device;
+    [[nodiscard]] auto get_physical_device() const -> const ::vk::raii::PhysicalDevice &;
+    [[nodiscard]] auto physical_device_native_handle() const -> const ::vk::PhysicalDevice;
 
-    auto graphics_queue() const -> ::vk::Queue;
-    auto graphics_queue_family_index() const -> std::uint32_t;
-    auto present_queue() const -> ::vk::Queue;
-    auto present_queue_family_index() const -> std::uint32_t;
+    [[nodiscard]] auto graphics_queue() const -> ::vk::Queue;
+    [[nodiscard]] auto graphics_queue_family_index() const -> std::uint32_t;
+    [[nodiscard]] auto present_queue() const -> ::vk::Queue;
+    [[nodiscard]] auto present_queue_family_index() const -> std::uint32_t;
 
-    auto supports_dynamic_rendering() const -> bool;
-    auto find_memory_type_index(const ::vk::MemoryRequirements requirements, const ::vk::MemoryPropertyFlags flags)
-        const -> std::uint32_t;
-    auto choose_depth_format() const -> ::vk::Format;
+    [[nodiscard]] auto supports_dynamic_rendering() const -> bool;
+    [[nodiscard]] auto find_memory_type_index(
+        const ::vk::MemoryRequirements requirements,
+        const ::vk::MemoryPropertyFlags flags) const -> std::uint32_t;
+    [[nodiscard]] auto choose_depth_format() const -> ::vk::Format;
 
-    auto allocate_image(::vk::ImageCreateInfo &info, ::vk::MemoryPropertyFlags flags) const
+    [[nodiscard]] auto allocate_image(const ::vk::ImageCreateInfo &info, ::vk::MemoryPropertyFlags flags) const
         -> std::pair<::vk::raii::Image, ::vk::raii::DeviceMemory>;
 
-    auto get_sampler(const SamplerKey &key) -> ::vk::Sampler;
-    auto get_default_sampler_key() const -> const SamplerKey &;
+    [[nodiscard]] auto get_sampler(const SamplerKey &key) -> ::vk::Sampler;
+    [[nodiscard]] auto get_default_sampler_key() const -> const SamplerKey &;
 
   private:
-    const VulkanInstance &instance_;
     const VulkanSurface &surface_;
 
     ::vk::raii::PhysicalDevice physical_device_;
@@ -75,7 +75,7 @@ class VulkanDevice
 
   private:
     auto score_device_(VulkanDeviceInfo &info, const ::vk::raii::PhysicalDevice &device) -> bool;
-    auto choose_physical_device_() -> void;
+    auto choose_physical_device_(const VulkanInstance &instance) -> void;
     auto create_device_() -> void;
 
 }; // class VulkanDevice

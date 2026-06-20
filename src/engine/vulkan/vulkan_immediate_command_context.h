@@ -20,7 +20,8 @@ class VulkanImmediateCommandContext
     auto operator=(VulkanImmediateCommandContext &&) noexcept -> VulkanImmediateCommandContext & = delete;
 
     auto command_buffer() -> ::vk::raii::CommandBuffer &;
-    auto fence() const -> ::vk::Fence;
+    [[nodiscard]] auto fence() const -> ::vk::Fence;
+
     auto wait_for_fence() const -> void;
 
   private:

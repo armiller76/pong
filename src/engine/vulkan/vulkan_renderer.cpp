@@ -19,6 +19,7 @@
 #include "engine/vulkan/vulkan_descriptor_pool.h"
 #include "engine/vulkan/vulkan_device.h"
 #include "engine/vulkan/vulkan_gpu_buffer.h"
+#include "engine/vulkan/vulkan_image_transition_info.h"
 #include "engine/vulkan/vulkan_pipeline_manager.h"
 #include "engine/vulkan/vulkan_render_utils.h"
 #include "graphics/color.h"
@@ -44,17 +45,17 @@ VulkanRenderer::VulkanRenderer(
     VulkanDescriptorPool &descriptor_pool,
     std::uint32_t max_frames_in_flight,
     const Color clear_color)
-    : max_frames_in_flight_{max_frames_in_flight}
+    : frames_in_flight_{max_frames_in_flight}
     , device_{device}
     , resource_manager_{resource_manager}
     , pipeline_manager_{pipeline_manager}
     , descriptor_pool_{descriptor_pool}
+    , per_frame_descriptor_sets_{}
     , swapchain_{device_, surface}
+    , frame_command_context_{device_, frames_in_flight_}
     , camera_uniform_buffers_{}
     , light_uniform_buffers_{}
-    , frame_command_context_{device_, max_frames_in_flight_}
     , depth_buffer_{device_, swapchain_.extent()}
-    , per_frame_descriptor_sets_{}
     , clear_color_{clear_color.r, clear_color.g, clear_color.b, clear_color.a}
 {
     arm::log::debug("VulkanRenderer constructor");
@@ -151,17 +152,18 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
         // bypassing raii here because Vulkan internally checks Result and asserts on OutOfDate error at acquire.
         // we're handling OutOfDate errors, so we'll use the C API for this (and also for present) to avoid the internal
         // check.
-        auto swapchain = static_cast<VkSwapchainKHR>(*swapchain_.native_handle());
+        auto swapchain = static_cast<VkSwapchainKHR>(*swapchain_.get());
         auto semaphore = static_cast<VkSemaphore>(*frame_command_context_.current_image_available_semaphore());
 
-        auto next_image_info = VkAcquireNextImageInfoKHR{};
-        next_image_info.sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR;
-        next_image_info.pNext = NULL;
-        next_image_info.swapchain = swapchain;
-        next_image_info.timeout = UINT64_MAX;
-        next_image_info.semaphore = semaphore;
-        next_image_info.fence = NULL;
-        next_image_info.deviceMask = 1u;
+        auto next_image_info = VkAcquireNextImageInfoKHR{
+            .sType = VK_STRUCTURE_TYPE_ACQUIRE_NEXT_IMAGE_INFO_KHR,
+            .pNext = NULL,
+            .swapchain = swapchain,
+            .timeout = UINT64_MAX,
+            .semaphore = semaphore,
+            .fence = NULL,
+            .deviceMask = 1u,
+        };
 
         auto swap_chain_image_index = std::uint32_t{};
         auto vk_result = vkAcquireNextImage2KHR(device_.native_handle(), &next_image_info, &swap_chain_image_index);
@@ -174,7 +176,10 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
         }
         if (vk_result == VK_ERROR_OUT_OF_DATE_KHR)
         {
-            return {RenderStatusCode::RecreateRequested, {}};
+            return {
+                .code = RenderStatusCode::RecreateRequested,
+                .draw_items = {},
+            };
         }
         throw arm::Exception(
             "Unable to aquire swapchain image ({})", ::vk::to_string(static_cast<::vk::Result>(vk_result)));
@@ -197,12 +202,14 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
         {
             for (const auto &renderable : entity.model().value().renderables)
             {
-                auto draw_item = DrawItem{};
-                draw_item.mesh_handle = renderable.mesh_handle;
-                draw_item.material_handle = renderable.material_handle.has_value()
-                                                ? std::make_optional<MaterialHandle>(renderable.material_handle.value())
-                                                : std::nullopt;
-                draw_item.model = world_transform;
+                auto draw_item = DrawItem{
+                    .mesh_handle = renderable.mesh_handle,
+                    .material_handle = renderable.material_handle.has_value()
+                                           ? std::make_optional<MaterialHandle>(renderable.material_handle.value())
+                                           : std::nullopt,
+                    .model = world_transform,
+                    .sort_key = {},
+                };
                 // TODO: this can't always get default pipeline key
                 draw_item.sort_key = make_draw_sort_key_(
                     pipeline_manager_.get_default_pipeline_key(), draw_item.material_handle, draw_item.mesh_handle);
@@ -227,30 +234,43 @@ auto VulkanRenderer::prepare_frame_(const Scene &scene) -> RenderStatus
     }
 
     std::ranges::sort(result, {}, &DrawItem::sort_key);
-    return {RenderStatusCode::ReadyToRecord, std::move(result)};
+
+    return {
+        .code = RenderStatusCode::ReadyToRecord,
+        .draw_items = std::move(result),
+    };
 }
 
 auto VulkanRenderer::record_(const Scene &scene, const std::vector<DrawItem> &draw_items, ImDrawData *imgui_draw_data)
     -> void
 {
     const auto frame_index = frame_command_context_.current_frame_index();
+    auto &command_buffer = frame_command_context_.current_command_buffer();
 
     // prepare infos
     auto color_attachment_info =
         make_color_attachment(*swapchain_.image_views()[current_swap_chain_image_index_], clear_color_);
     auto depth_attachment_info = make_depth_attachment(depth_buffer_.image_view());
-    auto rendering_info = ::vk::RenderingInfo{};
-    rendering_info.sType = ::vk::StructureType::eRenderingInfo;
-    rendering_info.pNext = nullptr;
-    rendering_info.flags = {};
-    rendering_info.renderArea.offset = ::vk::Offset2D{0, 0};
-    rendering_info.renderArea.extent = swapchain_.extent();
-    rendering_info.layerCount = 1;
-    rendering_info.viewMask = 0; // TODO magic-y number - must match pipeline creation create_rendering_info
-    rendering_info.colorAttachmentCount = 1;
-    rendering_info.pColorAttachments = &color_attachment_info;
-    rendering_info.pDepthAttachment = &depth_attachment_info;
-    rendering_info.pStencilAttachment = nullptr;
+
+    auto rendering_info = ::vk::RenderingInfo{
+        .sType = ::vk::StructureType::eRenderingInfo,
+        .pNext = nullptr,
+        .flags = {},
+        .renderArea{
+            .offset =
+                ::vk::Offset2D{
+                    .x = 0,
+                    .y = 0,
+                },
+            .extent = swapchain_.extent(),
+        },
+        .layerCount = 1,
+        .viewMask = 0, // TODO magic-y number - must match pipeline creation create_rendering_info
+        .colorAttachmentCount = 1,
+        .pColorAttachments = &color_attachment_info,
+        .pDepthAttachment = &depth_attachment_info,
+        .pStencilAttachment = nullptr,
+    };
 
     // upload camera/view data
     auto camera = scene.frame_camera_ubo();
@@ -261,9 +281,12 @@ auto VulkanRenderer::record_(const Scene &scene, const std::vector<DrawItem> &dr
     light_uniform_buffers_[frame_index].upload(&lights, sizeof(UBO_Lighting));
 
     // start command buffer
-    auto &command_buffer = frame_command_context_.current_command_buffer();
-    auto command_buffer_begin_info = ::vk::CommandBufferBeginInfo{};
-    command_buffer_begin_info.setFlags(::vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+    auto command_buffer_begin_info = ::vk::CommandBufferBeginInfo{
+        .sType = ::vk::StructureType::eCommandBufferBeginInfo,
+        .pNext = nullptr,
+        .flags = ::vk::CommandBufferUsageFlagBits::eOneTimeSubmit,
+        .pInheritanceInfo = nullptr,
+    };
     command_buffer.reset();
     command_buffer.begin(command_buffer_begin_info);
 
@@ -272,34 +295,35 @@ auto VulkanRenderer::record_(const Scene &scene, const std::vector<DrawItem> &dr
         command_buffer,
         swapchain_.images().at(current_swap_chain_image_index_),
         ::vk::ImageAspectFlagBits::eColor,
-        transition_info::undef_to_color_optimal());
+        VulkanImageTransitionInfo::undef_to_color_optimal());
     transition(
         command_buffer,
         depth_buffer_.image(),
         ::vk::ImageAspectFlagBits::eDepth | ::vk::ImageAspectFlagBits::eStencil,
-        transition_info::undef_to_depth_optimal());
+        VulkanImageTransitionInfo::undef_to_depth_optimal());
 
     // render
     command_buffer.beginRendering(rendering_info);
 
     command_buffer.bindPipeline(
         ::vk::PipelineBindPoint::eGraphics,
-        *pipeline_manager_.get_pipeline(pipeline_manager_.get_default_pipeline_key()).pipeline);
+        *pipeline_manager_.get_or_create_pipeline(pipeline_manager_.get_default_pipeline_key()).pipeline);
     command_buffer.setViewport(
         0,
         ::vk::Viewport{
-            0.0f,
-            0.0f,
-            static_cast<float>(swapchain_.extent().width),
-            static_cast<float>(swapchain_.extent().height),
-            0.0f,
-            1.0f});
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = static_cast<float>(swapchain_.extent().width),
+            .height = static_cast<float>(swapchain_.extent().height),
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f,
+        });
     command_buffer.setScissor(0, ::vk::Rect2D{::vk::Offset2D{0, 0}, swapchain_.extent()});
     command_buffer.bindDescriptorSets(
         ::vk::PipelineBindPoint::eGraphics,
         *pipeline_manager_.get_pipeline_layout(),
         0,
-        *per_frame_descriptor_sets_.at(frame_index),
+        *per_frame_descriptor_sets_[frame_index],
         nullptr);
 
     //    iterate draw items
@@ -356,18 +380,21 @@ auto VulkanRenderer::end_frame_() -> void
         command_buffer,
         swapchain_.images().at(current_swap_chain_image_index_),
         ::vk::ImageAspectFlagBits::eColor,
-        transition_info::color_optimal_to_present());
+        VulkanImageTransitionInfo::color_optimal_to_present());
     command_buffer.end();
 
     auto wait_for = ::vk::PipelineStageFlags{::vk::PipelineStageFlagBits::eColorAttachmentOutput};
-    auto submit_info = ::vk::SubmitInfo{};
-    submit_info.waitSemaphoreCount = 1;
-    submit_info.pWaitSemaphores = &*frame_command_context_.current_image_available_semaphore();
-    submit_info.pWaitDstStageMask = &wait_for;
-    submit_info.commandBufferCount = 1;
-    submit_info.pCommandBuffers = &*frame_command_context_.current_command_buffer();
-    submit_info.signalSemaphoreCount = 1;
-    submit_info.pSignalSemaphores = &*swapchain_.semaphores().at(current_swap_chain_image_index_);
+    auto submit_info = ::vk::SubmitInfo{
+        .sType = ::vk::StructureType::eSubmitInfo,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &*frame_command_context_.current_image_available_semaphore(),
+        .pWaitDstStageMask = &wait_for,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &*frame_command_context_.current_command_buffer(),
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = &*swapchain_.semaphores()[current_swap_chain_image_index_],
+    };
 
     frame_command_context_.reset_fence();
     auto submit_result = device_.graphics_queue().submit(submit_info, *frame_command_context_.current_fence());
@@ -381,15 +408,18 @@ auto VulkanRenderer::end_frame_() -> void
     // bypassing raii here because Vulkan internally checks Result and asserts on OutOfDate error at present.
     // we're handling OutOfDate errors, so we'll use the C API for this (and also for acquire) to avoid the internal
     // check.
-    auto semaphore = static_cast<VkSemaphore>(*swapchain_.semaphores().at(current_swap_chain_image_index_));
-    auto swapchain = static_cast<VkSwapchainKHR>(*swapchain_.native_handle());
-    auto present_info = VkPresentInfoKHR{};
-    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = &semaphore;
-    present_info.swapchainCount = 1;
-    present_info.pSwapchains = &swapchain;
-    present_info.pImageIndices = &current_swap_chain_image_index_;
+    auto semaphore = static_cast<VkSemaphore>(*swapchain_.semaphores()[current_swap_chain_image_index_]);
+    auto swapchain = static_cast<VkSwapchainKHR>(*swapchain_.get());
+    auto present_info = VkPresentInfoKHR{
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .pNext = nullptr,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = &semaphore,
+        .swapchainCount = 1,
+        .pSwapchains = &swapchain,
+        .pImageIndices = &current_swap_chain_image_index_,
+        .pResults = nullptr,
+    };
 
     const auto present_result = vkQueuePresentKHR(device_.graphics_queue(), &present_info);
     if (present_result == VK_ERROR_OUT_OF_DATE_KHR || present_result == VK_SUBOPTIMAL_KHR)
@@ -408,18 +438,18 @@ auto VulkanRenderer::end_frame_() -> void
 
 auto VulkanRenderer::init_() -> void
 {
-    for (std::size_t i = 0; i < max_frames_in_flight_; ++i)
+    for (std::size_t i = 0; i < frames_in_flight_; ++i)
     {
-        camera_uniform_buffers_.push_back(
-            {device_,
-             ::vk::DeviceSize{sizeof(UBO_Camera)},
-             ::vk::BufferUsageFlagBits::eUniformBuffer,
-             ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible});
-        light_uniform_buffers_.push_back(
-            {device_,
-             ::vk::DeviceSize{sizeof(UBO_Lighting)},
-             ::vk::BufferUsageFlagBits::eUniformBuffer,
-             ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible});
+        camera_uniform_buffers_.emplace_back(
+            device_,
+            ::vk::DeviceSize{sizeof(UBO_Camera)},
+            ::vk::BufferUsageFlagBits::eUniformBuffer,
+            ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible);
+        light_uniform_buffers_.emplace_back(
+            device_,
+            ::vk::DeviceSize{sizeof(UBO_Lighting)},
+            ::vk::BufferUsageFlagBits::eUniformBuffer,
+            ::vk::MemoryPropertyFlagBits::eHostCoherent | ::vk::MemoryPropertyFlagBits::eHostVisible);
     }
 
     per_frame_descriptor_sets_ = descriptor_pool_.allocate_per_frame_descriptor_sets(
@@ -435,9 +465,19 @@ constexpr auto VulkanRenderer::make_draw_sort_key_(
     constexpr auto no_material = MaterialHandle{std::numeric_limits<std::uint64_t>::max() - 1zu};
     if (material_handle.has_value())
     {
-        return {pipeline_id.pack(), material_handle.value(), mesh_handle, depth_bucket};
+        return {
+            pipeline_id.pack(),
+            material_handle.value(),
+            mesh_handle,
+            depth_bucket,
+        };
     }
-    return {pipeline_id.pack(), no_material, mesh_handle, depth_bucket};
+    return {
+        pipeline_id.pack(),
+        no_material,
+        mesh_handle,
+        depth_bucket,
+    };
 }
 
 } // namespace pong

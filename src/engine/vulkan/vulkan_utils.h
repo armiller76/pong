@@ -15,11 +15,17 @@ namespace pong
 {
     if (r == ::vk::Result::eSuccess)
     {
-        return {ResultCode::Ok, {}};
+        return {
+            .code = ResultCode::Ok,
+            .message = {},
+        };
     }
     else
     {
-        return {ResultCode::Error, std::format("Vulkan result: {}", ::vk::to_string(r))};
+        return {
+            .code = ResultCode::Error,
+            .message = std::format("Vulkan result: {}", ::vk::to_string(r)),
+        };
     }
 }
 
@@ -63,12 +69,18 @@ inline auto to_vk(ShaderStage s) -> ::vk::ShaderStageFlagBits
 
 inline auto to_vk(Extent2D e) -> ::vk::Extent2D
 {
-    return {e.width, e.height};
+    return {
+        .width = e.width,
+        .height = e.height,
+    };
 }
 
 inline auto to_vk(Offset2D o) -> ::vk::Offset2D
 {
-    return {o.x, o.y};
+    return {
+        .x = o.x,
+        .y = o.y,
+    };
 }
 
 inline auto to_pong(::vk::ShaderStageFlagBits b) -> ShaderStage

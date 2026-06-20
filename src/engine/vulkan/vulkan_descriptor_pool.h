@@ -22,19 +22,20 @@ class VulkanDescriptorPool
     VulkanDescriptorPool(VulkanDescriptorPool &&) noexcept = default;
     auto operator=(VulkanDescriptorPool &&) noexcept -> VulkanDescriptorPool & = delete;
 
-    auto native_handle() const -> ::vk::DescriptorPool;
+    [[nodiscard]] auto native_handle() const -> ::vk::DescriptorPool;
 
-    auto allocate_per_frame_descriptor_sets(
+    [[nodiscard]] auto allocate_per_frame_descriptor_sets(
         const ::vk::raii::DescriptorSetLayout &layout,
         std::vector<VulkanGpuBuffer> &view_proj_uniform_buffers,
         std::vector<VulkanGpuBuffer> &light_uniform_buffers) -> std::vector<vk::raii::DescriptorSet>;
-    auto allocate_material_descriptor_set(const ::vk::raii::DescriptorSetLayout &layout) -> vk::raii::DescriptorSet;
+    [[nodiscard]] auto allocate_material_descriptor_set(const ::vk::raii::DescriptorSetLayout &layout)
+        -> vk::raii::DescriptorSet;
 
   private:
     auto create_pool_() -> ::vk::raii::DescriptorPool;
 
     const VulkanDevice &device_;
-    std::uint32_t frames_in_flight_;
+    const std::uint32_t frames_in_flight_;
     ::vk::raii::DescriptorPool pool_;
 
     static const std::uint32_t MAX_MATERIALS = 100u;

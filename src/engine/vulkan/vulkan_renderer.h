@@ -43,7 +43,7 @@ class VulkanRenderer
         DrawSortKey sort_key;
     };
 
-    enum class RenderStatusCode
+    enum class RenderStatusCode : std::uint8_t
     {
         ReadyToRecord,
         SkipMinimized,
@@ -68,18 +68,19 @@ class VulkanRenderer
     ~VulkanRenderer() = default;
 
     VulkanRenderer(const VulkanRenderer &) = delete;
-    VulkanRenderer &operator=(const VulkanRenderer &) = delete;
+    auto operator=(const VulkanRenderer &) -> VulkanRenderer & = delete;
     VulkanRenderer(VulkanRenderer &&) = delete;
-    VulkanRenderer &operator=(VulkanRenderer &&) = delete;
+    auto operator=(VulkanRenderer &&) -> VulkanRenderer & = delete;
 
     auto recreate_resources() -> void;
-    auto needs_recreate() const -> bool;
+    [[nodiscard]] auto needs_recreate() const -> bool;
 
-    auto swapchain_image_count() const -> std::uint32_t;
-    auto swapchain_image_index() const -> std::uint32_t;
-    auto swapchain_format() const -> ::vk::Format;
-    auto swapchain_extent() const -> Extent2D;
-    auto depth_format() const -> ::vk::Format;
+    [[nodiscard]] auto swapchain_image_count() const -> std::uint32_t;
+    [[nodiscard]] auto swapchain_image_index() const -> std::uint32_t;
+    [[nodiscard]] auto swapchain_format() const -> ::vk::Format;
+    [[nodiscard]] auto swapchain_extent() const -> Extent2D;
+
+    [[nodiscard]] auto depth_format() const -> ::vk::Format;
 
     auto descriptor_pool() -> VulkanDescriptorPool *;
     auto set_clear_color(const Color &color) -> void;
@@ -89,32 +90,40 @@ class VulkanRenderer
     auto shutdown() -> void;
 
   private:
-    std::uint32_t max_frames_in_flight_;
+    const std::uint32_t frames_in_flight_;
 
     const VulkanDevice &device_;
     const ResourceManager &resource_manager_;
+
     VulkanPipelineManager &pipeline_manager_;
     VulkanDescriptorPool &descriptor_pool_;
+    std::vector<::vk::raii::DescriptorSet> per_frame_descriptor_sets_;
+
     VulkanSwapchain swapchain_;
+    std::uint32_t current_swap_chain_image_index_{0};
+
+    VulkanFrameCommandContext frame_command_context_;
+    std::uint64_t frame_counter_{0}; // TODO use this
+
     std::vector<VulkanGpuBuffer> camera_uniform_buffers_;
     std::vector<VulkanGpuBuffer> light_uniform_buffers_;
-    VulkanFrameCommandContext frame_command_context_;
     DepthBuffer depth_buffer_;
-    std::vector<::vk::raii::DescriptorSet> per_frame_descriptor_sets_;
+
     ::vk::ClearColorValue clear_color_;
-    std::uint32_t current_swap_chain_image_index_{0};
-    std::uint64_t frame_counter_{0}; // TODO use this
+
     bool needs_recreate_ = false;
 
   private:
     auto init_() -> void;
 
-    auto prepare_frame_(const Scene &scene) -> RenderStatus;
+    [[nodiscard]] auto prepare_frame_(const Scene &scene) -> RenderStatus;
+
     auto record_(const Scene &scene, const std::vector<DrawItem> &draw_items, ImDrawData *imgui_draw_data = nullptr)
         -> void;
+
     auto end_frame_() -> void;
 
-    static constexpr auto make_draw_sort_key_(
+    [[nodiscard]] static constexpr auto make_draw_sort_key_(
         PipelineKey pipeline_key,
         std::optional<MaterialHandle> material_handle,
         MeshHandle mesh_handle,

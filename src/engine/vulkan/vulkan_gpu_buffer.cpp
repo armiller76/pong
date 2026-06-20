@@ -1,6 +1,7 @@
 #include "vulkan_gpu_buffer.h"
 
 #include <cstring>
+#include <memory>
 #include <utility>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -19,35 +20,46 @@ VulkanGpuBuffer::VulkanGpuBuffer(
     ::vk::DeviceSize size,
     ::vk::BufferUsageFlags usage,
     ::vk::MemoryPropertyFlags memory_flags)
-    : device_{&device}
+    : device_{std::addressof(device)}
     , size_{size}
     , buffer_(
-          [&]() -> ::vk::raii::Buffer
+          [&]() -> vk::raii::Buffer
           {
-              auto buffer_info = ::vk::BufferCreateInfo{};
-              buffer_info.size = size;
-              buffer_info.usage = usage;
-              buffer_info.sharingMode = ::vk::SharingMode::eExclusive;
+              const auto buffer_info = ::vk::BufferCreateInfo{
+                  .sType = ::vk::StructureType::eBufferCreateInfo,
+                  .pNext = nullptr,
+                  .flags = {},
+                  .size = size,
+                  .usage = usage,
+                  .sharingMode = ::vk::SharingMode::eExclusive,
+                  .queueFamilyIndexCount = 0u,
+                  .pQueueFamilyIndices = nullptr,
+              };
+
               auto buffer_result = check_vk_expected(device_->get().createBuffer(buffer_info));
-              if (!buffer_result)
+              if (!buffer_result.has_value())
               {
                   throw arm::Exception("unable to create gpu buffer");
               }
               return std::move(buffer_result.value());
           }())
     , memory_(
-          [&]() -> ::vk::raii::DeviceMemory
+          [&]() -> vk::raii::DeviceMemory
           {
-              auto memory_requirements = buffer_.getMemoryRequirements();
-              auto memory_info = ::vk::MemoryAllocateInfo{};
-              memory_info.allocationSize = memory_requirements.size;
-              memory_info.memoryTypeIndex = device_->find_memory_type_index(memory_requirements, memory_flags);
+              const auto memory_requirements = buffer_.getMemoryRequirements();
+              const auto memory_info = ::vk::MemoryAllocateInfo{
+                  .sType = ::vk::StructureType::eMemoryAllocateInfo,
+                  .pNext = nullptr,
+                  .allocationSize = memory_requirements.size,
+                  .memoryTypeIndex = device_->find_memory_type_index(memory_requirements, memory_flags),
+              };
+
               auto memory_result = check_vk_expected(device_->get().allocateMemory(memory_info));
-              if (!memory_result)
+              if (!memory_result.has_value())
               {
                   throw arm::Exception("unable to allocate buffer memory");
               }
-              buffer_.bindMemory(*memory_result.value(), 0);
+              buffer_.bindMemory(*memory_result.value(), 0u);
               return std::move(memory_result.value());
           }())
     , memory_flags_{memory_flags}
@@ -73,10 +85,13 @@ auto VulkanGpuBuffer::upload(const void *data, std::size_t bytes, std::size_t of
 
     if (!((memory_flags_ & ::vk::MemoryPropertyFlagBits::eHostCoherent) == ::vk::MemoryPropertyFlagBits::eHostCoherent))
     {
-        auto flush_range = ::vk::MappedMemoryRange{};
-        flush_range.memory = *memory_;
-        flush_range.offset = offset;
-        flush_range.size = bytes;
+        auto flush_range = ::vk::MappedMemoryRange{
+            .sType = ::vk::StructureType::eMappedMemoryRange,
+            .pNext = nullptr,
+            .memory = *memory_,
+            .offset = offset,
+            .size = bytes,
+        };
         device_->get().flushMappedMemoryRanges({flush_range});
     }
 }

@@ -30,8 +30,8 @@ class VulkanGpuBuffer
     auto unmap() -> void;
     auto upload(const void *data, std::size_t bytes, std::size_t offset = 0) -> void;
 
-    auto native_handle() const -> const ::vk::Buffer;
-    auto size() const -> ::vk::DeviceSize;
+    [[nodiscard]] auto native_handle() const -> const ::vk::Buffer;
+    [[nodiscard]] auto size() const -> ::vk::DeviceSize;
 
   private:
     const VulkanDevice *device_;
