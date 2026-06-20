@@ -10,7 +10,7 @@ namespace pong
 
 using namespace std::literals;
 
-enum class ImageFormat
+enum class ImageFormat : std::uint8_t
 {
     RGBA8,
     RGB8,

@@ -22,7 +22,7 @@ class Texture2D
     Texture2D(const Texture2D &) = delete;
     auto operator=(const Texture2D &) -> Texture2D & = delete;
     Texture2D(Texture2D &&) noexcept = default;
-    auto operator=(Texture2D &&) noexcept -> Texture2D & = default;
+    auto operator=(Texture2D &&) noexcept -> Texture2D & = delete;
 
     auto name() const -> std::string_view;
     auto width() const -> std::uint32_t;
