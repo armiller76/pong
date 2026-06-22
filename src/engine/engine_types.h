@@ -6,7 +6,7 @@
 namespace pong
 {
 
-enum class ResultCode
+enum class ResultCode : std::uint8_t
 {
     Ok,
     Warning,

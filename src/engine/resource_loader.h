@@ -9,7 +9,6 @@
 
 #include "core/resource_handles.h"
 #include "engine/vulkan/vulkan_immediate_command_context.h"
-#include "gltf/fastgltf_primitives.h"
 #include "graphics/image_format.h"
 
 namespace pong
@@ -17,10 +16,14 @@ namespace pong
 
 class Entity;
 class Image;
-class VulkanPipelineManager;
 class ResourceManager;
 class Texture2D;
 class VulkanDevice;
+class VulkanPipelineManager;
+
+struct LoadedAsset;
+struct LoadedNode;
+
 enum class ShaderStage;
 
 class ResourceLoader
