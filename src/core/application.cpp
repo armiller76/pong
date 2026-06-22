@@ -17,9 +17,12 @@ Application::Application(ApplicationInfo info)
     : app_info_{std::move(info)}
     , render_info_{RenderContextInfo{
           .frames_in_flight = 2u,
-          .clear_color = {},
-          .window_rect = {},
-      }}
+          .clear_color = {0.005f, 0.005f, 0.005f, 1.0f},
+          .window_rect =
+              {
+                  .offset = {100u, 100u},
+                  .extent = {800u, 600u},
+              }}}
     , input_state_{}
     , win32_window_{app_info_.application_name, render_info_, input_state_}
     , vulkan_instance_{app_info_}
