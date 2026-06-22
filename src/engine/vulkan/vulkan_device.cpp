@@ -318,7 +318,7 @@ auto VulkanDevice::score_device_(VulkanDeviceInfo &info, const ::vk::raii::Physi
             largest_heap_size = heap.size > largest_heap_size ? heap.size : largest_heap_size;
         }
     }
-    info.score += static_cast<uint32_t>(largest_heap_size / (1024zu * 1024zu));
+    info.score += static_cast<uint32_t>(largest_heap_size / (1024zu * 1024zu * 1024zu));
 
     return result;
 }
