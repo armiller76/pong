@@ -12,9 +12,8 @@
 namespace pong
 {
 
-class VulkanDevice;
 class VulkanInstance;
-class VulkanRenderer;
+class RenderContext;
 
 class ImguiWrapper
 
@@ -23,8 +22,7 @@ class ImguiWrapper
     ImguiWrapper(
         HWND hwnd,
         const VulkanInstance &instance,
-        const VulkanDevice &device,
-        VulkanRenderer &renderer,
+        RenderContext &render_context,
         std::string_view project_root);
     ~ImguiWrapper();
 
@@ -49,8 +47,7 @@ class ImguiWrapper
     ImGuiIO *io_;
     HWND windows_handle_;
     const VulkanInstance &instance_;
-    const VulkanDevice &device_;
-    VulkanRenderer &renderer_;
+    RenderContext &render_context_;
     ImDrawData *draw_data_;
     std::string ini_file_;
 

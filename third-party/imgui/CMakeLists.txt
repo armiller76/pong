@@ -15,6 +15,8 @@ target_sources(
           ${imgui_SOURCE_DIR}/imgui_demo.cpp
 )
 
+target_compile_definitions(imgui PUBLIC MAX_DIR_LIGHTS=${PONG_MAX_DIR_LIGHTS})
+
 target_include_directories(
   imgui
   PUBLIC ${PROJECT_SOURCE_DIR}/src
