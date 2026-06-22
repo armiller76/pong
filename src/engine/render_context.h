@@ -1,18 +1,17 @@
 #pragma once
 
 #include <chrono>
-#include <string>
+#include <cstdint>
 
-#include "engine/engine_types.h"
 #include "engine/resource_loader.h"
 #include "engine/resource_manager.h"
 #include "engine/vulkan/vulkan_descriptor_pool.h"
 #include "engine/vulkan/vulkan_device.h"
-#include "engine/vulkan/vulkan_instance.h"
 #include "engine/vulkan/vulkan_pipeline_manager.h"
 #include "engine/vulkan/vulkan_renderer.h"
 #include "engine/vulkan/vulkan_surface.h"
-#include "imgui/imgui_wrapper.h"
+#include "graphics/color.h"
+#include "math/rectangle.h"
 
 namespace pong
 {
@@ -21,8 +20,18 @@ using namespace std::literals;
 
 class Camera;
 class InputState;
+class ImguiWrapper;
 class Scene;
+class VulkanDevice;
+class VulkanInstance;
 class Win32Window;
+
+struct RenderContextInfo
+{
+    std::uint32_t frames_in_flight;
+    Color clear_color;
+    Rectangle window_rect;
+};
 
 class RenderContext
 {
@@ -30,7 +39,13 @@ class RenderContext
     explicit RenderContext(
         const RenderContextInfo &render_context_info,
         Win32Window &win32_window,
-        InputState &input_state);
+        InputState &input_state,
+        VulkanInstance &instance);
+
+    RenderContext(const RenderContext &) = delete;
+    auto operator=(const RenderContext &) -> RenderContext & = delete;
+    RenderContext(RenderContext &&) noexcept = delete;
+    auto operator=(RenderContext &&) noexcept -> RenderContext & = delete;
 
     auto load_scene(std::string_view filename) -> Scene;
 
@@ -38,10 +53,12 @@ class RenderContext
 
     auto shutdown() -> void;
 
+    [[nodiscard]] auto renderer() const -> const VulkanRenderer &;
+    [[nodiscard]] auto device() const -> const VulkanDevice &;
+
+    auto init_debug_renderer(ImguiWrapper *debug_renderer) -> void;
+
   private:
-    const std::string app_name_;
-    const std::string engine_name_;
-    [[maybe_unused]] const Version version_;
     Win32Window &win32_window_;
     InputState &input_state_;
 
@@ -49,7 +66,6 @@ class RenderContext
     std::chrono::steady_clock::time_point last_window_recreate_time_;
     bool was_resize_pending_;
 
-    VulkanInstance vulkan_instance_;
     VulkanSurface vulkan_surface_;
     VulkanDevice vulkan_device_;
     VulkanDescriptorPool vulkan_descriptor_pool_;
@@ -59,7 +75,8 @@ class RenderContext
 
     VulkanRenderer vulkan_renderer_;
 
-    ImguiWrapper debug_renderer_;
+    bool debug_enabled_ = false;
+    ImguiWrapper *debug_renderer_ = nullptr;
 
   private:
     auto recreate_resources_() -> bool;

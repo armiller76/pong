@@ -1,10 +1,8 @@
 #include "engine/render_context.h"
 
 #include <chrono>
-#include <string>
 
 #include "core/scene.h"
-#include "engine/engine_types.h"
 #include "engine/input_state.h"
 #include "engine/resource_loader.h"
 #include "engine/resource_manager.h"
@@ -16,6 +14,7 @@
 #include "engine/vulkan/vulkan_surface.h"
 #include "graphics/free_look_camera.h"
 #include "graphics/image.h"
+#include "imgui/imgui_wrapper.h"
 #include "platform/win32_window.h"
 
 namespace pong
@@ -25,22 +24,23 @@ using namespace std::literals;
 
 class Scene;
 
-RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32Window &win32_window, InputState &input_state)
-    : app_name_{render_context_info.app_name}
-    , engine_name_{render_context_info.engine_name}
-    , version_{render_context_info.version}
-    , win32_window_{win32_window}
+RenderContext::RenderContext(
+    const RenderContextInfo &render_context_info,
+    Win32Window &win32_window,
+    InputState &input_state,
+    VulkanInstance &instance)
+    : win32_window_{win32_window}
     , input_state_{input_state}
     , frame_begin_timestamp_{std::chrono::steady_clock::now()}
     , last_window_recreate_time_{std::chrono::steady_clock::now()}
     , was_resize_pending_{false}
-    , vulkan_instance_{render_context_info}
-    , vulkan_surface_{vulkan_instance_, win32_window_.win32_handles()}
-    , vulkan_device_{vulkan_instance_, vulkan_surface_}
+    , vulkan_surface_{instance, win32_window_.win32_handles()}
+    , vulkan_device_{instance, vulkan_surface_}
     , vulkan_descriptor_pool_{vulkan_device_, 2u} // TODO magic number (frames in flight)
     , resource_manager_{}
     , vulkan_pipeline_manager_{vulkan_device_, vulkan_descriptor_pool_, resource_manager_}
-    , resource_loader_{vulkan_device_, resource_manager_, vulkan_pipeline_manager_, "c:/dev/pong/assets"sv} // TODO magic path (path to assets)
+    , resource_loader_{vulkan_device_, resource_manager_, vulkan_pipeline_manager_, "c:/dev/pong/assets"sv}
+    // TODO magic path (path to assets)
     , vulkan_renderer_{
           vulkan_device_,
           vulkan_surface_,
@@ -49,9 +49,19 @@ RenderContext::RenderContext(const RenderContextInfo &render_context_info, Win32
           vulkan_descriptor_pool_,
           render_context_info.frames_in_flight,
           render_context_info.clear_color}
-    , debug_renderer_{win32_window.win32_handles().window, vulkan_instance_, vulkan_device_, vulkan_renderer_, render_context_info.project_root}
 {
     init_();
+}
+
+auto RenderContext::init_debug_renderer(ImguiWrapper *debug_renderer) -> void
+{
+    if (!debug_renderer_ && debug_renderer && !debug_enabled_)
+    {
+        debug_renderer_ = debug_renderer;
+        debug_enabled_ = true;
+        return;
+    }
+    arm::log::warn("debug renderer init failed or was already initialized");
 }
 
 auto RenderContext::load_scene(std::string_view filename) -> Scene
@@ -94,7 +104,7 @@ auto RenderContext::update_and_render(Scene &scene) -> void
     if (should_recreate)
     {
         recreate_resources_();
-        debug_renderer_.recreate();
+        debug_renderer_->recreate();
         last_window_recreate_time_ = frame_begin_timestamp_;
 
         const auto new_extent = vulkan_renderer_.swapchain_extent();
@@ -110,9 +120,9 @@ auto RenderContext::update_and_render(Scene &scene) -> void
     scene.frame_camera().adjust_pitch(-input_state_.mouse_state().frame_delta_y * mouse_sensitivity);
     scene.frame_camera().adjust_yaw(input_state_.mouse_state().frame_delta_x * mouse_sensitivity);
 
-    debug_renderer_.render(); // calls ImGui::BeginFrame() and ImGui::EndFrame() -- don't call manually
+    debug_renderer_->render(); // calls ImGui::BeginFrame() and ImGui::EndFrame() -- don't call manually
 
-    vulkan_renderer_.render(scene, debug_renderer_.get_draw_data());
+    vulkan_renderer_.render(scene, debug_renderer_->get_draw_data());
 
     input_state_.advance_frame();
 }
@@ -122,9 +132,19 @@ auto RenderContext::shutdown() -> void
     vulkan_device_.get().waitIdle();
 
     // TODO shutdown order?
-    debug_renderer_.shutdown();
+    debug_renderer_->shutdown();
     vulkan_renderer_.shutdown();
     resource_manager_.shutdown();
+}
+
+auto RenderContext::renderer() const -> const VulkanRenderer &
+{
+    return vulkan_renderer_;
+}
+
+auto RenderContext::device() const -> const VulkanDevice &
+{
+    return vulkan_device_;
 }
 
 // returns true if recreated, false if minimized
@@ -139,7 +159,7 @@ auto RenderContext::recreate_resources_() -> bool
     vulkan_device_.get().waitIdle();
 
     vulkan_renderer_.recreate_resources();
-    debug_renderer_.recreate();
+    debug_renderer_->recreate();
 
     return true;
 }
