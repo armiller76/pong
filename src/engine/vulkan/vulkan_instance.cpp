@@ -9,7 +9,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_types.h"
+#include "core/application.h"
 #include "engine/vulkan/vulkan_utils.h"
 #include "utils/error.h"
 #include "utils/exception.h"
@@ -18,9 +18,9 @@
 namespace pong
 {
 
-VulkanInstance::VulkanInstance(const RenderContextInfo &render_context_info)
-    : application_name_{render_context_info.app_name}
-    , engine_name_{render_context_info.engine_name}
+VulkanInstance::VulkanInstance(const ApplicationInfo &info)
+    : application_name_{info.application_name}
+    , engine_name_{info.engine_name}
     , context_{}
     , instance_{nullptr}
     , debug_messenger_{nullptr}
@@ -60,8 +60,7 @@ VulkanInstance::VulkanInstance(const RenderContextInfo &render_context_info)
             != available_layers.end(),
         "Validation layers not available");
 
-    const auto app_engine_version = ::vk::makeVersion(
-        render_context_info.version.major, render_context_info.version.minor, render_context_info.version.patch);
+    const auto app_engine_version = ::vk::makeVersion(info.version.major, info.version.minor, info.version.patch);
     const auto vk_application_info = ::vk::ApplicationInfo{
         .sType = ::vk::StructureType::eApplicationInfo,
         .pNext = nullptr,

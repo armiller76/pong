@@ -4,15 +4,15 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-#include "engine/engine_types.h"
-
 namespace pong
 {
+
+struct ApplicationInfo;
 
 class VulkanInstance
 {
   public:
-    VulkanInstance(const RenderContextInfo &render_context_info);
+    VulkanInstance(const ApplicationInfo &info);
 
     [[nodiscard]] auto get() const -> const ::vk::raii::Instance &;
 
