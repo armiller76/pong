@@ -4,6 +4,7 @@
 #include <climits>
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <hidusage.h>
@@ -12,8 +13,8 @@
 #include "imgui.h"
 
 #include "core/key.h"
-#include "engine/engine_types.h"
 #include "engine/input_state.h"
+#include "engine/render_context.h"
 #include "event/key_event.h"
 #include "event/mouse_button_event.h"
 #include "event/mouse_move_event.h"
@@ -35,10 +36,13 @@ Win32Window::~Win32Window()
     ::UnregisterClassA(class_name_.c_str(), hinstance_);
 }
 
-Win32Window::Win32Window(const RenderContextInfo &render_context_info, InputState &input_state)
+Win32Window::Win32Window(
+    std::string_view app_name,
+    const RenderContextInfo &render_context_info,
+    InputState &input_state)
     : hinstance_{::GetModuleHandleA(0)}
     , input_state{input_state}
-    , app_name_{render_context_info.app_name}
+    , app_name_{app_name}
     , class_name_{std::string(app_name_ + "WindowClass")}
     , window_rect_{render_context_info.window_rect}
 {
@@ -67,10 +71,10 @@ Win32Window::Win32Window(const RenderContextInfo &render_context_info, InputStat
             WS_OVERLAPPEDWINDOW,
             window_rect_.offset.x,
             window_rect_.offset.y,
-            window_rect_.extent.width,
-            window_rect_.extent.height,
-            0,
-            0,
+            static_cast<INT>(window_rect_.extent.width),
+            static_cast<INT>(window_rect_.extent.height),
+            nullptr,
+            nullptr,
             hinstance_,
             this),
         ::DestroyWindow};

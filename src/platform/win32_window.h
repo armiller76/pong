@@ -4,10 +4,10 @@
 #include <functional>
 #include <map>
 #include <string>
+#include <string_view>
 
 #include <windows.h>
 
-#include "engine/engine_types.h"
 #include "math/rectangle.h"
 #include "utils/auto_release.h"
 
@@ -23,13 +23,14 @@ struct Win32WindowHandles
 class InputState;
 class VulkanInstance;
 class VulkanSurface;
+struct RenderContextInfo;
 
 class Win32Window
 {
   public:
     ~Win32Window();
 
-    Win32Window(const RenderContextInfo &render_context_info, InputState &input_state);
+    Win32Window(std::string_view app_name, const RenderContextInfo &render_context_info, InputState &input_state);
 
     auto process_events() -> void;
     auto handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
