@@ -23,7 +23,7 @@
 #include "utils/error.h"
 #include "utils/exception.h"
 
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+extern IMGUI_IMPL_API auto ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) -> LRESULT;
 
 namespace pong
 {
@@ -46,19 +46,38 @@ Win32Window::Win32Window(
     , class_name_{std::string(app_name_ + "WindowClass")}
     , window_rect_{render_context_info.window_rect}
 {
+    arm::log::debug("Win32Window constructor");
+
     arm::ensure(
         (window_rect_.extent.width != 0) && (window_rect_.extent.height != 0),
         "Invalid window dimension: w={} h={}",
         window_rect_.extent.width,
         window_rect_.extent.height);
 
-    // TODO: Consider some parameterization here?
-    auto win32_window_class = WNDCLASS{};
-    win32_window_class.lpfnWndProc = instance_window_callback;
-    win32_window_class.hInstance = hinstance_;
-    win32_window_class.lpszClassName = class_name_.c_str();
+    clear_brush_ = {
+        ::CreateSolidBrush(
+            RGB(Color::float_to_srgb_byte(render_context_info.clear_color.r),
+                Color::float_to_srgb_byte(render_context_info.clear_color.g),
+                Color::float_to_srgb_byte(render_context_info.clear_color.b))),
+        ::DeleteObject};
 
-    if (!::RegisterClassA(&win32_window_class))
+    // TODO: Consider some parameterization here?
+    auto wc = WNDCLASSEX{
+        .cbSize = sizeof(WNDCLASSEX),
+        .style = CS_VREDRAW | CS_HREDRAW,
+        .lpfnWndProc = instance_window_callback,
+        .cbClsExtra = 0,
+        .cbWndExtra = 0,
+        .hInstance = hinstance_,
+        .hIcon = nullptr,
+        .hCursor = nullptr,
+        .hbrBackground = clear_brush_.get(),
+        .lpszMenuName = nullptr,
+        .lpszClassName = class_name_.c_str(),
+        .hIconSm = nullptr,
+    };
+
+    if (!::RegisterClassEx(&wc))
     {
         throw arm::Exception("Failed to register window class");
     }
@@ -92,13 +111,6 @@ Win32Window::Win32Window(
     };
 
     arm::ensure(::RegisterRawInputDevices(&mouse_info, 1u, sizeof(mouse_info)), "failed to register for mouse input");
-
-    clear_brush_ = {
-        ::CreateSolidBrush(
-            RGB(Color::float_to_srgb_byte(render_context_info.clear_color.r),
-                Color::float_to_srgb_byte(render_context_info.clear_color.g),
-                Color::float_to_srgb_byte(render_context_info.clear_color.b))),
-        ::DeleteObject};
 
     ::ShowWindow(hwnd_, SW_SHOWNORMAL);
     ::UpdateWindow(hwnd_);
@@ -137,10 +149,18 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
             {
                 auto size = ::UINT{};
                 ::GetRawInputData(
-                    reinterpret_cast<::HRAWINPUT>(lParam), RID_INPUT, nullptr, &size, sizeof(::RAWINPUTHEADER));
+                    reinterpret_cast<::HRAWINPUT>(lParam), // NOLINT(performance-no-int-to-ptr)
+                    RID_INPUT,
+                    nullptr,
+                    &size,
+                    sizeof(::RAWINPUTHEADER));
                 auto buffer = std::vector<std::byte>(size);
                 ::GetRawInputData(
-                    reinterpret_cast<::HRAWINPUT>(lParam), RID_INPUT, buffer.data(), &size, sizeof(::RAWINPUTHEADER));
+                    reinterpret_cast<::HRAWINPUT>(lParam), // NOLINT(performance-no-int-to-ptr)
+                    RID_INPUT,
+                    buffer.data(),
+                    &size,
+                    sizeof(::RAWINPUTHEADER));
                 const auto raw = reinterpret_cast<const ::RAWINPUT *>(buffer.data());
 
                 if (raw->header.dwType == RIM_TYPEMOUSE)
@@ -242,7 +262,7 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
             }
             else
             {
-                return DefWindowProcA(hwnd_, msg, lParam, wParam);
+                return DefWindowProcA(hwnd_, msg, wParam, lParam);
             }
         }
 
@@ -257,17 +277,15 @@ auto Win32Window::handle_message(HWND window, UINT msg, WPARAM wParam, LPARAM lP
             }
             else
             {
-                return DefWindowProcA(hwnd_, msg, lParam, wParam);
+                return DefWindowProcA(hwnd_, msg, wParam, lParam);
             }
         }
 
         case WM_ERASEBKGND:
         {
-            auto hdc = HDC(wParam);
             auto window_rect = RECT{};
-
             ::GetClientRect(hwnd_, &window_rect);
-            ::FillRect(hdc, &window_rect, clear_brush_);
+            ::FillRect(HDC(wParam), &window_rect, clear_brush_);
             return 1;
         }
 
@@ -338,7 +356,7 @@ auto Win32Window::should_close() const -> bool
 
 auto Win32Window::win32_handles() const -> const Win32WindowHandles
 {
-    return {hwnd_, hinstance_};
+    return {.window = hwnd_.get(), .instance = hinstance_};
 }
 
 auto Win32Window::fire_close_callbacks() const -> void
@@ -404,13 +422,14 @@ auto CALLBACK Win32Window::instance_window_callback(HWND window, UINT msg, WPARA
 {
     if (msg == WM_NCCREATE)
     {
-        auto create_struct = reinterpret_cast<CREATESTRUCT *>(lParam);
+        auto create_struct = reinterpret_cast<CREATESTRUCT *>(lParam); // NOLINT(performance-no-int-to-ptr)
         auto this_pointer = reinterpret_cast<LONG_PTR>(create_struct->lpCreateParams);
         SetWindowLongPtr(window, GWLP_USERDATA, this_pointer);
         return TRUE;
     }
 
-    Win32Window *self = reinterpret_cast<Win32Window *>(::GetWindowLongPtrA(window, GWLP_USERDATA));
+    auto *self = reinterpret_cast<Win32Window *>( // NOLINT(performance-no-int-to-ptr)
+        ::GetWindowLongPtrA(window, GWLP_USERDATA));
     if (self)
     {
         return self->handle_message(window, msg, wParam, lParam);
