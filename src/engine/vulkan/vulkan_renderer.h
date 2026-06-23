@@ -85,7 +85,7 @@ class VulkanRenderer
     auto descriptor_pool() -> VulkanDescriptorPool *;
     auto set_clear_color(const Color &color) -> void;
 
-    auto render(const Scene &scene, ImDrawData *imgui_draw_data) -> void;
+    auto render(const Scene &scene, ImDrawData *imgui_draw_data = nullptr) -> void;
 
     auto shutdown() -> void;
 
