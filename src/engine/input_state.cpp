@@ -30,11 +30,11 @@ auto InputState::process_events() -> void
 {
     while (!events_.empty())
     {
-        auto &e = events_.front();
+        auto &event = events_.front();
         events_.pop();
 
         std::visit(
-            [&](auto &&arg)
+            [&](auto &&arg) -> auto
             {
                 using InType = std::decay_t<decltype(arg)>;
                 if constexpr (std::same_as<InType, KeyEvent>)
@@ -83,7 +83,7 @@ auto InputState::process_events() -> void
                     }
                 }
             },
-            e);
+            event);
     }
 }
 
