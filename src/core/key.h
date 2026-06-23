@@ -2,10 +2,10 @@
 
 #include <array>
 #include <cstddef>
-#include <optional>
+#include <cstdint>
 #include <string>
 
-#include "utils/log.h"
+#include "utils/exception.h"
 
 namespace pong
 {
@@ -15,7 +15,7 @@ namespace pong
 // all-keys array
 // to_string(key)
 
-enum class Key
+enum class Key : std::uint8_t
 {
     Backspace = 0x08,
     Enter = 0x0D,
@@ -107,7 +107,7 @@ inline constexpr auto all_keys = std::to_array({
     Key::DArrow,    Key::Backtick, Key::Minus,    Key::Equals,
 });
 
-enum class KeyPosition
+enum class KeyPosition : std::uint8_t
 {
     Up,
     Down,
@@ -190,15 +190,14 @@ constexpr auto to_string(const Key &key) -> std::string
     }
 }
 
-constexpr auto get_key_index(Key key) -> std::optional<std::size_t>
+constexpr auto get_key_index(Key key) -> std::size_t
 {
-    auto result = std::ranges::find(all_keys, key);
+    const auto result = std::ranges::find(all_keys, key);
     if (result != all_keys.end())
     {
         return result - all_keys.begin();
     }
-    arm::log::error("Unknown key");
-    return {};
+    throw arm::Exception("Unknown key");
 }
 
 constexpr auto to_string(const KeyPosition &position) -> std::string

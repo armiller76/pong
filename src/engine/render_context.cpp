@@ -53,17 +53,6 @@ RenderContext::RenderContext(
     init_();
 }
 
-auto RenderContext::init_debug_renderer(ImguiWrapper *debug_renderer) -> void
-{
-    if (!debug_renderer_ && debug_renderer && !debug_enabled_)
-    {
-        debug_renderer_ = debug_renderer;
-        debug_enabled_ = true;
-        return;
-    }
-    arm::log::warn("debug renderer init failed or was already initialized");
-}
-
 auto RenderContext::load_scene(std::string_view filename) -> Scene
 {
     auto entity_info = resource_loader_.loadgltf(filename);
@@ -120,9 +109,15 @@ auto RenderContext::update_and_render(Scene &scene) -> void
     scene.frame_camera().adjust_pitch(-input_state_.mouse_state().frame_delta_y * mouse_sensitivity);
     scene.frame_camera().adjust_yaw(input_state_.mouse_state().frame_delta_x * mouse_sensitivity);
 
-    debug_renderer_->render(); // calls ImGui::BeginFrame() and ImGui::EndFrame() -- don't call manually
-
-    vulkan_renderer_.render(scene, debug_renderer_->get_draw_data());
+    if (debug_enabled_)
+    {
+        debug_renderer_->render();
+        vulkan_renderer_.render(scene, debug_renderer_->get_draw_data());
+    }
+    else
+    {
+        vulkan_renderer_.render(scene);
+    }
 
     input_state_.advance_frame();
 }
@@ -145,6 +140,32 @@ auto RenderContext::renderer() const -> const VulkanRenderer &
 auto RenderContext::device() const -> const VulkanDevice &
 {
     return vulkan_device_;
+}
+
+auto RenderContext::init_debug_renderer(ImguiWrapper *debug_renderer) -> void
+{
+    if (!debug_renderer_ && debug_renderer && !debug_enabled_)
+    {
+        debug_renderer_ = debug_renderer;
+        // debug_enabled_ = true;
+        return;
+    }
+    arm::log::warn("debug renderer init failed or was already initialized");
+}
+
+auto RenderContext::is_debug_enabled() const -> bool
+{
+    return debug_enabled_;
+}
+
+auto RenderContext::set_debug_enabled(bool enabled) -> void
+{
+    if (debug_enabled_ == enabled)
+    {
+        arm::log::warn(
+            "setting RenderContext debug_enabled to same value it already was: {}", enabled ? "true" : "false");
+    }
+    debug_enabled_ = enabled;
 }
 
 // returns true if recreated, false if minimized

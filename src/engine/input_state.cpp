@@ -39,16 +39,8 @@ auto InputState::process_events() -> void
                 using InType = std::decay_t<decltype(arg)>;
                 if constexpr (std::same_as<InType, KeyEvent>)
                 {
-                    const auto index = get_key_index(arg.key());
-                    if (index.has_value())
-                    {
-                        update_button_state_(
-                            keyboard_state_[index.value()], arg.position() == KeyPosition::Down ? true : false);
-                    }
-                    else
-                    {
-                        // key ignored
-                    }
+                    update_button_state_(
+                        keyboard_state_[get_key_index(arg.key())], arg.position() == KeyPosition::Down ? true : false);
                 }
                 else if constexpr (std::same_as<InType, MouseMoveEvent>)
                 {
@@ -91,9 +83,7 @@ auto InputState::advance_frame() -> void
 {
     for (const auto k : dirty_keys_)
     {
-        const auto index = get_key_index(k);
-        arm::ensure(index.has_value(), "dirty_keys invariant is broken");
-        reset_button_state_(keyboard_state_[index.value()]);
+        reset_button_state_(keyboard_state_[get_key_index(k)]);
     }
     dirty_keys_.clear();
 
@@ -109,19 +99,19 @@ auto InputState::move_direction(const FreeLookCamera &camera) -> ::glm::vec3
 {
     auto result = ::glm::vec3{0.0f};
 
-    if (keyboard_state_[get_key_index(Key::W).value()].is_down_this_frame)
+    if (keyboard_state_[get_key_index(Key::W)].is_down_this_frame)
     {
         result += camera.get_forward_direction();
     }
-    if (keyboard_state_[get_key_index(Key::S).value()].is_down_this_frame)
+    if (keyboard_state_[get_key_index(Key::S)].is_down_this_frame)
     {
         result -= camera.get_forward_direction();
     }
-    if (keyboard_state_[get_key_index(Key::A).value()].is_down_this_frame)
+    if (keyboard_state_[get_key_index(Key::A)].is_down_this_frame)
     {
         result -= camera.get_right_direction();
     }
-    if (keyboard_state_[get_key_index(Key::D).value()].is_down_this_frame)
+    if (keyboard_state_[get_key_index(Key::D)].is_down_this_frame)
     {
         result += camera.get_right_direction();
     }

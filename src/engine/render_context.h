@@ -57,6 +57,8 @@ class RenderContext
     [[nodiscard]] auto device() const -> const VulkanDevice &;
 
     auto init_debug_renderer(ImguiWrapper *debug_renderer) -> void;
+    [[nodiscard]] auto is_debug_enabled() const -> bool;
+    auto set_debug_enabled(bool enabled) -> void;
 
   private:
     Win32Window &win32_window_;
