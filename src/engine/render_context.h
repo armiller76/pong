@@ -60,6 +60,9 @@ class RenderContext
     [[nodiscard]] auto is_debug_enabled() const -> bool;
     auto set_debug_enabled(bool enabled) -> void;
 
+    auto camera_tranlsation_speed(this auto &&self) -> auto &&;
+    auto mouse_sensitivity(this auto &&self) -> auto &&;
+
   private:
     Win32Window &win32_window_;
     InputState &input_state_;
@@ -80,9 +83,22 @@ class RenderContext
     bool debug_enabled_ = false;
     ImguiWrapper *debug_renderer_ = nullptr;
 
+    float camera_translate_speed_ = 10.0f;
+    float mouse_sensitivity_ = 0.0005f;
+
   private:
     auto recreate_resources_() -> bool;
     auto init_() -> void;
 }; // class RenderContext
+
+auto RenderContext::camera_tranlsation_speed(this auto &&self) -> auto &&
+{
+    return self.camera_translate_speed_;
+}
+
+auto RenderContext::mouse_sensitivity(this auto &&self) -> auto &&
+{
+    return self.mouse_sensitivity_;
+}
 
 } // namespace pong

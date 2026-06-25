@@ -100,14 +100,9 @@ auto RenderContext::update_and_render(Scene &scene) -> void
         scene.frame_camera().resize(new_extent.width, new_extent.height);
     }
 
-    const auto translate_speed = 10.0f;
-    const auto mouse_sensitivity = 0.0005f;
-
     // scene.entities().at(scene.root_indices().at(0).value).rotate_by({0.0f, 0.01f, 0.0f});
     scene.frame_camera().translate_by(
-        input_state_.move_direction(scene.frame_camera()) * (frame_delta_seconds.count() * translate_speed));
-    scene.frame_camera().adjust_pitch(-input_state_.mouse_state().frame_delta_y * mouse_sensitivity);
-    scene.frame_camera().adjust_yaw(input_state_.mouse_state().frame_delta_x * mouse_sensitivity);
+        input_state_.move_direction(scene.frame_camera()) * (frame_delta_seconds.count() * camera_translate_speed_));
 
     if (debug_enabled_)
     {
@@ -116,6 +111,8 @@ auto RenderContext::update_and_render(Scene &scene) -> void
     }
     else
     {
+        scene.frame_camera().adjust_pitch(-input_state_.mouse_state().frame_delta_y * mouse_sensitivity_);
+        scene.frame_camera().adjust_yaw(input_state_.mouse_state().frame_delta_x * mouse_sensitivity_);
         vulkan_renderer_.render(scene);
     }
 
