@@ -33,6 +33,8 @@ class ImguiWrapper
 
     auto draw_fps() -> void;
 
+    auto draw_left_panel() -> void;
+
     auto draw_settings() -> void;
 
     auto render() -> void;
@@ -45,10 +47,11 @@ class ImguiWrapper
 
   private:
     ImGuiIO *io_;
+    ImDrawData *draw_data_;
+
     HWND windows_handle_;
     const VulkanInstance &instance_;
     RenderContext &render_context_;
-    ImDrawData *draw_data_;
     std::string ini_file_;
 
   private:

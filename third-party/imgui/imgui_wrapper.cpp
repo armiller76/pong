@@ -6,10 +6,10 @@
 #include <vulkan/vulkan_raii.hpp>
 #include <windows.h>
 
-#include "engine/render_context.h"
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
 #include "imgui_impl_win32.h"
+#include "imgui_internal.h"
 
 #include "engine/render_context.h"
 #include "engine/vulkan/vulkan_instance.h"
@@ -29,6 +29,7 @@ ImguiWrapper::ImguiWrapper(
               ::ImGui::CreateContext();
               return &::ImGui::GetIO();
           }()}
+    , draw_data_{nullptr}
     , windows_handle_{hwnd}
     , instance_{instance}
     , render_context_{render_context}
@@ -36,8 +37,8 @@ ImguiWrapper::ImguiWrapper(
 {
     io_->IniFilename = ini_file_.c_str();
     io_->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io_->ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
     startup_();
 }
 
@@ -49,8 +50,7 @@ auto ImguiWrapper::recreate() -> void
 {
     ::ImGui_ImplWin32_Shutdown();
     ::ImGui_ImplVulkan_Shutdown();
-    init_vulkan_();
-    init_windows_();
+    startup_();
 }
 
 auto ImguiWrapper::draw_fps() -> void
@@ -70,6 +70,18 @@ auto ImguiWrapper::draw_fps() -> void
     ::ImGui::End();
 }
 
+auto ImguiWrapper::draw_left_panel() -> void
+{
+    ImGui::Begin("Properties");
+    auto &cs = render_context_.camera_tranlsation_speed();
+    ImGui::SliderFloat("camera speed", &cs, 5.0f, 25.0f);
+
+    auto &ms = render_context_.mouse_sensitivity();
+    ImGui::SliderFloat("mouse sensitivity", &ms, 0.0001f, 0.001f);
+
+    ImGui::End();
+}
+
 auto ImguiWrapper::draw_settings() -> void
 {
 }
@@ -80,8 +92,27 @@ auto ImguiWrapper::render() -> void
     ::ImGui_ImplWin32_NewFrame();
     ::ImGui::NewFrame();
 
+    const auto viewport = ImGui::GetMainViewport();
+    auto main_dockspace_id = ImGui::GetID("main_dockspace");
+
+    if (ImGui::DockBuilderGetNode(main_dockspace_id) == nullptr)
+    {
+        ImGui::DockBuilderAddNode(main_dockspace_id, ImGuiDockNodeFlags_DockSpace);
+        ImGui::DockBuilderSetNodeSize(main_dockspace_id, viewport->Size);
+
+        auto left_panel_id = 0u;
+        auto right_panel_id = main_dockspace_id;
+
+        ImGui::DockBuilderSplitNode(right_panel_id, ImGuiDir_Left, 0.20f, &left_panel_id, &right_panel_id);
+        ImGui::DockBuilderDockWindow("Main", right_panel_id);
+        ImGui::DockBuilderDockWindow("Properties", left_panel_id);
+        ImGui::DockBuilderFinish(main_dockspace_id);
+    }
+
+    ImGui::DockSpaceOverViewport(main_dockspace_id, viewport, ImGuiDockNodeFlags_PassthruCentralNode);
+
     draw_fps();
-    draw_settings();
+    draw_left_panel();
 
     ::ImGui::Render();
     draw_data_ = ::ImGui::GetDrawData();
